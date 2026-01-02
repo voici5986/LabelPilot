@@ -46,7 +46,7 @@ export function PreviewPanel({ config, imageFile }: PreviewPanelProps) {
     };
 
     return (
-        <section className="flex-1 flex flex-col p-4 pl-0 h-full overflow-hidden">
+        <section className="flex-1 flex flex-col p-2 pl-0 h-full overflow-hidden">
             <div className="flex-1 bg-white/40 backdrop-blur-md rounded-2xl border border-white/60 flex flex-col relative overflow-hidden shadow-inner">
 
                 {/* Background Pattern */}
