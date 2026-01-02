@@ -115,9 +115,6 @@ export function PreviewPanel({ config, imageFile }: PreviewPanelProps) {
                             </div>
                         ))}
 
-                        {/* Margins indicator (optional, maybe on hover) */}
-                        {/* Watermark */}
-                        <div className="absolute bottom-4 right-4 text-[10px] text-slate-300 pointer-events-none select-none">{t('preview_hint')}</div>
                     </motion.div>
                 </div>
 
