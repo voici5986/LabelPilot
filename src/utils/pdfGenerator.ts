@@ -11,7 +11,7 @@ export async function generatePDF(config: HelperLayoutConfig, imageFile: File): 
 
     // 2. Load Image to get format/data
     const imageData = await fileToDataURL(imageFile);
-    const imgProps = await getImageProperties(imageData);
+    const { format, width: imgWidth, height: imgHeight } = await getImageProperties(imageData);
 
     // 3. Create PDF
     // jsPDF default unit is mm, which matches our calculation
@@ -24,14 +24,23 @@ export async function generatePDF(config: HelperLayoutConfig, imageFile: File): 
     // 4. Draw Images
     // We use the positions from our layout math
     layout.positions.forEach(pos => {
-        // addImage(imageData, format, x, y, w, h)
+        // Calculate aspect ratio fit (Contain)
+        const scale = Math.min(pos.width / imgWidth, pos.height / imgHeight);
+
+        const w = imgWidth * scale; // Rendered width
+        const h = imgHeight * scale; // Rendered height
+
+        // Center the image in the slot
+        const x = pos.x + (pos.width - w) / 2;
+        const y = pos.y + (pos.height - h) / 2;
+
         pdf.addImage(
             imageData,
-            imgProps.format,
-            pos.x,
-            pos.y,
-            pos.width,
-            pos.height,
+            format,
+            x,
+            y,
+            w,
+            h,
             undefined,
             'FAST' // Compression
         );
@@ -55,17 +64,23 @@ function fileToDataURL(file: File): Promise<string> {
 }
 
 /**
- * Helper to get image format (JPEG/PNG) and validity
+ * Helper to get image format (JPEG/PNG) and dimensions
  */
-function getImageProperties(dataUrl: string): Promise<{ format: string }> {
-    return new Promise((resolve) => {
-        // Simple check based on data header
-        if (dataUrl.startsWith("data:image/png")) {
-            resolve({ format: "PNG" });
-        } else if (dataUrl.startsWith("data:image/jpeg")) {
-            resolve({ format: "JPEG" });
-        } else {
-            resolve({ format: "PNG" }); // Fallback or handle error
-        }
+function getImageProperties(dataUrl: string): Promise<{ format: string; width: number; height: number }> {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+            let format = "PNG";
+            if (dataUrl.startsWith("data:image/jpeg")) {
+                format = "JPEG";
+            }
+            resolve({
+                format,
+                width: img.width,
+                height: img.height
+            });
+        };
+        img.onerror = reject;
+        img.src = dataUrl;
     });
 }
