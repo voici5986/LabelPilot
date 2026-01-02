@@ -58,7 +58,7 @@ export function PreviewPanel({ config, imageFile }: PreviewPanelProps) {
                         animate={{
                             width: `${paperWidthMm}mm`,
                             height: `${paperHeightMm}mm`,
-                            scale: scale
+                            scale: scale * 0.9 // Default 100% is now visually 90%
                         }}
                         transition={{ duration: 0.4, ease: "easeInOut" }}
                         className="bg-white shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] relative"

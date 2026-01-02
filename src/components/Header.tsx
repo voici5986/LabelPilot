@@ -13,10 +13,10 @@ export function Header() {
         <motion.header
             initial={{ y: -20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            className="h-11 bg-white/80 backdrop-blur-md border-b border-white/50 z-20 px-6 flex items-center justify-between shrink-0 shadow-sm"
+            className="h-10 bg-white/80 backdrop-blur-md border-b border-white/50 z-20 px-6 flex items-center justify-between shrink-0 shadow-sm"
         >
             <div className="flex items-center gap-3">
-                <div className="bg-indigo-600 text-white p-1.5 rounded-lg shadow-lg shadow-indigo-500/30">
+                <div className="bg-indigo-600 text-white p-1 rounded-lg shadow-lg shadow-indigo-500/30">
                     <Printer className="w-5 h-5" />
                 </div>
                 <div>
