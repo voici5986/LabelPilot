@@ -1,5 +1,6 @@
 import jsPDF from "jspdf";
-import { HelperLayoutConfig, calculateLabelLayout } from "./layoutMath";
+import { calculateLabelLayout } from "./layoutMath";
+import type { HelperLayoutConfig } from "./layoutMath";
 
 export async function generatePDF(config: HelperLayoutConfig, imageFile: File): Promise<void> {
     // 1. Calculate Layout

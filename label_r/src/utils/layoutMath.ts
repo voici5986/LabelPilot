@@ -62,7 +62,7 @@ export function calculateLabelLayout(config: HelperLayoutConfig): {
   const usableHeight = pageHeight - 2 * marginMm;
 
   if (usableWidth <= 0 || usableHeight <= 0) {
-     return { positions: [], labelWidth: 0, labelHeight: 0, pageWidth, pageHeight, error: "MARGIN_TOO_LARGE" };
+    return { positions: [], labelWidth: 0, labelHeight: 0, pageWidth, pageHeight, error: "MARGIN_TOO_LARGE" };
   }
 
   // 4. Calculate Label Dimensions

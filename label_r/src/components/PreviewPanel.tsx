@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { HelperLayoutConfig, calculateLabelLayout, A4_WIDTH_MM, A4_HEIGHT_MM } from "../utils/layoutMath";
+import { calculateLabelLayout, A4_WIDTH_MM, A4_HEIGHT_MM } from "../utils/layoutMath";
+import type { HelperLayoutConfig } from "../utils/layoutMath";
 import { Minus, Plus, Maximize, Printer } from "lucide-react";
+import { useI18n } from "../utils/i18n";
 
 interface PreviewPanelProps {
     config: HelperLayoutConfig;
@@ -8,6 +10,7 @@ interface PreviewPanelProps {
 }
 
 export function PreviewPanel({ config, imageFile }: PreviewPanelProps) {
+    const { t } = useI18n();
     const [scale, setScale] = useState(1);
     const [imageUrl, setImageUrl] = useState<string | null>(null);
 
@@ -77,7 +80,7 @@ export function PreviewPanel({ config, imageFile }: PreviewPanelProps) {
 
                         {/* Margins indicator (optional, maybe on hover) */}
                         {/* Watermark */}
-                        <div className="absolute bottom-4 right-4 text-[10px] text-slate-300 pointer-events-none">Preview Mode</div>
+                        <div className="absolute bottom-4 right-4 text-[10px] text-slate-300 pointer-events-none select-none">{t('preview_hint')}</div>
                     </div>
                 </div>
 
@@ -102,7 +105,7 @@ export function PreviewPanel({ config, imageFile }: PreviewPanelProps) {
                     <button
                         onClick={() => setScale(1)}
                         className="p-2 hover:bg-slate-100 rounded-full text-slate-600 transition-colors tooltip"
-                        title="Reset Zoom"
+                        title={t('zoom_reset')}
                     >
                         <Maximize className="w-4 h-4" />
                     </button>

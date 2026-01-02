@@ -1,6 +1,7 @@
 import { UploadCloud, Grid, RotateCw, File as FileIcon, FileMinus, Download } from "lucide-react";
-import { HelperLayoutConfig } from "../utils/layoutMath";
+import type { HelperLayoutConfig } from "../utils/layoutMath";
 import { motion } from "framer-motion";
+import { useI18n } from "../utils/i18n";
 
 interface ControlPanelProps {
     config: HelperLayoutConfig;
@@ -17,6 +18,7 @@ export function ControlPanel({
     selectedFileName,
     onGeneratePdf
 }: ControlPanelProps) {
+    const { t } = useI18n();
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -31,7 +33,7 @@ export function ControlPanel({
                 {/* File Selection */}
                 <div className="space-y-3">
                     <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                        <UploadCloud className="w-4 h-4" /> Source File
+                        <UploadCloud className="w-4 h-4" /> {t('file_group')}
                     </h2>
 
                     <div className="relative group cursor-pointer">
@@ -47,9 +49,9 @@ export function ControlPanel({
                                 <UploadCloud className={`w-6 h-6 ${selectedFileName ? 'text-indigo-600' : 'text-indigo-400'}`} />
                             </div>
                             <p className="text-sm font-medium text-slate-700 truncate max-w-full px-2">
-                                {selectedFileName || "Click to upload label image"}
+                                {selectedFileName || t('browse_btn')}
                             </p>
-                            <p className="text-xs text-slate-400 mt-1">Supports PNG, JPG</p>
+                            <p className="text-xs text-slate-400 mt-1">{t('browse_hint')}</p>
                         </div>
                     </div>
                 </div>
@@ -57,18 +59,18 @@ export function ControlPanel({
                 {/* Grid Settings */}
                 <div className="space-y-4">
                     <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                        <Grid className="w-4 h-4" /> Layout Settings
+                        <Grid className="w-4 h-4" /> {t('layout_group')}
                     </h2>
 
                     <div className="grid grid-cols-2 gap-4">
                         <NumberInput
-                            label="Rows"
+                            label={t('rows')}
                             value={config.rows}
                             onChange={(v) => onConfigChange({ rows: v })}
                             min={1} max={20}
                         />
                         <NumberInput
-                            label="Columns"
+                            label={t('cols')}
                             value={config.cols}
                             onChange={(v) => onConfigChange({ cols: v })}
                             min={1} max={10}
@@ -78,13 +80,13 @@ export function ControlPanel({
                     {/* Range Sliders */}
                     <div className="space-y-6 pt-2">
                         <RangeInput
-                            label="Margin"
+                            label={t('margin')}
                             value={config.marginMm}
                             onChange={(v) => onConfigChange({ marginMm: v })}
                             min={0} max={50} unit="mm"
                         />
                         <RangeInput
-                            label="Spacing"
+                            label={t('spacing')}
                             value={config.spacingMm}
                             onChange={(v) => onConfigChange({ spacingMm: v })}
                             min={0} max={30} unit="mm"
@@ -95,20 +97,20 @@ export function ControlPanel({
                 {/* Orientation */}
                 <div className="space-y-3">
                     <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                        <RotateCw className="w-4 h-4" /> Orientation
+                        <RotateCw className="w-4 h-4" /> {t('orientation')}
                     </h2>
                     <div className="bg-slate-100/50 p-1 rounded-xl flex border border-slate-200">
                         <button
                             onClick={() => onConfigChange({ orientation: 'portrait' })}
                             className={`flex-1 py-2 px-3 rounded-lg font-medium text-xs flex items-center justify-center gap-2 transition-all ${config.orientation === 'portrait' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
                         >
-                            <FileIcon className="w-4 h-4" /> Portrait
+                            <FileIcon className="w-4 h-4" /> {t('portrait')}
                         </button>
                         <button
                             onClick={() => onConfigChange({ orientation: 'landscape' })}
                             className={`flex-1 py-2 px-3 rounded-lg font-medium text-xs flex items-center justify-center gap-2 transition-all ${config.orientation === 'landscape' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
                         >
-                            <FileMinus className="w-4 h-4 transform rotate-90" /> Landscape
+                            <FileMinus className="w-4 h-4 transform rotate-90" /> {t('landscape')}
                         </button>
                     </div>
                 </div>
@@ -125,7 +127,7 @@ export function ControlPanel({
                     className={`w-full py-3.5 px-4 rounded-xl font-semibold text-sm shadow-lg flex items-center justify-center gap-2 transition-all ${selectedFileName ? 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-indigo-500/30' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
                 >
                     <Download className="w-5 h-5" />
-                    Generate PDF
+                    {t('generate_btn')}
                 </motion.button>
             </div>
         </aside>

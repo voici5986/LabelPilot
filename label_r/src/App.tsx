@@ -3,7 +3,7 @@ import { Layout } from "./components/Layout";
 import { Header } from "./components/Header";
 import { ControlPanel } from "./components/ControlPanel";
 import { PreviewPanel } from "./components/PreviewPanel";
-import { HelperLayoutConfig } from "./utils/layoutMath";
+import type { HelperLayoutConfig } from "./utils/layoutMath";
 import { generatePDF } from "./utils/pdfGenerator";
 
 // Default Config

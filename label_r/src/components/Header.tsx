@@ -1,7 +1,14 @@
 import { Printer, Globe, HelpCircle } from "lucide-react";
 import { motion } from "framer-motion";
+import { useI18n } from "../utils/i18n";
 
 export function Header() {
+    const { t, language, setLanguage } = useI18n();
+
+    const toggleLanguage = () => {
+        setLanguage(language === 'zh' ? 'th' : 'zh');
+    };
+
     return (
         <motion.header
             initial={{ y: -20, opacity: 0 }}
@@ -14,14 +21,19 @@ export function Header() {
                 </div>
                 <div>
                     <h1 className="font-bold text-lg bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-blue-500">
-                        Label Printer
+                        {t('main_title')}
                     </h1>
-                    <p className="text-[10px] text-slate-500 font-medium tracking-wide uppercase">Based on PyQt6</p>
+                    <p className="text-[10px] text-slate-500 font-medium tracking-wide uppercase">{t('subtitle')}</p>
                 </div>
             </div>
             <div className="flex items-center gap-2">
-                <button className="text-slate-500 hover:text-indigo-600 transition-colors p-2 rounded-full hover:bg-slate-100/50">
+                <button
+                    onClick={toggleLanguage}
+                    className="text-slate-500 hover:text-indigo-600 transition-colors p-2 rounded-full hover:bg-slate-100/50 flex items-center gap-1"
+                    title="Switch Language"
+                >
                     <Globe className="w-5 h-5" />
+                    <span className="text-xs font-bold uppercase">{language}</span>
                 </button>
                 <button className="text-slate-500 hover:text-indigo-600 transition-colors p-2 rounded-full hover:bg-slate-100/50">
                     <HelpCircle className="w-5 h-5" />
