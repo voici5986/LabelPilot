@@ -44,7 +44,7 @@ export function ControlPanel({
                             className="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer"
                         />
                         <div className={`absolute inset-0 bg-indigo-50/50 rounded-xl border-2 border-dashed transition-colors ${selectedFileName ? 'border-indigo-500 bg-indigo-50' : 'border-indigo-200 group-hover:border-indigo-400'}`}></div>
-                        <div className="relative flex flex-col items-center justify-center py-8 px-4 text-center pointer-events-none">
+                        <div className="relative flex flex-col items-center justify-center py-3 px-4 text-center pointer-events-none">
                             <div className="bg-white p-3 rounded-full shadow-sm mb-3 group-hover:scale-110 transition-transform duration-300">
                                 <UploadCloud className={`w-6 h-6 ${selectedFileName ? 'text-indigo-600' : 'text-indigo-400'}`} />
                             </div>

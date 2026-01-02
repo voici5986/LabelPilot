@@ -8,11 +8,11 @@ import { generatePDF } from "./utils/pdfGenerator";
 
 // Default Config
 const DEFAULT_CONFIG: HelperLayoutConfig = {
-  rows: 5,
-  cols: 2,
+  rows: 3,
+  cols: 3,
   marginMm: 10,
-  spacingMm: 5,
-  orientation: 'portrait',
+  spacingMm: 10,
+  orientation: 'landscape',
 };
 
 function App() {

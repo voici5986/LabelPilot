@@ -13,7 +13,7 @@ export function Header() {
         <motion.header
             initial={{ y: -20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            className="h-16 bg-white/80 backdrop-blur-md border-b border-white/50 z-20 px-6 flex items-center justify-between shrink-0 shadow-sm"
+            className="h-12 bg-white/80 backdrop-blur-md border-b border-white/50 z-20 px-6 flex items-center justify-between shrink-0 shadow-sm"
         >
             <div className="flex items-center gap-3">
                 <div className="bg-indigo-600 text-white p-2 rounded-lg shadow-lg shadow-indigo-500/30">
@@ -23,7 +23,6 @@ export function Header() {
                     <h1 className="font-bold text-lg bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-blue-500">
                         {t('main_title')}
                     </h1>
-                    <p className="text-[10px] text-slate-500 font-medium tracking-wide uppercase">{t('subtitle')}</p>
                 </div>
             </div>
             <div className="flex items-center gap-2">
