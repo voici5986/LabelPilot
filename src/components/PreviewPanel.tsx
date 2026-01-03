@@ -3,7 +3,7 @@ import { calculateLabelLayout, A4_WIDTH_MM, A4_HEIGHT_MM } from "../utils/layout
 import type { HelperLayoutConfig } from "../utils/layoutMath";
 import { Maximize } from "lucide-react";
 import { useI18n } from "../utils/i18n";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface PreviewPanelProps {
     config: HelperLayoutConfig;
@@ -129,10 +129,14 @@ export function PreviewPanel({ config, imageFile }: PreviewPanelProps) {
                         animate={{
                             width: `${paperWidthMm}mm`,
                             height: `${paperHeightMm}mm`,
-                            scale: scale * baseFitScale
+                            scale: scale * baseFitScale,
+                            // 动态阴影逻辑: 放大时阴影变淡弥散, 缩小时变深利落
+                            boxShadow: isDragging
+                                ? `0 ${20 / scale}px ${50 / scale}px -12px rgba(0,0,0,${0.1 + (1 - scale / 3) * 0.1})`
+                                : "0 20px 50px -12px rgba(0,0,0,0.15)"
                         }}
-                        transition={isDragging ? { duration: 0 } : { duration: 0.4, ease: "easeInOut" }}
-                        className="bg-white shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] relative shrink-0"
+                        transition={isDragging ? { duration: 0 } : { type: "spring", stiffness: 300, damping: 30 }}
+                        className="bg-white relative shrink-0"
                         style={{ transformOrigin: 'top center', marginTop: '10px', originY: 0, originX: 0.5 }}
                     >
                         {layout.positions.map((pos, idx) => (
@@ -163,25 +167,36 @@ export function PreviewPanel({ config, imageFile }: PreviewPanelProps) {
                     onMouseLeave={() => setIsHovered(false)}
                 >
                     {/* Reset Button */}
-                    <button
+                    <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
                         onClick={() => setScale(1)}
                         className="w-8 h-8 flex items-center justify-center hover:bg-white rounded-lg text-slate-500 hover:text-indigo-600 transition-all shadow-sm border border-transparent hover:border-slate-200 bg-white/50"
                         title={t('zoom_reset')}
                     >
                         <Maximize className="w-4 h-4" />
-                    </button>
+                    </motion.button>
 
-                    <div className="bg-white/60 backdrop-blur-md rounded-lg p-1.5 shadow-md border border-white/50 flex flex-col items-center h-40 w-8 relative">
-                        {/* Tooltip (Centered to THIS container height) */}
-                        {(isHovered || isDragging) && (
-                            <motion.div
-                                initial={{ opacity: 0, x: -10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                className="absolute left-12 top-1/2 -translate-y-1/2 bg-slate-800 text-white text-[14px] px-2 py-1 rounded shadow-xl whitespace-nowrap pointer-events-none font-bold z-30"
-                            >
-                                {Math.round(scale * 100)}%
-                            </motion.div>
-                        )}
+                    <motion.div
+                        animate={{
+                            backgroundColor: isDragging ? "rgba(255, 255, 255, 0.9)" : "rgba(255, 255, 255, 0.6)",
+                            boxShadow: isDragging ? "0 4px 12px rgba(0,0,0,0.1)" : "0 4px 6px rgba(0,0,0,0.05)"
+                        }}
+                        className="backdrop-blur-md rounded-lg p-1.5 border border-white/50 flex flex-col items-center h-40 w-8 relative"
+                    >
+                        {/* Tooltip (Enhanced popup animation) */}
+                        <AnimatePresence>
+                            {(isHovered || isDragging) && (
+                                <motion.div
+                                    initial={{ opacity: 0, x: -5, scale: 0.8 }}
+                                    animate={{ opacity: 1, x: 0, scale: 1 }}
+                                    exit={{ opacity: 0, x: -5, scale: 0.8 }}
+                                    className="absolute left-12 top-1/2 -translate-y-1/2 bg-slate-800 text-white text-[14px] px-2 py-1 rounded shadow-xl whitespace-nowrap pointer-events-none font-bold z-30 flex items-center gap-1.5"
+                                >
+                                    {Math.round(scale * 100)}%
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
 
                         <div
                             ref={sliderTrackRef}
@@ -191,12 +206,15 @@ export function PreviewPanel({ config, imageFile }: PreviewPanelProps) {
                         >
                             <motion.div
                                 className="absolute left-1/2 -translate-x-1/2 w-4 h-4 bg-white border-2 border-indigo-500 rounded-lg shadow-md pointer-events-none"
-                                animate={{ bottom: `${getThumbBottom()}%` }}
+                                animate={{
+                                    bottom: `${getThumbBottom()}%`,
+                                    scale: Math.abs(scale - 1) < 0.01 ? 1.1 : 1
+                                }}
                                 transition={isDragging ? { duration: 0 } : { type: "spring", stiffness: 300, damping: 30 }}
                                 style={{ marginBottom: '-8px' }}
                             />
                         </div>
-                    </div>
+                    </motion.div>
                 </div>
             </div>
         </section>
