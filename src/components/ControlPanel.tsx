@@ -53,20 +53,22 @@ export function ControlPanel({
                             className="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer"
                         />
                         <div className={`absolute inset-0 bg-indigo-50/50 rounded-lg border-2 border-dashed transition-colors ${selectedFileName ? 'border-brand-primary bg-indigo-50' : 'border-indigo-200 group-hover:border-indigo-400'}`}></div>
-                        <div className="relative flex flex-col items-center justify-center py-5 px-4 text-center pointer-events-none">
-                            <div className="bg-white p-2.5 rounded-full shadow-sm mb-2 group-hover:scale-110 transition-transform duration-300">
-                                <UploadCloud className={`w-5 h-5 ${selectedFileName ? 'text-brand-primary' : 'text-indigo-400'}`} />
+                        <div className="relative flex flex-row items-center gap-0 py-3 px-5 text-left pointer-events-none">
+                            <div className="bg-white p-2 rounded-full shadow-sm flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+                                <UploadCloud className={`w-7 h-7 ${selectedFileName ? 'text-brand-primary' : 'text-indigo-400'}`} />
                             </div>
-                            <p className="text-xs font-bold text-slate-700 truncate max-w-full px-2">
-                                {selectedFileName || t('browse_btn')}
-                            </p>
-                            {!selectedFileName && <p className="text-[10px] text-slate-400 mt-0.5">{t('browse_hint')}</p>}
+                            <div className="flex-1 min-w-0 flex flex-col items-center">
+                                <p className="text-sm font-bold text-slate-700 truncate w-full text-center">
+                                    {selectedFileName || t('browse_btn')}
+                                </p>
+                                {!selectedFileName && <p className="text-[12px] text-slate-400 text-center">{t('browse_hint')}</p>}
+                            </div>
                         </div>
                     </div>
 
                     {/* Thumbnail Preview Area */}
                     {imageItems.length > 0 && (
-                        <div className="flex gap-3 overflow-x-auto py-3 px-1 scrollbar-hide">
+                        <div className="flex gap-1 overflow-x-auto py-3 px-1 scrollbar-hide">
                             {imageItems.map((item) => (
                                 <ThumbnailItem
                                     key={item.id}
@@ -222,7 +224,7 @@ function ThumbnailItem({ item, onCountChange }: { item: ImageItem; onCountChange
         <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="flex-shrink-0 w-16 h-16 rounded-lg border border-slate-200 bg-white shadow-sm relative group transition-all hover:border-brand-primary"
+            className="flex-shrink-0 w-20 h-20 rounded-lg border border-slate-200 bg-white shadow-sm relative group transition-all hover:border-brand-primary"
             title={item.file.name}
         >
             {url && <img src={url} alt="" className="w-full h-full object-contain p-1" />}
@@ -232,10 +234,10 @@ function ThumbnailItem({ item, onCountChange }: { item: ImageItem; onCountChange
                 <input
                     type="number"
                     min="1"
-                    max="999"
+                    max="99"
                     value={item.count}
                     onChange={handleCountChange}
-                    className="w-10 h-6 bg-transparent text-white text-[10px] font-bold text-center focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    className="w-6 h-4 bg-transparent text-white text-[14px] font-bold text-center focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
             </div>
         </motion.div>

@@ -22,6 +22,7 @@ export const translations = {
     zoom_reset: 'Reset Zoom',
     gen_success: 'PDF Generated! Downloading...',
     gen_failed: 'Failed to generate PDF',
+    files_selected: '{n} images selected',
   },
   zh: {
     window_title: 'LabelPilot',
@@ -41,6 +42,7 @@ export const translations = {
     zoom_reset: '重置缩放',
     gen_success: 'PDF 已生成！正在开始下载...',
     gen_failed: '生成 PDF 失败',
+    files_selected: '已选择 {n} 张图片',
   }
 };
 
@@ -49,7 +51,7 @@ type Translations = typeof translations.zh;
 interface I18nContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
-  t: (key: keyof Translations) => string;
+  t: (key: keyof Translations, variables?: Record<string, string | number>) => string;
 }
 
 const I18nContext = createContext<I18nContextType | null>(null);
@@ -64,8 +66,14 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('label_printer_lang', lang);
   };
 
-  const t = (key: keyof Translations) => {
-    return translations[language][key] || translations.zh[key] || key;
+  const t = (key: keyof Translations, variables?: Record<string, string | number>) => {
+    let str = translations[language][key] || translations.zh[key] || key;
+    if (variables) {
+      Object.entries(variables).forEach(([k, v]) => {
+        str = str.replace(`{${k}}`, String(v));
+      });
+    }
+    return str;
   };
 
   useEffect(() => {
