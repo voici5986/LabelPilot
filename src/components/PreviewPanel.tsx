@@ -76,9 +76,16 @@ export function PreviewPanel({ config, imageFile }: PreviewPanelProps) {
         let pct = 1 - (clientY - rect.top) / rect.height;
         pct = Math.max(0, Math.min(1, pct));
 
-        const minScale = 0.2;
-        const maxScale = 3.0;
-        setScale(minScale + (maxScale - minScale) * pct);
+        // 分段非线性映射: 100% (1.0) 位于中心 (0.5)
+        // 下平段: 0% -> 50% 进度 对应 50% -> 100% 缩放 (0.5 -> 1.0)
+        // 上平段: 50% -> 100% 进度 对应 100% -> 300% 缩放 (1.0 -> 3.0)
+        let newScale;
+        if (pct <= 0.5) {
+            newScale = 0.5 + (pct / 0.5) * 0.5;
+        } else {
+            newScale = 1.0 + ((pct - 0.5) / 0.5) * 2.0;
+        }
+        setScale(newScale);
     };
 
     useEffect(() => {
@@ -96,6 +103,17 @@ export function PreviewPanel({ config, imageFile }: PreviewPanelProps) {
             window.removeEventListener('touchend', onUp);
         };
     }, [isDragging]);
+
+    // 计算滑块位置的反向映射
+    const getThumbBottom = () => {
+        if (scale <= 1.0) {
+            // Scale 0.5 to 1.0 maps to bottom 0% to 50%
+            return ((scale - 0.5) / 0.5) * 50;
+        } else {
+            // Scale 1.0 to 3.0 maps to bottom 50% to 100%
+            return 50 + ((scale - 1.0) / 2.0) * 50;
+        }
+    };
 
     return (
         <section className="flex-1 flex flex-col p-2 pl-0 h-full overflow-hidden">
@@ -140,29 +158,31 @@ export function PreviewPanel({ config, imageFile }: PreviewPanelProps) {
 
                 {/* Vertical Zoom Controls */}
                 <div
-                    className="absolute bottom-4 left-4 flex flex-col items-center gap-2 z-20"
+                    className="absolute bottom-2 left-2 flex flex-col items-center gap-1 z-20"
                     onMouseEnter={() => setIsHovered(true)}
                     onMouseLeave={() => setIsHovered(false)}
                 >
-                    {(isHovered || isDragging) && (
-                        <motion.div
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            className="absolute left-12 top-1/2 -translate-y-1/2 bg-slate-800 text-white text-[10px] px-2 py-1 rounded shadow-xl whitespace-nowrap pointer-events-none font-bold z-30"
-                        >
-                            {Math.round(scale * 100)}%
-                        </motion.div>
-                    )}
-
+                    {/* Reset Button */}
                     <button
                         onClick={() => setScale(1)}
-                        className="p-1.5 hover:bg-white rounded-lg text-slate-500 hover:text-indigo-600 transition-all shadow-sm border border-transparent hover:border-slate-200 bg-white/50"
+                        className="w-8 h-8 flex items-center justify-center hover:bg-white rounded-lg text-slate-500 hover:text-indigo-600 transition-all shadow-sm border border-transparent hover:border-slate-200 bg-white/50"
                         title={t('zoom_reset')}
                     >
                         <Maximize className="w-4 h-4" />
                     </button>
 
-                    <div className="bg-white/60 backdrop-blur-md rounded-lg p-1.5 shadow-md border border-white/50 flex flex-col items-center h-32 w-8">
+                    <div className="bg-white/60 backdrop-blur-md rounded-lg p-1.5 shadow-md border border-white/50 flex flex-col items-center h-40 w-8 relative">
+                        {/* Tooltip (Centered to THIS container height) */}
+                        {(isHovered || isDragging) && (
+                            <motion.div
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                className="absolute left-12 top-1/2 -translate-y-1/2 bg-slate-800 text-white text-[14px] px-2 py-1 rounded shadow-xl whitespace-nowrap pointer-events-none font-bold z-30"
+                            >
+                                {Math.round(scale * 100)}%
+                            </motion.div>
+                        )}
+
                         <div
                             ref={sliderTrackRef}
                             className="w-1.5 h-full bg-slate-200/50 rounded-lg relative cursor-ns-resize"
@@ -171,7 +191,7 @@ export function PreviewPanel({ config, imageFile }: PreviewPanelProps) {
                         >
                             <motion.div
                                 className="absolute left-1/2 -translate-x-1/2 w-4 h-4 bg-white border-2 border-indigo-500 rounded-lg shadow-md pointer-events-none"
-                                animate={{ bottom: `${((scale - 0.2) / (3.0 - 0.2)) * 100}%` }}
+                                animate={{ bottom: `${getThumbBottom()}%` }}
                                 transition={isDragging ? { duration: 0 } : { type: "spring", stiffness: 300, damping: 30 }}
                                 style={{ marginBottom: '-8px' }}
                             />
