@@ -197,28 +197,35 @@ export function ControlPanel({
                     whileTap={selectedFileName && genStatus === 'idle' ? { scale: 0.98 } : {}}
                     initial={false}
                     animate={
-                        genStatus === 'success' ? { backgroundColor: "#22c55e" } :
-                            genStatus === 'error' ? { backgroundColor: "#ef4444" } :
-                                selectedFileName ? {
-                                    opacity: 1,
-                                    scale: 1,
-                                    filter: "grayscale(0%)",
-                                    boxShadow: "0 4px 6px -1px rgba(79, 70, 229, 0.1), 0 2px 4px -1px rgba(79, 70, 229, 0.06)"
-                                } : {
-                                    opacity: 0.7,
-                                    scale: 1,
-                                    filter: "grayscale(100%)",
-                                    boxShadow: "none"
-                                }
+                        (selectedFileName && genStatus === 'idle') || genStatus === 'success' || genStatus === 'error' ? {
+                            opacity: 1,
+                            scale: 1,
+                            filter: "grayscale(0%)",
+                            boxShadow: genStatus === 'success'
+                                ? "0 10px 25px -5px rgba(34, 197, 94, 0.4)"
+                                : genStatus === 'error'
+                                    ? "0 10px 25px -5px rgba(239, 68, 68, 0.4)"
+                                    : "0 4px 6px -1px rgba(79, 70, 229, 0.1), 0 2px 4px -1px rgba(79, 70, 229, 0.06)"
+                        } : {
+                            opacity: 0.7,
+                            scale: 1,
+                            filter: "grayscale(100%)",
+                            boxShadow: "none"
+                        }
                     }
                     transition={{ type: "spring", stiffness: 400, damping: 25 }}
                     onClick={onGeneratePdf}
                     disabled={!selectedFileName || genStatus !== 'idle'}
-                    className={`w-full py-3.5 px-4 rounded-lg font-semibold text-sm flex items-center justify-center gap-2 relative overflow-hidden group 
-                        ${selectedFileName && genStatus === 'idle' ? 'bg-gradient-to-r from-brand-primary to-brand-secondary text-white' :
-                            genStatus === 'generating' ? 'bg-slate-100 text-slate-400' :
-                                (genStatus === 'success' || genStatus === 'error') ? 'text-white' :
-                                    'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
+                    className={`w-full py-3.5 px-4 rounded-lg font-semibold text-sm flex items-center justify-center gap-2 relative overflow-hidden group transition-colors duration-300
+                        ${genStatus === 'success'
+                            ? 'bg-green-500 text-white'
+                            : genStatus === 'error'
+                                ? 'bg-red-500 text-white'
+                                : selectedFileName && genStatus === 'idle'
+                                    ? 'bg-gradient-to-r from-brand-primary to-brand-secondary text-white'
+                                    : genStatus === 'generating'
+                                        ? 'bg-slate-100 text-slate-400 border border-slate-200'
+                                        : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
                 >
                     {/* Progress Background */}
                     {genStatus === 'generating' && (
@@ -335,4 +342,3 @@ function ThumbnailItem({ item, onCountChange }: { item: ImageItem; onCountChange
         </motion.div>
     );
 }
-
