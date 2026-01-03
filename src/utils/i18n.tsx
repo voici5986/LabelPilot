@@ -23,6 +23,8 @@ export const translations = {
     gen_success: 'PDF Generated! Downloading...',
     gen_failed: 'Failed to generate PDF',
     files_selected: '{n} images selected',
+    limit_reached: 'Max 10 images allowed. Only the first 10 were loaded.',
+    generating_pdf: 'Generating PDF... {p}%',
   },
   zh: {
     window_title: 'LabelPilot',
@@ -43,6 +45,8 @@ export const translations = {
     gen_success: 'PDF 已生成！正在开始下载...',
     gen_failed: '生成 PDF 失败',
     files_selected: '已选择 {n} 张图片',
+    limit_reached: '单次最多支持 10 张图片，已为您加载前 10 张。',
+    generating_pdf: '正在生成 PDF... {p}%',
   }
 };
 

@@ -1,97 +1,55 @@
-import jsPDF from "jspdf";
-import { calculateLabelLayout, resolveItemAtSlot } from "./layoutMath";
 import type { HelperLayoutConfig } from "./layoutMath";
 import type { ImageItem } from "../App";
 
-export async function generatePDF(config: HelperLayoutConfig, imageItems: ImageItem[]): Promise<void> {
-    // 1. Calculate Layout
-    const layout = calculateLabelLayout(config);
-    if (layout.error) {
-        throw new Error(layout.error);
-    }
-
-    // 2. Load all images with their settings
-    const loadedImages = await Promise.all(imageItems.map(async (item) => {
-        const data = await fileToDataURL(item.file);
-        const props = await getImageProperties(data);
-        return { ...item, data, ...props };
-    }));
-
-    if (loadedImages.length === 0) {
-        throw new Error("No images provided");
-    }
-
-    // 3. Create PDF
-    const pdf = new jsPDF({
-        orientation: config.orientation,
-        unit: "mm",
-        format: "a4",
-    });
-
-    // 4. Draw Images
-    layout.positions.forEach((pos, idx) => {
-        // 统一使用“精确分配”逻辑
-        const img = resolveItemAtSlot(idx, loadedImages);
-
-        if (!img) return;
-
-        // Calculate aspect ratio fit (Contain)
-        const scale = Math.min(pos.width / img.width, pos.height / img.height);
-
-        const w = img.width * scale;
-        const h = img.height * scale;
-
-        // Center the image in the slot
-        const x = pos.x + (pos.width - w) / 2;
-        const y = pos.y + (pos.height - h) / 2;
-
-        pdf.addImage(
-            img.data,
-            img.format,
-            x,
-            y,
-            w,
-            h,
-            undefined,
-            'FAST'
-        );
-    });
-
-    // 5. Save
-    const dateStr = new Date().toISOString().slice(0, 19).replace(/[:T]/g, ""); // YYYYMMDDHHMMSS
-    pdf.save(`label_${dateStr}.pdf`);
-}
-
 /**
- * Helper to convert File to Base64 DataURL
+ * Generates PDF using a Web Worker to avoid blocking the main thread.
+ * @param config Layout configuration
+ * @param imageItems List of images with their settings
+ * @param onProgress Callback for generation progress (0-100)
  */
-function fileToDataURL(file: File): Promise<string> {
+export async function generatePDF(
+    config: HelperLayoutConfig,
+    imageItems: ImageItem[],
+    onProgress?: (progress: number) => void
+): Promise<void> {
     return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-    });
-}
+        // Vite handles the worker URL automatically
+        const worker = new Worker(new URL('./pdf.worker.ts', import.meta.url), {
+            type: 'module'
+        });
 
-/**
- * Helper to get image format (JPEG/PNG) and dimensions
- */
-function getImageProperties(dataUrl: string): Promise<{ format: string; width: number; height: number }> {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => {
-            let format = "PNG";
-            if (dataUrl.startsWith("data:image/jpeg")) {
-                format = "JPEG";
+        worker.onmessage = (e) => {
+            const { type, data } = e.data;
+
+            if (type === 'progress') {
+                onProgress?.(data);
+            } else if (type === 'complete') {
+                const blob = new Blob([data], { type: 'application/pdf' });
+                const url = URL.createObjectURL(blob);
+
+                const link = document.createElement('a');
+                const dateStr = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "");
+                link.href = url;
+                link.download = `labelpilot_${dateStr}.pdf`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                URL.revokeObjectURL(url);
+                worker.terminate();
+                resolve();
+            } else if (type === 'error') {
+                worker.terminate();
+                reject(new Error(data));
             }
-            resolve({
-                format,
-                width: img.width,
-                height: img.height
-            });
         };
-        img.onerror = reject;
-        img.src = dataUrl;
+
+        worker.onerror = (err) => {
+            worker.terminate();
+            reject(err);
+        };
+
+        // Send data to worker (Files are transferable, but here we just pass the objects)
+        worker.postMessage({ config, imageItems });
     });
 }

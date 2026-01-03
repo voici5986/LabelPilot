@@ -48,6 +48,9 @@ function App() {
     visible: false
   });
 
+  const [genStatus, setGenStatus] = useState<'idle' | 'generating' | 'success' | 'error'>('idle');
+  const [genProgress, setGenProgress] = useState(0);
+
   const showToast = (message: string, type: ToastType) => {
     setToast({ message, type, visible: true });
   };
@@ -61,16 +64,37 @@ function App() {
     localStorage.setItem("label_printer_config", JSON.stringify(config));
   }, [config]);
 
+  // 动态行列限制与自动修正
+  useEffect(() => {
+    const isPortrait = config.orientation === 'portrait';
+    const maxR = isPortrait ? 20 : 10;
+    const maxC = isPortrait ? 10 : 20;
+
+    if (config.rows > maxR || config.cols > maxC) {
+      setConfig(prev => ({
+        ...prev,
+        rows: Math.min(prev.rows, maxR),
+        cols: Math.min(prev.cols, maxC)
+      }));
+    }
+  }, [config.orientation]);
+
   // Handlers
   const handleConfigChange = (updates: Partial<HelperLayoutConfig>) => {
     setConfig(prev => ({ ...prev, ...updates }));
   };
 
   const handleFilesSelect = (files: File[]) => {
-    const totalSlots = config.rows * config.cols;
-    const numFiles = files.length;
+    let FilesToProcess = files;
+    if (files.length > 10) {
+      showToast(t('limit_reached'), 'warning');
+      FilesToProcess = files.slice(0, 10);
+    }
 
-    const newItems: ImageItem[] = files.map((file, idx) => {
+    const totalSlots = config.rows * config.cols;
+    const numFiles = FilesToProcess.length;
+
+    const newItems: ImageItem[] = FilesToProcess.map((file, idx) => {
       let initialCount = 1;
 
       if (numFiles === 1) {
@@ -103,11 +127,17 @@ function App() {
 
   const handleGenerateValues = async () => {
     if (imageItems.length === 0) return;
+    setGenStatus('generating');
+    setGenProgress(0);
     try {
-      await generatePDF(config, imageItems);
-      showToast(t('gen_success'), 'success');
+      await generatePDF(config, imageItems, (p: number) => setGenProgress(p));
+      setGenStatus('success');
+      // Auto reset after 2.5s
+      setTimeout(() => setGenStatus('idle'), 2500);
     } catch (e) {
+      setGenStatus('error');
       showToast(t('gen_failed') + ": " + (e as Error).message, 'error');
+      setTimeout(() => setGenStatus('idle'), 3000);
     }
   };
 
@@ -124,6 +154,10 @@ function App() {
           onItemCountChange={handleItemCountChange}
           selectedFileName={selectedFileName}
           onGeneratePdf={handleGenerateValues}
+          genStatus={genStatus}
+          genProgress={genProgress}
+          maxRows={config.orientation === 'portrait' ? 20 : 10}
+          maxCols={config.orientation === 'portrait' ? 10 : 20}
         />
         <PreviewPanel
           config={config}
