@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { UploadCloud, Grid, Layout, File as FileIcon, FileMinus, Download } from "lucide-react";
 import type { HelperLayoutConfig } from "../utils/layoutMath";
-import { motion } from "framer-motion";
+import { motion, Reorder } from "framer-motion";
 import { useI18n } from "../utils/i18n";
 import { NumberInput } from "./NumberInput";
 
@@ -12,6 +12,7 @@ interface ControlPanelProps {
     onConfigChange: (updates: Partial<HelperLayoutConfig>) => void;
     onFilesSelect: (files: File[]) => void;
     imageItems: ImageItem[];
+    onReorder: (newItems: ImageItem[]) => void;
     onItemCountChange: (id: string, count: number) => void;
     selectedFileName?: string;
     onGeneratePdf: () => void;
@@ -22,6 +23,7 @@ export function ControlPanel({
     onConfigChange,
     onFilesSelect,
     imageItems,
+    onReorder,
     onItemCountChange,
     selectedFileName,
     onGeneratePdf
@@ -68,15 +70,25 @@ export function ControlPanel({
 
                     {/* Thumbnail Preview Area */}
                     {imageItems.length > 0 && (
-                        <div className="flex gap-1 overflow-x-auto py-3 px-1 scrollbar-hide">
+                        <Reorder.Group
+                            axis="x"
+                            values={imageItems}
+                            onReorder={onReorder}
+                            className="flex gap-1 overflow-x-auto py-3 px-1 scrollbar-hide"
+                        >
                             {imageItems.map((item) => (
-                                <ThumbnailItem
+                                <Reorder.Item
                                     key={item.id}
-                                    item={item}
-                                    onCountChange={(count) => onItemCountChange(item.id, count)}
-                                />
+                                    value={item}
+                                    dragListener={true} // Enable dragging on the item itself
+                                >
+                                    <ThumbnailItem
+                                        item={item}
+                                        onCountChange={(count) => onItemCountChange(item.id, count)}
+                                    />
+                                </Reorder.Item>
                             ))}
-                        </div>
+                        </Reorder.Group>
                     )}
                 </div>
 
@@ -227,7 +239,14 @@ function ThumbnailItem({ item, onCountChange }: { item: ImageItem; onCountChange
             className="flex-shrink-0 w-20 h-20 rounded-lg border border-slate-200 bg-white shadow-sm relative group transition-all hover:border-brand-primary"
             title={item.file.name}
         >
-            {url && <img src={url} alt="" className="w-full h-full object-contain p-1" />}
+            {url && (
+                <img
+                    src={url}
+                    alt=""
+                    className="w-full h-full object-contain p-1 pointer-events-none"
+                    draggable="false"
+                />
+            )}
 
             {/* Count Input Overlay */}
             <div className="absolute -bottom-1 -right-1 flex items-center bg-brand-primary rounded-md shadow-sm border border-white shadow-brand-primary/20">

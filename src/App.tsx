@@ -120,6 +120,7 @@ function App() {
           onConfigChange={handleConfigChange}
           onFilesSelect={handleFilesSelect}
           imageItems={imageItems}
+          onReorder={setImageItems}
           onItemCountChange={handleItemCountChange}
           selectedFileName={selectedFileName}
           onGeneratePdf={handleGenerateValues}
