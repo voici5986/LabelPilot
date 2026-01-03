@@ -47,6 +47,7 @@ export function ThumbnailItem({ item, onCountChange }: ThumbnailItemProps) {
                     max="999"
                     value={item.count}
                     onChange={handleCountChange}
+                    onFocus={(e) => e.target.select()}
                     className="w-6 h-4 bg-transparent text-white text-[14px] font-bold text-center focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     onClick={(e) => e.stopPropagation()}
                 />

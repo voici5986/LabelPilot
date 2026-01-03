@@ -98,6 +98,7 @@ export function NumberInput({
                     value={localVal}
                     onChange={handleChange}
                     onBlur={handleBlur}
+                    onFocus={(e) => (e.target as HTMLInputElement).select()}
                     className="w-full bg-white/50 border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary font-semibold text-slate-700 transition-all shadow-sm"
                 />
                 <div className="absolute right-0 top-0 h-full flex flex-col border-l border-slate-200">
