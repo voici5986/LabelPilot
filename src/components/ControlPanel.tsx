@@ -28,7 +28,7 @@ export function ControlPanel({
     };
 
     return (
-        <aside className="w-80 bg-white/80 backdrop-blur-md border border-white/50 border-r-0 flex flex-col z-10 m-2 rounded-2xl shadow-sm">
+        <aside className="w-80 bg-white/80 backdrop-blur-md border border-white/50 border-r-0 flex flex-col z-10 m-2 rounded-lg shadow-sm">
             <div className="p-6 overflow-y-auto flex-1 space-y-8 scrollbar-hide">
 
                 {/* File Selection */}
@@ -44,7 +44,7 @@ export function ControlPanel({
                             onChange={handleFileChange}
                             className="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer"
                         />
-                        <div className={`absolute inset-0 bg-indigo-50/50 rounded-xl border-2 border-dashed transition-colors ${selectedFileName ? 'border-indigo-500 bg-indigo-50' : 'border-indigo-200 group-hover:border-indigo-400'}`}></div>
+                        <div className={`absolute inset-0 bg-indigo-50/50 rounded-lg border-2 border-dashed transition-colors ${selectedFileName ? 'border-indigo-500 bg-indigo-50' : 'border-indigo-200 group-hover:border-indigo-400'}`}></div>
                         <div className="relative flex flex-col items-center justify-center py-6 px-4 text-center pointer-events-none">
                             <div className="bg-white p-3 rounded-full shadow-sm mb-3 group-hover:scale-110 transition-transform duration-300">
                                 <UploadCloud className={`w-6 h-6 ${selectedFileName ? 'text-indigo-600' : 'text-indigo-400'}`} />
@@ -106,7 +106,7 @@ export function ControlPanel({
                     <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
                         <Layout className="w-4 h-4" /> {t('orientation')}
                     </h2>
-                    <div className="bg-slate-100/50 p-1 rounded-xl flex border border-slate-200 relative isolate">
+                    <div className="bg-slate-100/50 p-1 rounded-lg flex border border-slate-200 relative isolate">
                         <button
                             onClick={() => onConfigChange({ orientation: 'portrait' })}
                             className={`flex-1 py-2 px-3 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-colors relative z-0 ${config.orientation === 'portrait' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
@@ -139,7 +139,7 @@ export function ControlPanel({
             </div>
 
             {/* Action Button */}
-            <div className="p-6 border-t border-white/50 bg-white/40 backdrop-blur-sm rounded-b-2xl overflow-hidden relative">
+            <div className="p-6 border-t border-white/50 bg-white/40 backdrop-blur-sm rounded-lg overflow-hidden relative">
                 {/* Shine effect container */}
                 <motion.div
                     className="absolute top-0 left-0 w-full h-full pointer-events-none"
@@ -167,7 +167,7 @@ export function ControlPanel({
                     transition={{ type: "spring", stiffness: 400, damping: 25 }}
                     onClick={onGeneratePdf}
                     disabled={!selectedFileName}
-                    className={`w-full py-3.5 px-4 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 relative overflow-hidden group ${selectedFileName ? 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
+                    className={`w-full py-3.5 px-4 rounded-lg font-semibold text-sm flex items-center justify-center gap-2 relative overflow-hidden group ${selectedFileName ? 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
                 >
                     {/* Shimmer overlay on hover */}
                     <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
@@ -287,13 +287,13 @@ function NumberInput({ label, value, onChange, min, max, isInteger, decimalPlace
                     value={localVal}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    className="w-full bg-white/50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-semibold text-slate-700 transition-all shadow-sm"
+                    className="w-full bg-white/50 border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-semibold text-slate-700 transition-all shadow-sm"
                 />
                 <div className="absolute right-0 top-0 h-full flex flex-col border-l border-slate-200">
-                    <button onClick={increment} className="flex-1 px-2 hover:bg-slate-100 text-slate-400 hover:text-indigo-600 rounded-tr-xl flex items-center justify-center group">
+                    <button onClick={increment} className="flex-1 px-2 hover:bg-slate-100 text-slate-400 hover:text-indigo-600 rounded-lg flex items-center justify-center group">
                         <ChevronUp className="w-3 h-3 group-hover:scale-110 transition-transform" />
                     </button>
-                    <button onClick={decrement} className="flex-1 px-2 hover:bg-slate-100 text-slate-400 hover:text-indigo-600 rounded-br-xl flex items-center justify-center group">
+                    <button onClick={decrement} className="flex-1 px-2 hover:bg-slate-100 text-slate-400 hover:text-indigo-600 rounded-lg flex items-center justify-center group">
                         <ChevronDown className="w-3 h-3 group-hover:scale-110 transition-transform" />
                     </button>
                 </div>

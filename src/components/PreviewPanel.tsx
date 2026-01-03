@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, useRef } from "react";
 import { calculateLabelLayout, A4_WIDTH_MM, A4_HEIGHT_MM } from "../utils/layoutMath";
 import type { HelperLayoutConfig } from "../utils/layoutMath";
-import { Minus, Plus, Maximize } from "lucide-react";
+import { Maximize } from "lucide-react";
 import { useI18n } from "../utils/i18n";
 import { motion } from "framer-motion";
 
@@ -13,19 +13,22 @@ interface PreviewPanelProps {
 export function PreviewPanel({ config, imageFile }: PreviewPanelProps) {
     const { t } = useI18n();
     const [scale, setScale] = useState(1);
-    const [baseFitScale, setBaseFitScale] = useState(0.8); // 默认保底比例
+    const [baseFitScale, setBaseFitScale] = useState(0.8);
     const [imageUrl, setImageUrl] = useState<string | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // 计算自动缩放比例，使 A4 纸适配屏幕
+    // Zoom control states
+    const [isDragging, setIsDragging] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
+    const sliderTrackRef = useRef<HTMLDivElement>(null);
+
+    // 计算自动缩放比例
     useEffect(() => {
         const updateFitScale = () => {
             if (!containerRef.current) return;
-
-            // 定义边距常量
-            const TOP_GAP = 10;    // 用户已改为 10px
-            const BOTTOM_GAP = 10; // 底部空间缩小，因为控制条移走了
-            const HORIZONTAL_GAP = 20; // 左右 32px (px-4)
+            const TOP_GAP = 10;
+            const BOTTOM_GAP = 10;
+            const HORIZONTAL_GAP = 20;
 
             const containerW = containerRef.current.clientWidth - HORIZONTAL_GAP;
             const containerH = containerRef.current.clientHeight - (TOP_GAP + BOTTOM_GAP);
@@ -34,18 +37,14 @@ export function PreviewPanel({ config, imageFile }: PreviewPanelProps) {
             const paperWidthMm = isPortrait ? A4_WIDTH_MM : A4_HEIGHT_MM;
             const paperHeightMm = isPortrait ? A4_HEIGHT_MM : A4_WIDTH_MM;
 
-            // 浏览器中 1mm 约等于 3.78px (96 DPI)
             const mmToPx = 3.78;
             const paperW = paperWidthMm * mmToPx;
             const paperH = paperHeightMm * mmToPx;
 
-            // 计算宽和高的缩放比
             const scaleW = containerW / paperW;
             const scaleH = containerH / paperH;
 
-            // 使用 0.92 作为安全系数，确保在各种浏览器下不溢出
-            const fitScale = Math.min(scaleW, scaleH) * 1;
-            setBaseFitScale(fitScale);
+            setBaseFitScale(Math.min(scaleW, scaleH));
         };
 
         updateFitScale();
@@ -53,7 +52,6 @@ export function PreviewPanel({ config, imageFile }: PreviewPanelProps) {
         return () => window.removeEventListener('resize', updateFitScale);
     }, [config.orientation]);
 
-    // Generate object URL for image
     useEffect(() => {
         if (imageFile) {
             const url = URL.createObjectURL(imageFile);
@@ -66,18 +64,42 @@ export function PreviewPanel({ config, imageFile }: PreviewPanelProps) {
 
     const layout = useMemo(() => calculateLabelLayout(config), [config]);
 
-    // Determine container size to fit A4
     const isPortrait = config.orientation === 'portrait';
     const paperWidthMm = isPortrait ? A4_WIDTH_MM : A4_HEIGHT_MM;
     const paperHeightMm = isPortrait ? A4_HEIGHT_MM : A4_WIDTH_MM;
 
-    const paperStyle = {
-        transformOrigin: 'top center',
-    } as any;
+    const handleSliderChange = (e: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent) => {
+        if (!sliderTrackRef.current) return;
+        const rect = sliderTrackRef.current.getBoundingClientRect();
+        const clientY = 'touches' in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
+
+        let pct = 1 - (clientY - rect.top) / rect.height;
+        pct = Math.max(0, Math.min(1, pct));
+
+        const minScale = 0.2;
+        const maxScale = 3.0;
+        setScale(minScale + (maxScale - minScale) * pct);
+    };
+
+    useEffect(() => {
+        if (!isDragging) return;
+        const onMove = (e: MouseEvent | TouchEvent) => handleSliderChange(e);
+        const onUp = () => setIsDragging(false);
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onUp);
+        window.addEventListener('touchmove', onMove);
+        window.addEventListener('touchend', onUp);
+        return () => {
+            window.removeEventListener('mousemove', onMove);
+            window.removeEventListener('mouseup', onUp);
+            window.removeEventListener('touchmove', onMove);
+            window.removeEventListener('touchend', onUp);
+        };
+    }, [isDragging]);
 
     return (
         <section className="flex-1 flex flex-col p-2 pl-0 h-full overflow-hidden">
-            <div className="flex-1 bg-white/40 backdrop-blur-md rounded-xl border border-white/60 flex flex-col relative overflow-hidden shadow-inner">
+            <div className="flex-1 bg-white/40 backdrop-blur-md rounded-lg border border-white/60 flex flex-col relative overflow-hidden shadow-inner font-sans">
 
                 {/* Background Pattern */}
                 <div className="absolute inset-0 opacity-30 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
@@ -89,13 +111,12 @@ export function PreviewPanel({ config, imageFile }: PreviewPanelProps) {
                         animate={{
                             width: `${paperWidthMm}mm`,
                             height: `${paperHeightMm}mm`,
-                            scale: scale * baseFitScale // 使用动态计算的适配比例
+                            scale: scale * baseFitScale
                         }}
-                        transition={{ duration: 0.4, ease: "easeInOut" }}
+                        transition={isDragging ? { duration: 0 } : { duration: 0.4, ease: "easeInOut" }}
                         className="bg-white shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] relative shrink-0"
-                        style={{ ...paperStyle, marginTop: '10px', originY: 0, originX: 0.5 }}
+                        style={{ transformOrigin: 'top center', marginTop: '10px', originY: 0, originX: 0.5 }}
                     >
-                        {/* Render Labels */}
                         {layout.positions.map((pos, idx) => (
                             <div
                                 key={idx}
@@ -114,35 +135,48 @@ export function PreviewPanel({ config, imageFile }: PreviewPanelProps) {
                                 )}
                             </div>
                         ))}
-
                     </motion.div>
                 </div>
 
-                {/* Zoom Controls (Vertical, Bottom-Left) */}
-                <div className="absolute bottom-2 left-2 flex flex-col items-center gap-1 bg-white/80 backdrop-blur rounded-xl p-1 shadow-lg border border-white/50 z-20">
+                {/* Vertical Zoom Controls */}
+                <div
+                    className="absolute bottom-4 left-4 flex flex-col items-center gap-2 z-20"
+                    onMouseEnter={() => setIsHovered(true)}
+                    onMouseLeave={() => setIsHovered(false)}
+                >
+                    {(isHovered || isDragging) && (
+                        <motion.div
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            className="absolute left-12 top-1/2 -translate-y-1/2 bg-slate-800 text-white text-[10px] px-2 py-1 rounded shadow-xl whitespace-nowrap pointer-events-none font-bold z-30"
+                        >
+                            {Math.round(scale * 100)}%
+                        </motion.div>
+                    )}
+
                     <button
                         onClick={() => setScale(1)}
-                        className="p-1 hover:bg-slate-100 rounded-full text-slate-600 transition-colors"
+                        className="p-1.5 hover:bg-white rounded-lg text-slate-500 hover:text-indigo-600 transition-all shadow-sm border border-transparent hover:border-slate-200 bg-white/50"
                         title={t('zoom_reset')}
                     >
-                        <Maximize className="w-5 h-5" />
+                        <Maximize className="w-4 h-4" />
                     </button>
-                    <div className="h-px w-4 bg-slate-200"></div>
-                    <button
-                        onClick={() => setScale(s => Math.min(3, s + 0.1))}
-                        className="p-1 hover:bg-slate-100 rounded-full text-slate-600 transition-colors"
-                    >
-                        <Plus className="w-5 h-5" />
-                    </button>
-                    <span className="text-[12px] font-bold text-slate-500 py-1 min-w-[2.5rem] text-center">
-                        {Math.round(scale * 100)}%
-                    </span>
-                    <button
-                        onClick={() => setScale(s => Math.max(0.2, s - 0.1))}
-                        className="p-1 hover:bg-slate-100 rounded-full text-slate-600 transition-colors"
-                    >
-                        <Minus className="w-5 h-5" />
-                    </button>
+
+                    <div className="bg-white/60 backdrop-blur-md rounded-lg p-1.5 shadow-md border border-white/50 flex flex-col items-center h-32 w-8">
+                        <div
+                            ref={sliderTrackRef}
+                            className="w-1.5 h-full bg-slate-200/50 rounded-lg relative cursor-ns-resize"
+                            onMouseDown={(e) => { setIsDragging(true); handleSliderChange(e); }}
+                            onTouchStart={(e) => { setIsDragging(true); handleSliderChange(e); }}
+                        >
+                            <motion.div
+                                className="absolute left-1/2 -translate-x-1/2 w-4 h-4 bg-white border-2 border-indigo-500 rounded-lg shadow-md pointer-events-none"
+                                animate={{ bottom: `${((scale - 0.2) / (3.0 - 0.2)) * 100}%` }}
+                                transition={isDragging ? { duration: 0 } : { type: "spring", stiffness: 300, damping: 30 }}
+                                style={{ marginBottom: '-8px' }}
+                            />
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
