@@ -25,6 +25,7 @@ export const translations = {
     files_selected: '{n} images selected',
     limit_reached: 'Max 10 images allowed. Only the first 10 were loaded.',
     generating_pdf: 'Generating PDF... {p}%',
+    theme_toggle: 'Toggle Theme (System/Light/Dark)',
   },
   zh: {
     window_title: 'LabelPilot',
@@ -47,6 +48,7 @@ export const translations = {
     files_selected: '已选择 {n} 张图片',
     limit_reached: '单次最多支持 10 张图片，已为您加载前 10 张。',
     generating_pdf: '正在生成 PDF... {p}%',
+    theme_toggle: '切换主题模式 (自动/亮色/暗色)',
   }
 };
 

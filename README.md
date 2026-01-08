@@ -15,6 +15,7 @@ A modern, offline-capable web application for batch generating label PDF documen
 - **🎨 Smart Button Feedback**: Integrated progress tracking and success/error status directly within the action button. No more intrusive full-screen overlays.
 - **📐 Dynamic Constraints**: Grid limits (rows/cols) automatically adjust based on page orientation (Portrait vs Landscape).
 - **🌍 Internationalization**: Built-in support for **English** and **Chinese**, with instant language switching.
+- **🌓 Adaptive Dark Mode**: Full dark mode support that follows your system preferences or can be manually toggled ('System', 'Light', 'Dark'). Powered by Tailwind CSS 4.
 - **👁️ Real-time Preview**: What you see is what you get with a virtual A4 canvas.
 
 ## 🛠️ Tech Stack

@@ -31,11 +31,11 @@ export function Toast({ message, type, isVisible, onClose }: ToastProps) {
                         animate={{ y: 0, opacity: 1, scale: 1 }}
                         exit={{ y: -20, opacity: 0, scale: 0.9 }}
                         transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                        className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg border backdrop-blur-glass ${type === 'success'
-                            ? 'bg-glass-surface/90 border-green-200 text-green-800'
+                        className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg border backdrop-blur-glass transition-colors duration-300 ${type === 'success'
+                            ? 'bg-glass-surface/90 border-green-500/20 text-green-600 dark:text-green-400'
                             : type === 'error'
-                                ? 'bg-glass-surface/90 border-red-200 text-red-800'
-                                : 'bg-glass-surface/90 border-amber-200 text-amber-800'
+                                ? 'bg-glass-surface/90 border-red-500/20 text-red-600 dark:text-red-400'
+                                : 'bg-glass-surface/90 border-amber-500/20 text-amber-600 dark:text-amber-400'
                             }`}
                     >
                         {type === 'success' ? (
@@ -50,7 +50,7 @@ export function Toast({ message, type, isVisible, onClose }: ToastProps) {
 
                         <button
                             onClick={onClose}
-                            className={`p-1 rounded-full text-slate-400 hover:text-slate-600 transition-colors ${type === 'success' ? 'hover:bg-green-100' : type === 'error' ? 'hover:bg-red-100' : 'hover:bg-amber-100'
+                            className={`p-1 rounded-full text-text-muted hover:text-text-main transition-colors ${type === 'success' ? 'hover:bg-green-500/10' : type === 'error' ? 'hover:bg-red-500/10' : 'hover:bg-amber-500/10'
                                 }`}
                         >
                             <X className="w-3.5 h-3.5" />

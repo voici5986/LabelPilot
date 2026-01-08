@@ -46,8 +46,8 @@ export function SmartButton({ onClick, disabled, genStatus, genProgress }: Smart
                         : !disabled && genStatus === 'idle'
                             ? 'bg-gradient-to-r from-brand-primary to-brand-secondary text-white'
                             : genStatus === 'generating'
-                                ? 'bg-slate-100 text-slate-400 border border-slate-200'
-                                : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
+                                ? 'bg-text-main/5 text-text-muted border border-border-subtle'
+                                : 'bg-text-main/10 text-text-muted cursor-not-allowed'}`}
         >
             {/* Progress Background */}
             {genStatus === 'generating' && (

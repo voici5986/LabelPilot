@@ -90,7 +90,7 @@ export function NumberInput({
 
     return (
         <div className="space-y-1.5 hover:-translate-y-0.5 transition-transform duration-200">
-            <label className="text-sm font-medium text-slate-500 ml-1">{label}</label>
+            <label className="text-sm font-medium text-text-muted ml-1">{label}</label>
             <div className="relative">
                 <input
                     type="text"
@@ -99,13 +99,13 @@ export function NumberInput({
                     onChange={handleChange}
                     onBlur={handleBlur}
                     onFocus={(e) => (e.target as HTMLInputElement).select()}
-                    className="w-full bg-white/50 border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary font-semibold text-slate-700 transition-all shadow-sm"
+                    className="w-full bg-surface/50 border border-border-subtle rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary font-semibold text-text-main transition-all shadow-sm"
                 />
-                <div className="absolute right-0 top-0 h-full flex flex-col border-l border-slate-200">
-                    <button onClick={increment} className="flex-1 px-2 hover:bg-slate-100 text-slate-400 hover:text-brand-primary rounded-lg flex items-center justify-center group">
+                <div className="absolute right-0 top-0 h-full flex flex-col border-l border-border-subtle">
+                    <button onClick={increment} className="flex-1 px-2 hover:bg-text-main/5 text-text-muted hover:text-brand-primary rounded-lg flex items-center justify-center group">
                         <ChevronUp className="w-3 h-3 group-hover:scale-110 transition-transform" />
                     </button>
-                    <button onClick={decrement} className="flex-1 px-2 hover:bg-slate-100 text-slate-400 hover:text-brand-primary rounded-lg flex items-center justify-center group">
+                    <button onClick={decrement} className="flex-1 px-2 hover:bg-text-main/5 text-text-muted hover:text-brand-primary rounded-lg flex items-center justify-center group">
                         <ChevronDown className="w-3 h-3 group-hover:scale-110 transition-transform" />
                     </button>
                 </div>

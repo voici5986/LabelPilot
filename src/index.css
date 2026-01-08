@@ -3,14 +3,67 @@
 @theme {
   --font-sans: 'Inter', 'sans-serif';
 
+  /* 主题原始值定义 */
+  --light-surface: var(--color-zinc-50);
+  --light-text: var(--color-zinc-800);
+  --light-border: var(--color-zinc-200);
+  --light-glass: color-mix(in srgb, white 80%, transparent);
+
+  --dark-surface: var(--color-zinc-900);
+  --dark-text: var(--color-zinc-200);
+  --dark-border: var(--color-zinc-800);
+  --dark-glass: color-mix(in srgb, var(--color-zinc-800) 80%, transparent);
+
+  /* 基础语义变量 - 默认为亮色模式 */
+  --color-surface: var(--light-surface);
+  --color-text-main: var(--light-text);
+  --color-text-muted: var(--color-zinc-500);
+  --color-border-subtle: var(--light-border);
+  --color-glass-surface: var(--light-glass);
+  --color-glass-border: color-mix(in srgb, white 50%, transparent);
+  --paper-brightness: 1;
+
   /* Brand Colors */
   --color-brand-primary: var(--color-indigo-600);
   --color-brand-secondary: var(--color-blue-500);
-
-  /* Surface / Glassmorphism */
-  --color-glass-surface: color-mix(in srgb, white 80%, transparent);
-  --color-glass-border: color-mix(in srgb, white 50%, transparent);
   --blur-glass: 12px;
+}
+
+/* 1. 自动跟随系统的暗色模式 */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --color-surface: var(--dark-surface);
+    --color-text-main: var(--dark-text);
+    --color-text-muted: var(--color-zinc-400);
+    --color-border-subtle: var(--dark-border);
+    --color-glass-surface: var(--dark-glass);
+    --color-glass-border: color-mix(in srgb, white 8%, transparent);
+    --paper-brightness: 0.9;
+  }
+}
+
+/* 2. 手动模式强制覆盖 (放在后面确保优先级) */
+:root[data-theme='light'] {
+  color-scheme: light;
+  --color-surface: var(--light-surface);
+  --color-text-main: var(--light-text);
+  --color-text-muted: var(--color-zinc-500);
+  --color-border-subtle: var(--light-border);
+  --color-glass-surface: var(--light-glass);
+  --color-glass-border: color-mix(in srgb, white 50%, transparent);
+  --paper-brightness: 1;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --color-surface: var(--dark-surface);
+  --color-text-main: var(--dark-text);
+  --color-text-muted: var(--color-zinc-400);
+  --color-border-subtle: var(--dark-border);
+  --color-glass-surface: var(--dark-glass);
+  --color-glass-border: color-mix(in srgb, white 8%, transparent);
+  --paper-brightness: 0.9;
 }
 
 @utility glass-panel {
@@ -21,7 +74,9 @@
 
 @layer base {
   body {
-    @apply antialiased text-slate-800 bg-slate-50;
+    @apply antialiased transition-colors duration-300;
+    background-color: var(--color-surface);
+    color: var(--color-text-main);
     font-family: var(--font-sans);
   }
 }

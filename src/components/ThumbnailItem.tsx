@@ -25,7 +25,7 @@ export function ThumbnailItem({ item, onCountChange }: ThumbnailItemProps) {
         <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="flex-shrink-0 w-20 h-20 rounded-lg border border-slate-200 bg-white shadow-sm relative group transition-all hover:border-brand-primary"
+            className="flex-shrink-0 w-20 h-20 rounded-lg border border-border-subtle bg-surface shadow-sm relative group transition-all hover:border-brand-primary"
             title={item.file.name}
         >
             {url && (

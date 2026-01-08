@@ -45,6 +45,22 @@ function App() {
   const [genStatus, setGenStatus] = useState<'idle' | 'generating' | 'success' | 'error'>('idle');
   const [genProgress, setGenProgress] = useState(0);
 
+  // Theme State
+  const [theme, setTheme] = useState<'system' | 'light' | 'dark'>(() => {
+    return (localStorage.getItem("theme_mode") as 'system' | 'light' | 'dark') || 'system';
+  });
+
+  // Sync Theme to DOM
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === 'system') {
+      root.removeAttribute('data-theme');
+    } else {
+      root.setAttribute('data-theme', theme);
+    }
+    localStorage.setItem("theme_mode", theme);
+  }, [theme]);
+
   const showToast = (message: string, type: ToastType) => {
     setToast({ message, type, visible: true });
   };
@@ -138,7 +154,7 @@ function App() {
 
   return (
     <Layout>
-      <Header />
+      <Header theme={theme} onThemeChange={setTheme} />
       <main className="flex-1 flex overflow-hidden">
         <ControlPanel
           config={config}

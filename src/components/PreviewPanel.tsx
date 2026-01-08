@@ -140,13 +140,13 @@ export function PreviewPanel({ config, imageItems }: PreviewPanelProps) {
             <div className="flex-1 glass-panel rounded-lg flex flex-col relative overflow-hidden shadow-inner font-sans">
 
                 {/* Background Pattern */}
-                <div className="absolute inset-0 opacity-30 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
+                <div className="absolute inset-0 opacity-10 pointer-events-none dark:opacity-5" style={{ backgroundImage: 'radial-gradient(var(--color-text-main) 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
 
                 {/* Scrollable Area */}
                 <div
                     ref={containerRef}
                     onMouseDown={handleMouseDown}
-                    className={`flex-1 overflow-auto text-center p-2 scrollbar-thin scrollbar-thumb-slate-300 select-none ${isPanning ? 'cursor-grabbing' : 'cursor-grab'}`}
+                    className={`flex-1 overflow-auto text-center p-2 scrollbar-thin scrollbar-thumb-text-main/20 select-none ${isPanning ? 'cursor-grabbing' : 'cursor-grab'}`}
                 >
                     <div className="inline-block text-left align-top" style={{
                         width: `${paperWidthMm * scale * baseFitScale}mm`,
@@ -166,7 +166,10 @@ export function PreviewPanel({ config, imageItems }: PreviewPanelProps) {
                             }}
                             transition={isDragging ? { duration: 0 } : { type: "spring", stiffness: 300, damping: 30 }}
                             className="bg-white absolute top-0 left-0"
-                            style={{ transformOrigin: 'top left' }}
+                            style={{
+                                transformOrigin: 'top left',
+                                filter: `brightness(var(--paper-brightness))`
+                            }}
                         >
                             {layout.positions.map((pos, idx) => {
                                 // 无论是单图还是多图，统一使用“精确计数”逻辑
@@ -176,7 +179,7 @@ export function PreviewPanel({ config, imageItems }: PreviewPanelProps) {
                                 return (
                                     <div
                                         key={idx}
-                                        className="absolute overflow-hidden flex items-center justify-center bg-white border border-slate-200 border-dashed"
+                                        className="absolute overflow-hidden flex items-center justify-center bg-white border border-border-subtle border-dashed"
                                         style={{
                                             left: `${pos.x}mm`,
                                             top: `${pos.y}mm`,
@@ -192,7 +195,7 @@ export function PreviewPanel({ config, imageItems }: PreviewPanelProps) {
                                                 draggable="false"
                                             />
                                         ) : (
-                                            <span className="text-[12px] text-slate-400 font-medium select-none">Label {idx + 1}</span>
+                                            <span className="text-[12px] text-text-muted font-medium select-none">Label {idx + 1}</span>
                                         )}
                                     </div>
                                 );
@@ -212,7 +215,7 @@ export function PreviewPanel({ config, imageItems }: PreviewPanelProps) {
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={() => setScale(1)}
-                        className="w-8 h-8 flex items-center justify-center hover:bg-white rounded-lg text-slate-500 hover:text-brand-primary transition-all shadow-sm border border-transparent hover:border-slate-200 bg-white/50"
+                        className="w-8 h-8 flex items-center justify-center hover:bg-surface rounded-lg text-text-muted hover:text-brand-primary transition-all shadow-sm border border-transparent hover:border-border-subtle bg-surface/50"
                         title={t('zoom_reset')}
                     >
                         <Maximize className="w-4 h-4" />
@@ -220,8 +223,9 @@ export function PreviewPanel({ config, imageItems }: PreviewPanelProps) {
 
                     <motion.div
                         animate={{
-                            backgroundColor: isDragging ? "rgba(255, 255, 255, 0.9)" : "rgba(255, 255, 255, 0.6)",
-                            boxShadow: isDragging ? "0 4px 12px rgba(0,0,0,0.1)" : "0 4px 6px rgba(0,0,0,0.05)"
+                            backgroundColor: isDragging ? "var(--color-surface)" : "var(--color-surface)",
+                            opacity: isDragging ? 0.95 : 0.7,
+                            boxShadow: isDragging ? "0 4px 12px rgba(0,0,0,0.2)" : "0 4px 6px rgba(0,0,0,0.1)"
                         }}
                         className="backdrop-blur-glass rounded-lg p-1.5 border border-glass-border flex flex-col items-center h-40 w-8 relative"
                     >
@@ -232,7 +236,7 @@ export function PreviewPanel({ config, imageItems }: PreviewPanelProps) {
                                     initial={{ opacity: 0, x: -5, scale: 0.8 }}
                                     animate={{ opacity: 1, x: 0, scale: 1 }}
                                     exit={{ opacity: 0, x: -5, scale: 0.8 }}
-                                    className="absolute left-12 top-1/2 -translate-y-1/2 bg-slate-800 text-white text-[14px] px-2 py-1 rounded shadow-xl whitespace-nowrap pointer-events-none font-bold z-30"
+                                    className="absolute left-12 top-1/2 -translate-y-1/2 bg-zinc-800 text-white text-[14px] px-2 py-1 rounded shadow-xl whitespace-nowrap pointer-events-none font-bold z-30"
                                 >
                                     {Math.round(scale * 100)}%
                                 </motion.div>
@@ -241,7 +245,7 @@ export function PreviewPanel({ config, imageItems }: PreviewPanelProps) {
 
                         <div
                             ref={sliderTrackRef}
-                            className="w-1.5 h-full bg-slate-200/50 rounded-lg relative cursor-ns-resize"
+                            className="w-1.5 h-full bg-text-main/10 rounded-lg relative cursor-ns-resize"
                             onMouseDown={(e) => { setIsDragging(true); handleSliderChange(e); }}
                             onTouchStart={(e) => { setIsDragging(true); handleSliderChange(e); }}
                         >
