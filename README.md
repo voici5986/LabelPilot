@@ -18,7 +18,11 @@ A modern, offline-capable web application for batch generating label PDF documen
 - **🌓 Adaptive Dark Mode**: Full dark mode support that follows your system preferences or can be manually toggled ('System', 'Light', 'Dark'). Powered by Tailwind CSS 4.
 - **👁️ Real-time Preview**: What you see is what you get with a virtual A4 canvas.
 
-## 🛠️ Tech Stack
+## � Quick Deploy
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/voici5986/LabelPilot)
+
+## �🛠️ Tech Stack
 
 - **Framework**: React 19.2.3
 - **Build Tool**: Vite 7.3
@@ -27,6 +31,9 @@ A modern, offline-capable web application for batch generating label PDF documen
 - **Styling**: Tailwind CSS 4.1, Framer Motion
 
 ## 🚀 Getting Started
+
+### One-Click Deploy
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/voici5986/LabelPilot)
 
 ### Installation
 1. `npm install`
