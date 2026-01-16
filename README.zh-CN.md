@@ -18,7 +18,7 @@
 - **🌓 适配暗色模式**: 完美支持跟随系统的深浅色切换，并支持手动切换（“自动”、“亮色”、“暗色”）。基于 Tailwind CSS 4 深度感知。
 - **👁️ 实时预览**: 所见即所得。基于 A4 画布的精准视觉预览。
 
-## 🚀 快速部署
+## 🚀 一键部署到 Vercel
 
 [![使用 Vercel 部署](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/voici5986/LabelPilot)
 
@@ -31,9 +31,6 @@
 - **样式与动画**: Tailwind CSS 4.1, Framer Motion
 
 ## 🚀 快速开始
-
-### 一键部署
-[![使用 Vercel 部署](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/voici5986/LabelPilot)
 
 ### 安装步骤
 1. `npm install`
