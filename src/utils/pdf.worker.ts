@@ -21,12 +21,13 @@ ctx.onmessage = async (e) => {
             // Report progress for loading (0% - 30%)
             ctx.postMessage({ type: 'progress', data: Math.round(((idx + 1) / imageItems.length) * 30) });
 
-            const arrayBuffer = await item.file.arrayBuffer();
-            const blob = new Blob([arrayBuffer], { type: item.file.type });
+            // Buffer is already transferred from main thread
+            const arrayBuffer = item.buffer;
+            const blob = new Blob([arrayBuffer], { type: item.type });
             const bitmap = await createImageBitmap(blob);
 
             let format = "PNG";
-            if (item.file.type === "image/jpeg" || item.file.type === "image/jpg") {
+            if (item.type === "image/jpeg" || item.type === "image/jpg") {
                 format = "JPEG";
             }
 
