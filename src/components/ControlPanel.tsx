@@ -157,6 +157,7 @@ export function ControlPanel({
                     </h2>
                     <div className="bg-text-main/5 p-1 rounded-lg flex border border-border-subtle relative isolate">
                         <button
+                            type="button"
                             onClick={() => onConfigChange({ orientation: 'portrait' })}
                             className={`flex-1 py-2 px-3 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-colors relative z-0 ${config.orientation === 'portrait' ? 'text-brand-primary' : 'text-text-muted hover:text-text-main'}`}
                         >
@@ -170,6 +171,7 @@ export function ControlPanel({
                             <FileIcon className="w-4 h-4" /> {t('portrait')}
                         </button>
                         <button
+                            type="button"
                             onClick={() => onConfigChange({ orientation: 'landscape' })}
                             className={`flex-1 py-2 px-3 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-colors relative z-0 ${config.orientation === 'landscape' ? 'text-brand-primary' : 'text-text-muted hover:text-text-main'}`}
                         >

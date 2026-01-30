@@ -1,56 +1,8 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 
-export type Language = 'en' | 'zh';
-
-export const translations = {
-  en: {
-    window_title: 'LabelPilot',
-    main_title: 'LabelPilot',
-    file_group: 'LABEL IMAGE',
-    layout_group: 'LAYOUT SETTINGS',
-    browse_btn: 'Click to upload image',
-    browse_hint: 'PNG, JPG supported',
-    rows: 'Rows',
-    cols: 'Columns',
-    margin: 'Margin',
-    spacing: 'Spacing',
-    orientation: 'Page Orientation',
-    portrait: 'Portrait',
-    landscape: 'Landscape',
-    generate_btn: 'Generate PDF',
-    zoom_reset: 'Reset Zoom',
-    gen_success: 'PDF Generated! Downloading...',
-    gen_failed: 'Failed to generate PDF',
-    files_selected: '{n} images selected',
-    limit_reached: 'Max 10 images allowed. Only the first 10 were loaded.',
-    generating_pdf: 'Generating PDF... {p}%',
-    theme_toggle: 'Toggle Theme (System/Light/Dark)',
-  },
-  zh: {
-    window_title: 'LabelPilot',
-    main_title: 'LabelPilot',
-    file_group: '标签图片',
-    layout_group: '排版设置',
-    browse_btn: '点击上传标签图片',
-    browse_hint: '支持 PNG, JPG 格式',
-    rows: '行数',
-    cols: '列数',
-    margin: '边距',
-    spacing: '间距',
-    orientation: '纸张方向',
-    portrait: '纵向',
-    landscape: '横向',
-    generate_btn: '生成 PDF 文档',
-    zoom_reset: '重置缩放',
-    gen_success: 'PDF 已生成！正在开始下载...',
-    gen_failed: '生成 PDF 失败',
-    files_selected: '已选择 {n} 张图片',
-    limit_reached: '单次最多支持 10 张图片，已为您加载前 10 张。',
-    generating_pdf: '正在生成 PDF... {p}%',
-    theme_toggle: '切换主题模式 (自动/亮色/暗色)',
-  }
-};
+import { translations } from './translations';
+import type { Language } from './translations';
 
 type Translations = typeof translations.zh;
 

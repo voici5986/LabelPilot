@@ -4,7 +4,7 @@ import { calculateLabelLayout, resolveItemAtSlot } from "./layoutMath";
 /**
  * PDF Generation Worker
  */
-const ctx: Worker = self as any;
+const ctx: Worker = self as unknown as Worker;
 
 ctx.onmessage = async (e) => {
     const { config, imageItems } = e.data;
@@ -17,7 +17,7 @@ ctx.onmessage = async (e) => {
         }
 
         // 2. Load all images
-        const loadedImages = await Promise.all(imageItems.map(async (item: any, idx: number) => {
+        const loadedImages = await Promise.all(imageItems.map(async (item: { buffer: ArrayBuffer; type: string; id: string }, idx: number) => {
             // Report progress for loading (0% - 30%)
             ctx.postMessage({ type: 'progress', data: Math.round(((idx + 1) / imageItems.length) * 30) });
 
@@ -26,7 +26,7 @@ ctx.onmessage = async (e) => {
             const blob = new Blob([arrayBuffer], { type: item.type });
             const bitmap = await createImageBitmap(blob);
 
-            let format = "PNG";
+            let format: "PNG" | "JPEG" = "PNG";
             if (item.type === "image/jpeg" || item.type === "image/jpg") {
                 format = "JPEG";
             }
@@ -51,7 +51,7 @@ ctx.onmessage = async (e) => {
 
         // 4. Draw Images
         const totalPositions = layout.positions.length;
-        layout.positions.forEach((pos: any, idx: number) => {
+        layout.positions.forEach((pos: { x: number; y: number; width: number; height: number }, idx: number) => {
             // Report progress for drawing (30% to 90%)
             if (idx % 5 === 0) {
                 ctx.postMessage({ type: 'progress', data: 30 + Math.round((idx / totalPositions) * 60) });

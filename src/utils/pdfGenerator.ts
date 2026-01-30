@@ -12,7 +12,21 @@ export async function generatePDF(
     imageItems: ImageItem[],
     onProgress?: (progress: number) => void
 ): Promise<void> {
-    return new Promise(async (resolve, reject) => {
+    // Pre-read buffers and prepare for transfer
+    const itemsWithBuffers = await Promise.all(imageItems.map(async (item) => {
+        const buffer = await item.file.arrayBuffer();
+        return {
+            id: item.id,
+            count: item.count,
+            name: item.file.name,
+            type: item.file.type,
+            buffer
+        };
+    }));
+
+    const buffers = itemsWithBuffers.map(item => item.buffer);
+
+    return new Promise((resolve, reject) => {
         // Vite handles the worker URL automatically
         const worker = new Worker(new URL('./pdf.worker.ts', import.meta.url), {
             type: 'module'
@@ -55,20 +69,6 @@ export async function generatePDF(
             worker.terminate();
             reject(err);
         };
-
-        // Pre-read buffers and prepare for transfer
-        const itemsWithBuffers = await Promise.all(imageItems.map(async (item) => {
-            const buffer = await item.file.arrayBuffer();
-            return {
-                id: item.id,
-                count: item.count,
-                name: item.file.name,
-                type: item.file.type,
-                buffer
-            };
-        }));
-
-        const buffers = itemsWithBuffers.map(item => item.buffer);
 
         // Send data to worker using Transferable Objects (zero-copy)
         worker.postMessage({ config, imageItems: itemsWithBuffers }, buffers);

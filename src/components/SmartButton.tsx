@@ -14,6 +14,7 @@ export function SmartButton({ onClick, disabled, genStatus, genProgress }: Smart
 
     return (
         <motion.button
+            type="button"
             layout
             whileHover={!disabled && genStatus === 'idle' ? { scale: 1.02, boxShadow: "0 10px 25px -5px rgba(79, 70, 229, 0.4)" } : {}}
             whileTap={!disabled && genStatus === 'idle' ? { scale: 0.98 } : {}}
