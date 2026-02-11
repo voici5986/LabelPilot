@@ -229,7 +229,7 @@ export function PreviewPanel({ config, imageItems, appMode, textConfig }: Previe
                                     content = (
                                         <div className="flex flex-col items-center justify-center w-full h-full p-1 text-center">
                                             <span 
-                                                className="text-black font-mono font-bold leading-tight break-all"
+                                                className="text-black font-mono font-semibold leading-tight break-all"
                                                 style={{ 
                                                     fontSize: `${Math.min(pos.width * 0.8 / (textConfig.prefix.length + textConfig.digits), pos.height * 0.5)}mm`
                                                 }}
@@ -261,7 +261,7 @@ export function PreviewPanel({ config, imageItems, appMode, textConfig }: Previe
 
                 {/* Page Navigation Controls */}
                 {totalPages > 1 && (
-                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-4 z-30 bg-surface/80 backdrop-blur-md px-4 py-2 rounded-full border border-border-subtle shadow-lg">
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-4 z-30 bg-surface/80 backdrop-blur-md px-4 py-1.5 rounded-full border border-border-subtle shadow-lg">
                         <button
                             disabled={currentPage === 0}
                             onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
@@ -297,7 +297,7 @@ export function PreviewPanel({ config, imageItems, appMode, textConfig }: Previe
                         />
                         <div className="w-[1.5px] h-full bg-text-muted"></div>
                     </div>
-                    <span className="text-[10px] text-text-muted font-bold font-mono leading-none select-none">50mm</span>
+                    <span className="text-[12px] text-text-muted font-semibold font-mono leading-none select-none">50mm</span>
                 </div>
 
                 {/* Vertical Zoom Controls */}
@@ -332,7 +332,7 @@ export function PreviewPanel({ config, imageItems, appMode, textConfig }: Previe
                                     initial={{ opacity: 0, x: -5, scale: 0.8 }}
                                     animate={{ opacity: 1, x: 0, scale: 1 }}
                                     exit={{ opacity: 0, x: -5, scale: 0.8 }}
-                                    className="absolute left-12 top-1/2 -translate-y-1/2 bg-zinc-800 text-white text-[14px] px-2 py-1 rounded shadow-xl whitespace-nowrap pointer-events-none font-bold z-30"
+                                    className="absolute left-12 top-1/2 -translate-y-1/2 bg-zinc-800 text-white text-[14px] px-2 py-1 rounded shadow-xl whitespace-nowrap pointer-events-none font-semibold z-30"
                                 >
                                     {Math.round(scale * 100)}%
                                 </motion.div>

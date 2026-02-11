@@ -10,6 +10,7 @@ interface NumberInputProps {
     isInteger?: boolean;
     decimalPlaces?: number;
     step?: number;
+    labelSize?: 'xs' | 'sm';
 }
 
 export function NumberInput({
@@ -20,7 +21,8 @@ export function NumberInput({
     max,
     isInteger,
     decimalPlaces,
-    step: propsStep
+    step: propsStep,
+    labelSize = 'sm'
 }: NumberInputProps) {
     // Local state to handle string input allowing intermediate states like "3."
     const [localVal, setLocalVal] = useState(String(value));
@@ -89,8 +91,8 @@ export function NumberInput({
     };
 
     return (
-        <div className="space-y-1.5 hover:-translate-y-0.5 transition-transform duration-200">
-            <label className="text-sm font-medium text-text-muted ml-1">{label}</label>
+        <div className="space-y-1.5">
+            <label className={`font-medium text-text-muted ml-1 ${labelSize === 'xs' ? 'text-xs' : 'text-sm'}`}>{label}</label>
             <div className="relative">
                 <input
                     type="text"
@@ -99,7 +101,7 @@ export function NumberInput({
                     onChange={handleChange}
                     onBlur={handleBlur}
                     onFocus={(e) => (e.target as HTMLInputElement).select()}
-                    className="w-full bg-surface/50 border border-border-subtle rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary font-mono font-semibold text-text-main transition-all shadow-sm"
+                    className="w-full input-base focus:input-base-focus px-3 py-1.5 text-sm font-mono font-semibold text-text-main"
                 />
                 <div className="absolute right-0 top-0 h-full flex flex-col border-l border-border-subtle">
                     <button onClick={increment} className="flex-1 px-2 hover:bg-text-main/5 text-text-muted hover:text-brand-primary rounded-lg flex items-center justify-center group">

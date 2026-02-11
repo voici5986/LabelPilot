@@ -49,6 +49,10 @@ export const translations = {
         text_start_number: 'Start Number',
         text_digits: 'Digits',
         text_count: 'Total Count',
+        orientation_tip_title: 'Please Rotate Your Device',
+        orientation_tip_desc: 'For the best label design experience, please use landscape mode.',
+        install_pwa: 'Install app for better experience',
+        install_btn: 'Install App',
     },
     zh: {
         window_title: 'LabelPilot',
@@ -98,5 +102,9 @@ export const translations = {
         text_start_number: '起始编号',
         text_digits: '编号位数',
         text_count: '生成数量',
+        orientation_tip_title: '请旋转您的设备',
+        orientation_tip_desc: '为了获得最佳的排版编辑体验，请将设备横屏使用。',
+        install_pwa: '安装应用以获得更佳体验',
+        install_btn: '安装应用',
     }
 };

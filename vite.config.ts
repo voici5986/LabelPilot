@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'prompt', // 使用提示模式，而不是自动静默更新
+      registerType: 'prompt',
       includeAssets: ['print.svg'],
       manifest: {
         name: 'Label Printer Pro',

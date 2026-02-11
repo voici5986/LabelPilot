@@ -24,7 +24,7 @@ export function ReloadPrompt() {
         },
     });
 
-    const [isOfflineReady, setOfflineReady] = offlineReady || [false, () => {}];
+    const [_, setOfflineReady] = offlineReady || [false, () => {}];
     const [isNeedUpdate, setNeedUpdate] = needRefresh || [false, () => {}];
 
     const close = () => {
@@ -34,7 +34,7 @@ export function ReloadPrompt() {
 
     return (
         <AnimatePresence>
-            {(isOfflineReady || isNeedUpdate) && (
+            {isNeedUpdate && (
                 <motion.div
                     initial={{ y: 50, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
@@ -44,16 +44,14 @@ export function ReloadPrompt() {
                     <div className="flex items-start justify-between gap-4">
                         <div className="flex items-center gap-3">
                             <div className="bg-brand-primary/10 p-2 rounded-lg">
-                                <RefreshCw className={`w-5 h-5 text-brand-primary ${isNeedUpdate ? 'animate-spin-slow' : ''}`} />
+                                <RefreshCw className="w-5 h-5 text-brand-primary animate-spin-slow" />
                             </div>
                             <div>
-                                <h4 className="text-sm font-bold text-text-main">
-                                    {isOfflineReady ? t('pwa_ready_title') || 'Ready to work offline' : t('pwa_update_title') || 'Update Available'}
+                                <h4 className="text-sm font-semibold text-text-main">
+                                    {t('pwa_update_title') || 'Update Available'}
                                 </h4>
-                                <p className="text-xs text-text-muted mt-0.5">
-                                    {isOfflineReady 
-                                        ? t('pwa_ready_desc') || 'App is now ready for offline use.' 
-                                        : t('pwa_update_desc') || 'A new version is available, click update to refresh.'}
+                                <p className="text-sm text-text-muted mt-0.5">
+                                    {t('pwa_update_desc') || 'A new version is available, click update to refresh.'}
                                 </p>
                             </div>
                         </div>
@@ -65,15 +63,13 @@ export function ReloadPrompt() {
                         </button>
                     </div>
 
-                    {isNeedUpdate && (
-                        <button
-                            onClick={() => updateServiceWorker(true)}
-                            className="w-full py-2 bg-brand-primary text-white text-xs font-bold rounded-lg hover:bg-brand-primary/90 transition-all shadow-lg shadow-brand-primary/20 flex items-center justify-center gap-2"
-                        >
-                            <RefreshCw className="w-3.5 h-3.5" />
-                            {t('pwa_update_btn') || 'Update Now'}
-                        </button>
-                    )}
+                    <button
+                        onClick={() => updateServiceWorker(true)}
+                        className="w-full py-1.5 bg-brand-primary text-white text-sm font-semibold rounded-lg hover:bg-brand-primary/90 transition-all shadow-lg shadow-brand-primary/20 flex items-center justify-center gap-2"
+                    >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        {t('pwa_update_btn') || 'Update Now'}
+                    </button>
                 </motion.div>
             )}
         </AnimatePresence>

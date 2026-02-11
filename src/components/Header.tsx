@@ -1,4 +1,4 @@
-import { Printer, Globe, Sun, Moon, Monitor, Settings, X, ChevronDown } from "lucide-react";
+import { Printer, Globe, Sun, Moon, Monitor, Settings, ChevronDown, Download } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useI18n } from "../utils/i18n";
 import { useState, useRef, useEffect } from "react";
@@ -31,8 +31,37 @@ export function Header({
     const { t, language, setLanguage } = useI18n();
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isPresetsOpen, setIsPresetsOpen] = useState(false);
+    const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+    const [canInstall, setCanInstall] = useState(false);
     const settingsRef = useRef<HTMLDivElement>(null);
     const presetsRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleBeforeInstallPrompt = (e: any) => {
+            e.preventDefault();
+            setDeferredPrompt(e);
+            setCanInstall(true);
+        };
+
+        window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+        // Check if already installed
+        if (window.matchMedia('(display-mode: standalone)').matches) {
+            setCanInstall(false);
+        }
+
+        return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    }, []);
+
+    const handleInstallClick = async () => {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+            setCanInstall(false);
+        }
+        setDeferredPrompt(null);
+    };
 
     const toggleLanguage = () => {
         setLanguage(language === 'zh' ? 'en' : 'zh');
@@ -107,12 +136,25 @@ export function Header({
                     <Printer className="w-5 h-5" />
                 </div>
                 <div>
-                    <h1 className="font-bold text-xl bg-clip-text text-transparent bg-gradient-to-r from-brand-primary to-brand-secondary">
+                    <h1 className="font-extrabold text-xl bg-clip-text text-transparent bg-gradient-to-r from-brand-primary to-brand-secondary">
                         {t('main_title')}
                     </h1>
                 </div>
             </div>
             <div className="flex items-center gap-2 relative">
+                {canInstall && (
+                    <motion.button
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        onClick={handleInstallClick}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-primary/10 text-brand-primary rounded-full hover:bg-brand-primary/20 transition-all border border-brand-primary/20 group"
+                        title={t('install_pwa')}
+                    >
+                        <Download className="w-4 h-4 group-hover:bounce" />
+                        <span className="text-sm font-semibold hidden sm:inline">{t('install_btn')}</span>
+                    </motion.button>
+                )}
+
                 <button
                     onClick={() => setIsSettingsOpen(!isSettingsOpen)}
                     className={`text-text-muted hover:text-brand-primary transition-colors p-2 rounded-full hover:bg-text-main/5 flex items-center gap-1 ${isSettingsOpen ? 'text-brand-primary bg-text-main/5' : ''}`}
@@ -135,23 +177,10 @@ export function Header({
                                 WebkitBackdropFilter: 'none' 
                             }}
                         >
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="font-bold text-text-main flex items-center gap-2">
-                                    <Settings className="w-4 h-4 text-brand-primary" />
-                                    {t('settings')}
-                                </h3>
-                                <button
-                                    onClick={() => setIsSettingsOpen(false)}
-                                    className="text-text-muted hover:text-text-main p-1 rounded-full hover:bg-text-main/5"
-                                >
-                                    <X className="w-4 h-4" />
-                                </button>
-                            </div>
-
                             <div className="space-y-4">
                                 {/* App Mode Section */}
                                 <div className="space-y-3">
-                                    <label className="text-sm font-bold text-text-muted uppercase tracking-wider">
+                                    <label className="text-xs font-semibold text-text-muted uppercase tracking-wider">
                                         {t('app_mode')}
                                     </label>
                                     <div className="flex bg-text-main/5 p-1 rounded-lg border border-border-subtle relative overflow-hidden">
@@ -169,13 +198,13 @@ export function Header({
                                         />
                                         <button
                                             onClick={() => onAppModeChange('image')}
-                                            className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all relative z-10 ${appMode === 'image' ? 'text-brand-primary' : 'text-text-muted hover:text-text-main'}`}
+                                            className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all relative z-10 ${appMode === 'image' ? 'text-brand-primary' : 'text-text-muted hover:text-text-main'}`}
                                         >
                                             {t('mode_image')}
                                         </button>
                                         <button
                                             onClick={() => onAppModeChange('text')}
-                                            className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all relative z-10 ${appMode === 'text' ? 'text-brand-primary' : 'text-text-muted hover:text-text-main'}`}
+                                            className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all relative z-10 ${appMode === 'text' ? 'text-brand-primary' : 'text-text-muted hover:text-text-main'}`}
                                         >
                                             {t('mode_text')}
                                         </button>
@@ -184,7 +213,7 @@ export function Header({
 
                                 {/* Paper Size Section */}
                                 <div className="space-y-3">
-                                    <label className="text-sm font-bold text-text-muted uppercase tracking-wider">
+                                    <label className="text-xs font-semibold text-text-muted uppercase tracking-wider">
                                         {t('paper_size')}
                                     </label>
                                     
@@ -195,7 +224,7 @@ export function Header({
                                                 <div className="flex">
                                                     <button
                                                         onClick={() => handlePaperSizeChange('A4')}
-                                                        className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-l-md border transition-all flex items-center justify-center gap-1 ${['A4', 'A3', 'A5', 'Letter'].includes(paperSize)
+                                                        className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-l-md border transition-all flex items-center justify-center gap-1 ${['A4', 'A3', 'A5', 'Letter'].includes(paperSize)
                                                             ? 'bg-brand-primary/10 border-brand-primary text-brand-primary shadow-sm'
                                                             : 'border-border-subtle text-text-muted hover:border-brand-primary/50'
                                                             }`}
@@ -230,7 +259,7 @@ export function Header({
                                                                 <button
                                                                     key={size}
                                                                     onClick={() => handlePaperSizeChange(size)}
-                                                                    className={`w-full text-left px-3 py-1.5 text-xs hover:bg-brand-primary/10 transition-colors ${paperSize === size ? 'text-brand-primary font-bold bg-brand-primary/5' : 'text-text-main'}`}
+                                                                    className={`w-full text-left px-3 py-1.5 text-sm hover:bg-brand-primary/10 transition-colors ${paperSize === size ? 'text-brand-primary font-semibold bg-brand-primary/5' : 'text-text-main'}`}
                                                                 >
                                                                     {t(`paper_type_${size.toLowerCase()}` as any)}
                                                                 </button>
@@ -243,7 +272,7 @@ export function Header({
                                             {/* Custom Button */}
                                             <button
                                                 onClick={() => handlePaperSizeChange('Custom')}
-                                                className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md border transition-all ${paperSize === 'Custom'
+                                                className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-md border transition-all ${paperSize === 'Custom'
                                                     ? 'bg-brand-primary/10 border-brand-primary text-brand-primary shadow-sm'
                                                     : 'border-border-subtle text-text-muted hover:border-brand-primary/50'
                                                     }`}
@@ -261,6 +290,7 @@ export function Header({
                                                 onChange={(v) => onConfigChange({ pageWidthMm: v })}
                                                 min={50}
                                                 max={1000}
+                                                labelSize="xs"
                                             />
                                             <NumberInput
                                                 label={t('paper_height')}
@@ -268,16 +298,10 @@ export function Header({
                                                 onChange={(v) => onConfigChange({ pageHeightMm: v })}
                                                 min={50}
                                                 max={1000}
+                                                labelSize="xs"
                                             />
                                         </div>
                                     )}
-                                </div>
-
-                                {/* Divider */}
-                                <div className="h-px bg-border-subtle/50 my-2"></div>
-                                
-                                <div className="text-[10px] text-text-muted text-center italic opacity-60">
-                                    More settings coming soon...
                                 </div>
                             </div>
                         </motion.div>
@@ -290,7 +314,7 @@ export function Header({
                     title="Switch Language"
                 >
                     <Globe className="w-5 h-5" />
-                    <span className="text-sm font-bold uppercase">{language}</span>
+                    <span className="text-sm font-semibold uppercase">{language}</span>
                 </button>
                 <button
                     onClick={toggleTheme}

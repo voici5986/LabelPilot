@@ -90,7 +90,7 @@ export function ControlPanel({
                     <>
                         {/* File Selection */}
                         <div className="space-y-3">
-                            <h2 className="text-sm font-bold text-text-muted uppercase tracking-wider flex items-center gap-2">
+                            <h2 className="text-xs font-semibold text-text-muted uppercase tracking-wider flex items-center gap-2">
                                 <UploadCloud className="w-4 h-4" /> {t('file_group')}
                             </h2>
 
@@ -108,7 +108,7 @@ export function ControlPanel({
                                         <UploadCloud className={`w-6 h-6 ${selectedFileName ? 'text-brand-primary' : 'text-brand-primary/40'}`} />
                                     </div>
                                     <div className="flex-1 min-w-0 flex flex-col items-center">
-                                        <p className="text-sm font-bold text-text-main truncate w-full text-center">
+                                        <p className="text-sm font-semibold text-text-main truncate w-full text-center">
                                             {selectedFileName || t('browse_btn')}
                                         </p>
                                         {!selectedFileName && <p className="text-[12px] text-text-muted text-center">{t('browse_hint')}</p>}
@@ -148,18 +148,18 @@ export function ControlPanel({
                     <>
                         {/* Text Numbering Config */}
                         <div className="space-y-4">
-                            <h2 className="text-sm font-bold text-text-muted uppercase tracking-wider flex items-center gap-2">
+                            <h2 className="text-xs font-semibold text-text-muted uppercase tracking-wider flex items-center gap-2">
                                 <Grid className="w-4 h-4" /> {t('text_config_group')}
                             </h2>
 
-                            <div className="space-y-4 bg-text-main/5 p-4 rounded-xl border border-border-subtle">
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold text-text-muted">{t('text_prefix')}</label>
+                            <div className="space-y-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-sm font-medium text-text-muted ml-1">{t('text_prefix')}</label>
                                     <input 
                                         type="text"
                                         value={textConfig.prefix}
                                         onChange={(e) => onTextConfigChange({ prefix: e.target.value })}
-                                        className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/50 transition-all font-mono"
+                                        className="w-full input-base focus:input-base-focus px-3 py-1.5 text-sm font-mono"
                                         placeholder="SN-"
                                     />
                                 </div>
@@ -195,7 +195,7 @@ export function ControlPanel({
 
                 {/* Grid Settings */}
                 <div className="space-y-4">
-                    <h2 className="text-sm font-bold text-text-muted uppercase tracking-wider flex items-center gap-2">
+                    <h2 className="text-xs font-semibold text-text-muted uppercase tracking-wider flex items-center gap-2">
                         <Grid className="w-4 h-4" /> {t('layout_group')}
                     </h2>
 
@@ -239,7 +239,7 @@ export function ControlPanel({
                 {/* Orientation */}
                 <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                        <h2 className="text-sm font-bold text-text-muted uppercase tracking-wider flex items-center gap-2">
+                        <h2 className="text-xs font-semibold text-text-muted uppercase tracking-wider flex items-center gap-2">
                             <Layout className="w-4 h-4" /> {t('orientation')}
                         </h2>
                         <span className="text-[14px] font-medium text-text-muted opacity-80">
@@ -250,7 +250,7 @@ export function ControlPanel({
                         <button
                             type="button"
                             onClick={() => onConfigChange({ orientation: 'portrait' })}
-                            className={`flex-1 py-2 px-3 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-colors relative z-0 ${config.orientation === 'portrait' ? 'text-brand-primary' : 'text-text-muted hover:text-text-main'}`}
+                            className={`flex-1 py-1.5 px-3 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-colors relative z-0 ${config.orientation === 'portrait' ? 'text-brand-primary' : 'text-text-muted hover:text-text-main'}`}
                         >
                             {config.orientation === 'portrait' && (
                                 <motion.div
@@ -264,7 +264,7 @@ export function ControlPanel({
                         <button
                             type="button"
                             onClick={() => onConfigChange({ orientation: 'landscape' })}
-                            className={`flex-1 py-2 px-3 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-colors relative z-0 ${config.orientation === 'landscape' ? 'text-brand-primary' : 'text-text-muted hover:text-text-main'}`}
+                            className={`flex-1 py-1.5 px-3 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-colors relative z-0 ${config.orientation === 'landscape' ? 'text-brand-primary' : 'text-text-muted hover:text-text-main'}`}
                         >
                             {config.orientation === 'landscape' && (
                                 <motion.div

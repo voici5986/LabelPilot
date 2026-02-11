@@ -4,6 +4,7 @@ import { Header } from "./components/Header";
 import { ControlPanel } from "./components/ControlPanel";
 import { PreviewPanel } from "./components/PreviewPanel";
 import { ReloadPrompt } from "./components/ReloadPrompt";
+import { OrientationGuard } from "./components/OrientationGuard";
 import { A4_WIDTH_MM, A4_HEIGHT_MM } from "./utils/layoutMath";
 import type { HelperLayoutConfig } from "./utils/layoutMath";
 import { generatePDF } from "./utils/pdfGenerator";
@@ -222,6 +223,9 @@ function App() {
 
       {/* PWA Update Prompt */}
       <ReloadPrompt />
+
+      {/* Mobile Orientation Guard */}
+      <OrientationGuard />
 
       {/* Toast Notification */}
       <Toast

@@ -2,6 +2,14 @@
 
 /* 字体定义 */
 @font-face {
+  font-family: 'MiSansVF';
+  src: url('./assets/fonts/MiSansVF_gb2312.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
   font-family: 'MapleMono';
   src: url('./assets/fonts/MapleMono-Subset.woff2') format('woff2');
   font-weight: normal;
@@ -10,8 +18,8 @@
 }
 
 @theme {
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-mono: 'MapleMono', 'monospace';
+  --font-sans: 'MiSansVF', system-ui, -apple-system, sans-serif;
+  --font-mono: 'MapleMono', monospace;
 
   /* 主题原始值定义 */
   --light-surface: var(--color-zinc-50);
@@ -82,9 +90,29 @@
   border: 1px solid var(--color-glass-border);
 }
 
+@utility input-base {
+  background-color: color-mix(in srgb, var(--color-surface) 50%, transparent);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+  box-shadow: var(--shadow-sm);
+}
+
+@utility input-base-focus {
+  outline: none;
+  border-color: var(--color-brand-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-brand-primary) 20%, transparent);
+}
+
 @layer base {
   body {
-    @apply antialiased transition-colors duration-300;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 300ms;
     background-color: var(--color-surface);
     color: var(--color-text-main);
     font-family: var(--font-sans);

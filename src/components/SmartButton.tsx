@@ -39,7 +39,7 @@ export function SmartButton({ onClick, disabled, genStatus, genProgress }: Smart
             transition={{ type: "spring", stiffness: 400, damping: 25 }}
             onClick={onClick}
             disabled={disabled || genStatus !== 'idle'}
-            className={`w-full py-3.5 px-4 rounded-lg font-semibold text-sm flex items-center justify-center gap-2 relative overflow-hidden group transition-colors duration-300
+            className={`w-full py-3.5 px-4 rounded-lg font-bold text-sm flex items-center justify-center gap-2 relative overflow-hidden group transition-colors duration-300
                 ${genStatus === 'success'
                     ? 'bg-green-500 text-white'
                     : genStatus === 'error'
