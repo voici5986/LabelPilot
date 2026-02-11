@@ -8,7 +8,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'prompt', // 使用提示模式，而不是自动静默更新
-      includeAssets: ['print.svg', 'apple-touch-icon.png', 'masked-icon.svg'],
+      includeAssets: ['print.svg'],
       manifest: {
         name: 'Label Printer Pro',
         short_name: 'LabelPrint',
@@ -35,23 +35,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,txt,woff2}'],
-        importScripts: [],
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts-cache',
-              expiration: {
-                maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
-              },
-              cacheableResponse: {
-                statuses: [0, 200]
-              }
-            }
-          }
-        ]
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 放宽到 5MB 以缓存本地字体文件
       },
       devOptions: {
         enabled: false, // 关闭开发模式下的 PWA，消除终端警告
