@@ -49,34 +49,49 @@ ctx.onmessage = async (e) => {
             format: "a4",
         });
 
-        // 4. Draw Images
-        const totalPositions = layout.positions.length;
-        layout.positions.forEach((pos: { x: number; y: number; width: number; height: number }, idx: number) => {
-            // Report progress for drawing (30% to 90%)
-            if (idx % 5 === 0) {
-                ctx.postMessage({ type: 'progress', data: 30 + Math.round((idx / totalPositions) * 60) });
+        // 4. Calculate total images to draw across all pages
+        const totalCount = imageItems.reduce((acc: number, item: any) => acc + item.count, 0);
+        const slotsPerPage = layout.positions.length;
+        const totalPages = Math.ceil(totalCount / slotsPerPage);
+
+        // 5. Draw Images
+        for (let pageIdx = 0; pageIdx < totalPages; pageIdx++) {
+            if (pageIdx > 0) {
+                pdf.addPage();
             }
 
-            const img = resolveItemAtSlot(idx, loadedImages);
-            if (!img) return;
+            const startSlotIdx = pageIdx * slotsPerPage;
+            
+            layout.positions.forEach((pos: { x: number; y: number; width: number; height: number }, localIdx: number) => {
+                const globalIdx = startSlotIdx + localIdx;
+                if (globalIdx >= totalCount) return;
 
-            const scale = Math.min(pos.width / img.width, pos.height / img.height);
-            const w = img.width * scale;
-            const h = img.height * scale;
-            const x = pos.x + (pos.width - w) / 2;
-            const y = pos.y + (pos.height - h) / 2;
+                // Report progress (30% to 90%)
+                if (globalIdx % 5 === 0) {
+                    ctx.postMessage({ type: 'progress', data: 30 + Math.round((globalIdx / totalCount) * 60) });
+                }
 
-            pdf.addImage(
-                img.data,
-                img.format,
-                x,
-                y,
-                w,
-                h,
-                undefined,
-                'FAST'
-            );
-        });
+                const img = resolveItemAtSlot(globalIdx, loadedImages);
+                if (!img) return;
+
+                const scale = Math.min(pos.width / img.width, pos.height / img.height);
+                const w = img.width * scale;
+                const h = img.height * scale;
+                const x = pos.x + (pos.width - w) / 2;
+                const y = pos.y + (pos.height - h) / 2;
+
+                pdf.addImage(
+                    img.data,
+                    img.format,
+                    x,
+                    y,
+                    w,
+                    h,
+                    undefined,
+                    'FAST'
+                );
+            });
+        }
 
         ctx.postMessage({ type: 'progress', data: 95 });
 

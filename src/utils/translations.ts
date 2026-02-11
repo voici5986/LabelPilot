@@ -23,6 +23,9 @@ export const translations = {
         limit_reached: 'Max 10 images allowed. Only the first 10 were loaded.',
         generating_pdf: 'Generating PDF... {p}%',
         theme_toggle: 'Toggle Theme (System/Light/Dark)',
+        page_prev: 'Previous Page',
+        page_next: 'Next Page',
+        page_of: 'Page {current} of {total}',
     },
     zh: {
         window_title: 'LabelPilot',
@@ -46,5 +49,8 @@ export const translations = {
         limit_reached: '单次最多支持 10 张图片，已为您加载前 10 张。',
         generating_pdf: '正在生成 PDF... {p}%',
         theme_toggle: '切换主题模式 (自动/亮色/暗色)',
+        page_prev: '上一页',
+        page_next: '下一页',
+        page_of: '第 {current} / {total} 页',
     }
 };

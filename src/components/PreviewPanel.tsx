@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, useRef } from "react";
 import { calculateLabelLayout, A4_WIDTH_MM, A4_HEIGHT_MM, resolveItemAtSlot } from "../utils/layoutMath";
 import type { HelperLayoutConfig } from "../utils/layoutMath";
-import { Maximize } from "lucide-react";
+import { Maximize, ChevronLeft, ChevronRight } from "lucide-react";
 import { useI18n } from "../utils/i18n";
 import { motion, AnimatePresence } from "framer-motion";
 import { mapPctToScale, getThumbBottomPct } from "../utils/zoomMath";
@@ -70,6 +70,18 @@ export function PreviewPanel({ config, imageItems }: PreviewPanelProps) {
     }, [imageItems]);
 
     const layout = useMemo(() => calculateLabelLayout(config), [config]);
+
+    const totalCount = useMemo(() => imageItems.reduce((acc, item) => acc + item.count, 0), [imageItems]);
+    const slotsPerPage = layout.positions.length;
+    const totalPages = Math.max(1, Math.ceil(totalCount / slotsPerPage));
+    const [currentPage, setCurrentPage] = useState(0);
+
+    // Reset current page if total pages change
+    useEffect(() => {
+        if (currentPage >= totalPages) {
+            setCurrentPage(Math.max(0, totalPages - 1));
+        }
+    }, [totalPages, currentPage]);
 
     const isPortrait = config.orientation === 'portrait';
     const paperWidthMm = isPortrait ? A4_WIDTH_MM : A4_HEIGHT_MM;
@@ -172,8 +184,9 @@ export function PreviewPanel({ config, imageItems }: PreviewPanelProps) {
                             }}
                         >
                             {layout.positions.map((pos, idx) => {
-                                // 无论是单图还是多图，统一使用“精确计数”逻辑
-                                const item = resolveItemAtSlot(idx, imageItems);
+                                // 考虑分页的索引偏移
+                                const globalIdx = currentPage * slotsPerPage + idx;
+                                const item = resolveItemAtSlot(globalIdx, imageItems);
                                 const currentImageUrl = item ? imageUrls.get(item.id) : null;
 
                                 return (
@@ -195,7 +208,9 @@ export function PreviewPanel({ config, imageItems }: PreviewPanelProps) {
                                                 draggable="false"
                                             />
                                         ) : (
-                                            <span className="text-[12px] text-text-muted font-medium select-none">Label {idx + 1}</span>
+                                            globalIdx < totalCount ? (
+                                                <span className="text-[12px] text-text-muted font-medium select-none">Label {globalIdx + 1}</span>
+                                            ) : null
                                         )}
                                     </div>
                                 );
@@ -203,6 +218,33 @@ export function PreviewPanel({ config, imageItems }: PreviewPanelProps) {
                         </motion.div>
                     </div>
                 </div>
+
+                {/* Page Navigation Controls */}
+                {totalPages > 1 && (
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-4 z-30 bg-surface/80 backdrop-blur-md px-4 py-2 rounded-full border border-border-subtle shadow-lg">
+                        <button
+                            disabled={currentPage === 0}
+                            onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
+                            className="p-1 rounded-full hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            title={t('page_prev')}
+                        >
+                            <ChevronLeft className="w-5 h-5 text-text-main" />
+                        </button>
+                        
+                        <span className="text-sm font-medium text-text-main min-w-[80px] text-center">
+                            {t('page_of', { current: currentPage + 1, total: totalPages })}
+                        </span>
+
+                        <button
+                            disabled={currentPage === totalPages - 1}
+                            onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))}
+                            className="p-1 rounded-full hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            title={t('page_next')}
+                        >
+                            <ChevronRight className="w-5 h-5 text-text-main" />
+                        </button>
+                    </div>
+                )}
 
                 {/* Vertical Zoom Controls */}
                 <div

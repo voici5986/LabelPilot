@@ -74,24 +74,20 @@ function App() {
     localStorage.setItem("label_printer_config", JSON.stringify(config));
   }, [config]);
 
-  // 动态行列限制与自动修正
-  useEffect(() => {
-    const isPortrait = config.orientation === 'portrait';
-    const maxR = isPortrait ? 20 : 10;
-    const maxC = isPortrait ? 10 : 20;
-
-    if (config.rows > maxR || config.cols > maxC) {
-      setConfig(prev => ({
-        ...prev,
-        rows: Math.min(prev.rows, maxR),
-        cols: Math.min(prev.cols, maxC)
-      }));
-    }
-  }, [config.orientation]);
-
   // Handlers
   const handleConfigChange = (updates: Partial<HelperLayoutConfig>) => {
-    setConfig(prev => ({ ...prev, ...updates }));
+    setConfig(prev => {
+      const next = { ...prev, ...updates };
+      // 动态行列限制与自动修正
+      if (updates.orientation) {
+        const isPortrait = next.orientation === 'portrait';
+        const maxR = isPortrait ? 20 : 10;
+        const maxC = isPortrait ? 10 : 20;
+        next.rows = Math.min(next.rows, maxR);
+        next.cols = Math.min(next.cols, maxC);
+      }
+      return next;
+    });
   };
 
   const handleFilesSelect = (files: File[]) => {
