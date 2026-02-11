@@ -27,6 +27,13 @@ export interface ImageItem {
   count: number;
 }
 
+interface TextConfig {
+  prefix: string;
+  startNumber: number;
+  digits: number;
+  count: number;
+}
+
 function App() {
   const { t } = useI18n();
 
@@ -60,12 +67,20 @@ function App() {
   }, [appMode]);
 
   // Text Mode Config State
-  const [textConfig, setTextConfig] = useState({
-    prefix: "SN-",
-    startNumber: 1,
-    digits: 3,
-    count: 10
+  const [textConfig, setTextConfig] = useState<TextConfig>(() => {
+    const saved = localStorage.getItem("label_text_config");
+    return saved ? JSON.parse(saved) : {
+      prefix: "SN-",
+      startNumber: 1,
+      digits: 3,
+      count: 10
+    };
   });
+
+  // Sync Text Config to LocalStorage
+  useEffect(() => {
+    localStorage.setItem("label_text_config", JSON.stringify(textConfig));
+  }, [textConfig]);
 
   // Theme State
   const [theme, setTheme] = useState<'system' | 'light' | 'dark'>(() => {
