@@ -36,6 +36,11 @@ export const translations = {
         paper_type_letter: 'Letter',
         paper_type_custom: 'Custom',
         more_presets: 'More Presets',
+        pwa_ready_title: 'Ready to work offline',
+        pwa_ready_desc: 'App is now ready for offline use.',
+        pwa_update_title: 'Update Available',
+        pwa_update_desc: 'A new version is available, click update to refresh.',
+        pwa_update_btn: 'Update Now',
     },
     zh: {
         window_title: 'LabelPilot',
@@ -72,5 +77,10 @@ export const translations = {
         paper_type_letter: 'Letter (信纸)',
         paper_type_custom: '自定义尺寸',
         more_presets: '更多预设',
+        pwa_ready_title: '离线模式已就绪',
+        pwa_ready_desc: '应用已成功缓存，现在可以离线使用了。',
+        pwa_update_title: '发现新版本',
+        pwa_update_desc: '检测到有新功能或修复，点击更新以立即应用。',
+        pwa_update_btn: '立即更新并刷新',
     }
 };

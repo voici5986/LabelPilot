@@ -3,6 +3,7 @@ import { Layout } from "./components/Layout";
 import { Header } from "./components/Header";
 import { ControlPanel } from "./components/ControlPanel";
 import { PreviewPanel } from "./components/PreviewPanel";
+import { ReloadPrompt } from "./components/ReloadPrompt";
 import { A4_WIDTH_MM, A4_HEIGHT_MM } from "./utils/layoutMath";
 import type { HelperLayoutConfig } from "./utils/layoutMath";
 import { generatePDF } from "./utils/pdfGenerator";
@@ -178,6 +179,9 @@ function App() {
           imageItems={imageItems}
         />
       </main>
+
+      {/* PWA Update Prompt */}
+      <ReloadPrompt />
 
       {/* Toast Notification */}
       <Toast
