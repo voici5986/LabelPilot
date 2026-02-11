@@ -35,7 +35,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,txt,woff2}'],
-        maximumFileSizeToCacheInBytes: 2 * 1024 * 1024, // 恢复到 2MB，因为已经移除了 4MB+ 的 MiSans 字体
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 增加到 3MB 以支持较大的自定义字体文件
       },
       devOptions: {
         enabled: false, // 关闭开发模式下的 PWA，消除终端警告
