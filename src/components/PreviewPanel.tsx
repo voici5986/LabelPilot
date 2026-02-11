@@ -11,9 +11,16 @@ import type { ImageItem } from "../App";
 interface PreviewPanelProps {
     config: HelperLayoutConfig;
     imageItems: ImageItem[];
+    appMode: 'image' | 'text';
+    textConfig: {
+        prefix: string;
+        startNumber: number;
+        digits: number;
+        count: number;
+    };
 }
 
-export function PreviewPanel({ config, imageItems }: PreviewPanelProps) {
+export function PreviewPanel({ config, imageItems, appMode, textConfig }: PreviewPanelProps) {
     const { t } = useI18n();
     const [scale, setScale] = useState(1);
     const [baseFitScale, setBaseFitScale] = useState(0.8);
@@ -73,7 +80,14 @@ export function PreviewPanel({ config, imageItems }: PreviewPanelProps) {
 
     const layout = useMemo(() => calculateLabelLayout(config), [config]);
 
-    const totalCount = useMemo(() => imageItems.reduce((acc, item) => acc + item.count, 0), [imageItems]);
+    const totalCount = useMemo(() => {
+        if (appMode === 'image') {
+            return imageItems.reduce((acc, item) => acc + item.count, 0);
+        } else {
+            return textConfig.count;
+        }
+    }, [imageItems, appMode, textConfig.count]);
+
     const slotsPerPage = layout.positions.length;
     const totalPages = Math.max(1, Math.ceil(totalCount / slotsPerPage));
     const [currentPage, setCurrentPage] = useState(0);
@@ -190,8 +204,41 @@ export function PreviewPanel({ config, imageItems }: PreviewPanelProps) {
                             {layout.positions.map((pos, idx) => {
                                 // 考虑分页的索引偏移
                                 const globalIdx = currentPage * slotsPerPage + idx;
-                                const item = resolveItemAtSlot(globalIdx, imageItems);
-                                const currentImageUrl = item ? imageUrls.get(item.id) : null;
+                                
+                                // 根据模式决定渲染内容
+                                let content = null;
+                                if (appMode === 'image') {
+                                    const item = resolveItemAtSlot(globalIdx, imageItems);
+                                    const currentImageUrl = item ? imageUrls.get(item.id) : null;
+                                    if (currentImageUrl) {
+                                        content = (
+                                            <img
+                                                src={currentImageUrl}
+                                                className="w-full h-full object-contain pointer-events-none"
+                                                alt=""
+                                                draggable="false"
+                                            />
+                                        );
+                                    } else if (globalIdx < totalCount) {
+                                        content = <span className="text-[12px] text-text-muted font-medium select-none">Label {globalIdx + 1}</span>;
+                                    }
+                                } else if (globalIdx < totalCount) {
+                                    // 自动编号模式
+                                    const currentNumber = textConfig.startNumber + globalIdx;
+                                    const formattedNumber = String(currentNumber).padStart(textConfig.digits, '0');
+                                    content = (
+                                        <div className="flex flex-col items-center justify-center w-full h-full p-1 text-center">
+                                            <span 
+                                                className="text-black font-mono font-bold leading-tight break-all"
+                                                style={{ 
+                                                    fontSize: `${Math.min(pos.width * 0.8 / (textConfig.prefix.length + textConfig.digits), pos.height * 0.5)}mm`
+                                                }}
+                                            >
+                                                {textConfig.prefix}{formattedNumber}
+                                            </span>
+                                        </div>
+                                    );
+                                }
 
                                 return (
                                     <div
@@ -204,18 +251,7 @@ export function PreviewPanel({ config, imageItems }: PreviewPanelProps) {
                                             height: `${pos.height}mm`,
                                         }}
                                     >
-                                        {currentImageUrl ? (
-                                            <img
-                                                src={currentImageUrl}
-                                                className="w-full h-full object-contain pointer-events-none"
-                                                alt=""
-                                                draggable="false"
-                                            />
-                                        ) : (
-                                            globalIdx < totalCount ? (
-                                                <span className="text-[12px] text-text-muted font-medium select-none">Label {globalIdx + 1}</span>
-                                            ) : null
-                                        )}
+                                        {content}
                                     </div>
                                 );
                             })}

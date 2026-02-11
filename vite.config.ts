@@ -34,8 +34,7 @@ export default defineConfig({
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,ico,txt}'],
-        // 确保 Web Worker 也能被缓存
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,txt,woff2}'],
         importScripts: [],
         runtimeCaching: [
           {

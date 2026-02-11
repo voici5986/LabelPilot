@@ -10,10 +10,17 @@ import type { ImageItem } from "../App";
 export async function generatePDF(
     config: HelperLayoutConfig,
     imageItems: ImageItem[],
+    appMode: 'image' | 'text',
+    textConfig: {
+        prefix: string;
+        startNumber: number;
+        digits: number;
+        count: number;
+    },
     onProgress?: (progress: number) => void
 ): Promise<void> {
     // Pre-read buffers and prepare for transfer
-    const itemsWithBuffers = await Promise.all(imageItems.map(async (item) => {
+    const itemsWithBuffers = appMode === 'image' ? await Promise.all(imageItems.map(async (item) => {
         const buffer = await item.file.arrayBuffer();
         return {
             id: item.id,
@@ -22,7 +29,7 @@ export async function generatePDF(
             type: item.file.type,
             buffer
         };
-    }));
+    })) : [];
 
     const buffers = itemsWithBuffers.map(item => item.buffer);
 
@@ -71,6 +78,6 @@ export async function generatePDF(
         };
 
         // Send data to worker using Transferable Objects (zero-copy)
-        worker.postMessage({ config, imageItems: itemsWithBuffers }, buffers);
+        worker.postMessage({ config, imageItems: itemsWithBuffers, appMode, textConfig }, buffers);
     });
 }

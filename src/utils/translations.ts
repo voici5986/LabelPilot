@@ -41,6 +41,14 @@ export const translations = {
         pwa_update_title: 'Update Available',
         pwa_update_desc: 'A new version is available, click update to refresh.',
         pwa_update_btn: 'Update Now',
+        app_mode: 'Label Mode',
+        mode_image: 'Image',
+        mode_text: 'Auto Number',
+        text_config_group: 'TEXT CONFIG',
+        text_prefix: 'Prefix',
+        text_start_number: 'Start Number',
+        text_digits: 'Digits',
+        text_count: 'Total Count',
     },
     zh: {
         window_title: 'LabelPilot',
@@ -82,5 +90,13 @@ export const translations = {
         pwa_update_title: '发现新版本',
         pwa_update_desc: '检测到有新功能或修复，点击更新以立即应用。',
         pwa_update_btn: '立即更新并刷新',
+        app_mode: '标签类型',
+        mode_image: '图片模式',
+        mode_text: '自动编号',
+        text_config_group: '编号配置',
+        text_prefix: '前缀',
+        text_start_number: '起始编号',
+        text_digits: '编号位数',
+        text_count: '生成数量',
     }
 };

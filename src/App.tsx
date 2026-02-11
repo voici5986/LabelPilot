@@ -49,6 +49,24 @@ function App() {
   const [genStatus, setGenStatus] = useState<'idle' | 'generating' | 'success' | 'error'>('idle');
   const [genProgress, setGenProgress] = useState(0);
 
+  // App Mode State
+  const [appMode, setAppMode] = useState<'image' | 'text'>(() => {
+    return (localStorage.getItem("app_mode") as 'image' | 'text') || 'image';
+  });
+
+  // Sync App Mode to LocalStorage
+  useEffect(() => {
+    localStorage.setItem("app_mode", appMode);
+  }, [appMode]);
+
+  // Text Mode Config State
+  const [textConfig, setTextConfig] = useState({
+    prefix: "SN-",
+    startNumber: 1,
+    digits: 3,
+    count: 10
+  });
+
   // Theme State
   const [theme, setTheme] = useState<'system' | 'light' | 'dark'>(() => {
     return (localStorage.getItem("theme_mode") as 'system' | 'light' | 'dark') || 'system';
@@ -137,11 +155,11 @@ function App() {
 
 
   const handleGenerateValues = async () => {
-    if (imageItems.length === 0) return;
+    if (appMode === 'image' && imageItems.length === 0) return;
     setGenStatus('generating');
     setGenProgress(0);
     try {
-      await generatePDF(config, imageItems, (p: number) => setGenProgress(p));
+      await generatePDF(config, imageItems, appMode, textConfig, (p: number) => setGenProgress(p));
       setGenStatus('success');
       // Auto reset after 2.5s
       setTimeout(() => setGenStatus('idle'), 2500);
@@ -154,11 +172,13 @@ function App() {
 
   return (
     <Layout>
-      <Header
-        theme={theme}
-        onThemeChange={setTheme}
-        config={config}
+      <Header 
+        theme={theme} 
+        onThemeChange={setTheme} 
+        config={config} 
         onConfigChange={handleConfigChange}
+        appMode={appMode}
+        onAppModeChange={setAppMode}
       />
       <main className="flex-1 flex overflow-hidden">
         <ControlPanel
@@ -173,10 +193,15 @@ function App() {
           genProgress={genProgress}
           maxRows={config.orientation === 'portrait' ? 20 : 10}
           maxCols={config.orientation === 'portrait' ? 10 : 20}
+          appMode={appMode}
+          textConfig={textConfig}
+          onTextConfigChange={(updates) => setTextConfig(prev => ({ ...prev, ...updates }))}
         />
         <PreviewPanel
           config={config}
           imageItems={imageItems}
+          appMode={appMode}
+          textConfig={textConfig}
         />
       </main>
 

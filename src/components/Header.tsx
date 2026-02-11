@@ -16,9 +16,18 @@ interface HeaderProps {
     onThemeChange: (theme: 'system' | 'light' | 'dark') => void;
     config: HelperLayoutConfig;
     onConfigChange: (updates: Partial<HelperLayoutConfig>) => void;
+    appMode: 'image' | 'text';
+    onAppModeChange: (mode: 'image' | 'text') => void;
 }
 
-export function Header({ theme, onThemeChange, config, onConfigChange }: HeaderProps) {
+export function Header({ 
+    theme, 
+    onThemeChange, 
+    config, 
+    onConfigChange,
+    appMode,
+    onAppModeChange
+}: HeaderProps) {
     const { t, language, setLanguage } = useI18n();
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isPresetsOpen, setIsPresetsOpen] = useState(false);
@@ -140,6 +149,39 @@ export function Header({ theme, onThemeChange, config, onConfigChange }: HeaderP
                             </div>
 
                             <div className="space-y-4">
+                                {/* App Mode Section */}
+                                <div className="space-y-3">
+                                    <label className="text-sm font-bold text-text-muted uppercase tracking-wider">
+                                        {t('app_mode')}
+                                    </label>
+                                    <div className="flex bg-text-main/5 p-1 rounded-lg border border-border-subtle relative overflow-hidden">
+                                        <motion.div
+                                            className="absolute bg-surface shadow-sm rounded-md z-0"
+                                            initial={false}
+                                            animate={{
+                                                x: appMode === 'image' ? 0 : '100%',
+                                                width: '50%',
+                                                height: 'calc(100% - 8px)',
+                                                top: 4,
+                                                left: 0
+                                            }}
+                                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                        />
+                                        <button
+                                            onClick={() => onAppModeChange('image')}
+                                            className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all relative z-10 ${appMode === 'image' ? 'text-brand-primary' : 'text-text-muted hover:text-text-main'}`}
+                                        >
+                                            {t('mode_image')}
+                                        </button>
+                                        <button
+                                            onClick={() => onAppModeChange('text')}
+                                            className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all relative z-10 ${appMode === 'text' ? 'text-brand-primary' : 'text-text-muted hover:text-text-main'}`}
+                                        >
+                                            {t('mode_text')}
+                                        </button>
+                                    </div>
+                                </div>
+
                                 {/* Paper Size Section */}
                                 <div className="space-y-3">
                                     <label className="text-sm font-bold text-text-muted uppercase tracking-wider">

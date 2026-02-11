@@ -1,13 +1,15 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { X } from "lucide-react";
 import type { ImageItem } from "../App";
 
 interface ThumbnailItemProps {
     item: ImageItem;
     onCountChange: (count: number) => void;
+    onRemove: () => void;
 }
 
-export function ThumbnailItem({ item, onCountChange }: ThumbnailItemProps) {
+export function ThumbnailItem({ item, onCountChange, onRemove }: ThumbnailItemProps) {
     const [url, setUrl] = useState<string>("");
 
     useEffect(() => {
@@ -38,6 +40,17 @@ export function ThumbnailItem({ item, onCountChange }: ThumbnailItemProps) {
                     />
                 </div>
             )}
+
+            {/* Remove Button */}
+            <button
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onRemove();
+                }}
+                className="absolute -top-1.5 -left-1.5 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-red-600 z-20"
+            >
+                <X className="w-3 h-3" />
+            </button>
 
             {/* Count Input Overlay (Bottom Right) */}
             <div className="absolute -bottom-1 -right-1 flex items-center bg-brand-primary rounded-md shadow-sm border border-white shadow-brand-primary/20 z-10">
