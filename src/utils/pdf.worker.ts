@@ -46,7 +46,7 @@ ctx.onmessage = async (e) => {
         const pdf = new jsPDF({
             orientation: config.orientation,
             unit: "mm",
-            format: "a4",
+            format: [layout.pageWidth, layout.pageHeight],
         });
 
         // 4. Calculate total images to draw across all pages

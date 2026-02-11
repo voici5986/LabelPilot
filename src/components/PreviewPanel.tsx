@@ -39,8 +39,10 @@ export function PreviewPanel({ config, imageItems }: PreviewPanelProps) {
             const containerH = containerRef.current.clientHeight - (TOP_GAP + BOTTOM_GAP);
 
             const isPortrait = config.orientation === 'portrait';
-            const paperWidthMm = isPortrait ? A4_WIDTH_MM : A4_HEIGHT_MM;
-            const paperHeightMm = isPortrait ? A4_HEIGHT_MM : A4_WIDTH_MM;
+            const baseW = config.pageWidthMm || A4_WIDTH_MM;
+            const baseH = config.pageHeightMm || A4_HEIGHT_MM;
+            const paperWidthMm = isPortrait ? Math.min(baseW, baseH) : Math.max(baseW, baseH);
+            const paperHeightMm = isPortrait ? Math.max(baseW, baseH) : Math.min(baseW, baseH);
 
             const mmToPx = 3.78;
             const paperW = paperWidthMm * mmToPx;
@@ -84,8 +86,10 @@ export function PreviewPanel({ config, imageItems }: PreviewPanelProps) {
     }, [totalPages, currentPage]);
 
     const isPortrait = config.orientation === 'portrait';
-    const paperWidthMm = isPortrait ? A4_WIDTH_MM : A4_HEIGHT_MM;
-    const paperHeightMm = isPortrait ? A4_HEIGHT_MM : A4_WIDTH_MM;
+    const baseW = config.pageWidthMm || A4_WIDTH_MM;
+    const baseH = config.pageHeightMm || A4_HEIGHT_MM;
+    const paperWidthMm = isPortrait ? Math.min(baseW, baseH) : Math.max(baseW, baseH);
+    const paperHeightMm = isPortrait ? Math.max(baseW, baseH) : Math.min(baseW, baseH);
 
     const handleSliderChange = (e: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent) => {
         if (!sliderTrackRef.current) return;
@@ -245,6 +249,20 @@ export function PreviewPanel({ config, imageItems }: PreviewPanelProps) {
                         </button>
                     </div>
                 )}
+
+                {/* Relative Ruler */}
+                <div className="absolute bottom-4 left-14 flex flex-col items-start gap-1 pointer-events-none z-20 opacity-60">
+                    <div className="flex items-end h-3">
+                        <div className="w-[1.5px] h-full bg-text-muted"></div>
+                        <motion.div 
+                            className="h-[1.5px] bg-text-muted"
+                            animate={{ width: `${50 * scale * baseFitScale}mm` }}
+                            transition={isDragging ? { duration: 0 } : { type: "spring", stiffness: 300, damping: 30 }}
+                        />
+                        <div className="w-[1.5px] h-full bg-text-muted"></div>
+                    </div>
+                    <span className="text-[10px] text-text-muted font-bold font-mono leading-none select-none">50mm</span>
+                </div>
 
                 {/* Vertical Zoom Controls */}
                 <div

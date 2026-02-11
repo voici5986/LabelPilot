@@ -3,6 +3,7 @@ import { Layout } from "./components/Layout";
 import { Header } from "./components/Header";
 import { ControlPanel } from "./components/ControlPanel";
 import { PreviewPanel } from "./components/PreviewPanel";
+import { A4_WIDTH_MM, A4_HEIGHT_MM } from "./utils/layoutMath";
 import type { HelperLayoutConfig } from "./utils/layoutMath";
 import { generatePDF } from "./utils/pdfGenerator";
 import { Toast, type ToastType } from "./components/Toast";
@@ -15,6 +16,8 @@ const DEFAULT_CONFIG: HelperLayoutConfig = {
   marginMm: 10,
   spacingMm: 10,
   orientation: 'landscape',
+  pageWidthMm: A4_WIDTH_MM,
+  pageHeightMm: A4_HEIGHT_MM,
 };
 
 export interface ImageItem {
@@ -150,7 +153,12 @@ function App() {
 
   return (
     <Layout>
-      <Header theme={theme} onThemeChange={setTheme} />
+      <Header
+        theme={theme}
+        onThemeChange={setTheme}
+        config={config}
+        onConfigChange={handleConfigChange}
+      />
       <main className="flex-1 flex overflow-hidden">
         <ControlPanel
           config={config}

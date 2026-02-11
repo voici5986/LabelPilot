@@ -24,9 +24,17 @@ export interface LabelPosition {
 
 export const A4_WIDTH_MM = 210;
 export const A4_HEIGHT_MM = 297;
+export const A3_WIDTH_MM = 297;
+export const A3_HEIGHT_MM = 420;
+export const A5_WIDTH_MM = 148;
+export const A5_HEIGHT_MM = 210;
+export const LETTER_WIDTH_MM = 215.9;
+export const LETTER_HEIGHT_MM = 279.4;
+
+export type PaperSize = 'A4' | 'Letter' | 'Custom';
 
 /**
- * Calculates the dimensions and positions of labels on an A4 page.
+ * Calculates the dimensions and positions of labels on a page.
  * Returns measurements in Millimeters.
  */
 export function calculateLabelLayout(config: HelperLayoutConfig): {
@@ -43,11 +51,17 @@ export function calculateLabelLayout(config: HelperLayoutConfig): {
     marginMm,
     spacingMm,
     orientation,
+    pageWidthMm,
+    pageHeightMm
   } = config;
 
-  // 1. Determine Page Size
-  const pageWidth = orientation === 'landscape' ? A4_HEIGHT_MM : A4_WIDTH_MM;
-  const pageHeight = orientation === 'landscape' ? A4_WIDTH_MM : A4_HEIGHT_MM;
+  // 1. Determine Base Page Size
+  let baseWidth = pageWidthMm || A4_WIDTH_MM;
+  let baseHeight = pageHeightMm || A4_HEIGHT_MM;
+
+  // 2. Handle Orientation
+  const pageWidth = orientation === 'landscape' ? Math.max(baseWidth, baseHeight) : Math.min(baseWidth, baseHeight);
+  const pageHeight = orientation === 'landscape' ? Math.min(baseWidth, baseHeight) : Math.max(baseWidth, baseHeight);
 
   // 2. Validate Inputs
   if (rows <= 0 || cols <= 0) {

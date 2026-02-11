@@ -1,5 +1,11 @@
 import { UploadCloud, Grid, Layout, File as FileIcon, FileMinus } from "lucide-react";
 import type { HelperLayoutConfig } from "../utils/layoutMath";
+import { 
+    A4_WIDTH_MM, A4_HEIGHT_MM, 
+    A3_WIDTH_MM, A3_HEIGHT_MM, 
+    A5_WIDTH_MM, A5_HEIGHT_MM, 
+    LETTER_WIDTH_MM, LETTER_HEIGHT_MM 
+} from "../utils/layoutMath";
 import { motion, Reorder } from "framer-motion";
 import { useI18n } from "../utils/i18n";
 import { NumberInput } from "./NumberInput";
@@ -50,6 +56,20 @@ export function ControlPanel({
             onFilesSelect(Array.from(e.target.files));
         }
     };
+
+    // Calculate current paper size info
+    const paperSizeInfo = useMemo(() => {
+        const w = Math.round((config.pageWidthMm || A4_WIDTH_MM) * 10) / 10;
+        const h = Math.round((config.pageHeightMm || A4_HEIGHT_MM) * 10) / 10;
+
+        let label = 'Custom';
+        if (w === Math.round(A4_WIDTH_MM * 10) / 10 && h === Math.round(A4_HEIGHT_MM * 10) / 10) label = 'A4';
+        else if (w === Math.round(A3_WIDTH_MM * 10) / 10 && h === Math.round(A3_HEIGHT_MM * 10) / 10) label = 'A3';
+        else if (w === Math.round(A5_WIDTH_MM * 10) / 10 && h === Math.round(A5_HEIGHT_MM * 10) / 10) label = 'A5';
+        else if (w === Math.round(LETTER_WIDTH_MM * 10) / 10 && h === Math.round(LETTER_HEIGHT_MM * 10) / 10) label = 'Letter';
+
+        return `${label}, ${w}×${h}mm`;
+    }, [config.pageWidthMm, config.pageHeightMm]);
 
     return (
         <aside className="w-80 glass-panel border-r-0 flex flex-col z-10 m-2 rounded-xl shadow-lg">
@@ -152,9 +172,14 @@ export function ControlPanel({
 
                 {/* Orientation */}
                 <div className="space-y-3">
-                    <h2 className="text-sm font-bold text-text-muted uppercase tracking-wider flex items-center gap-2">
-                        <Layout className="w-4 h-4" /> {t('orientation')}
-                    </h2>
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-sm font-bold text-text-muted uppercase tracking-wider flex items-center gap-2">
+                            <Layout className="w-4 h-4" /> {t('orientation')}
+                        </h2>
+                        <span className="text-[14px] font-medium text-text-muted opacity-80">
+                            {paperSizeInfo}
+                        </span>
+                    </div>
                     <div className="bg-text-main/5 p-1 rounded-lg flex border border-border-subtle relative isolate">
                         <button
                             type="button"
