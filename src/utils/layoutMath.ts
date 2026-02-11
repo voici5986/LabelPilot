@@ -56,14 +56,14 @@ export function calculateLabelLayout(config: HelperLayoutConfig): {
   } = config;
 
   // 1. Determine Base Page Size
-  let baseWidth = pageWidthMm || A4_WIDTH_MM;
-  let baseHeight = pageHeightMm || A4_HEIGHT_MM;
+  const baseWidth = pageWidthMm || A4_WIDTH_MM;
+  const baseHeight = pageHeightMm || A4_HEIGHT_MM;
 
   // 2. Handle Orientation
   const pageWidth = orientation === 'landscape' ? Math.max(baseWidth, baseHeight) : Math.min(baseWidth, baseHeight);
   const pageHeight = orientation === 'landscape' ? Math.min(baseWidth, baseHeight) : Math.max(baseWidth, baseHeight);
 
-  // 2. Validate Inputs
+  // 3. Validate Inputs
   if (rows <= 0 || cols <= 0) {
     return { positions: [], labelWidth: 0, labelHeight: 0, pageWidth, pageHeight, error: "ROWS_COLS_POSITIVE" };
   }
@@ -71,7 +71,7 @@ export function calculateLabelLayout(config: HelperLayoutConfig): {
     return { positions: [], labelWidth: 0, labelHeight: 0, pageWidth, pageHeight, error: "MARGIN_SPACING_POSITIVE" };
   }
 
-  // 3. Calculate Usable Area
+  // 4. Calculate Usable Area
   const usableWidth = pageWidth - 2 * marginMm;
   const usableHeight = pageHeight - 2 * marginMm;
 
@@ -79,7 +79,7 @@ export function calculateLabelLayout(config: HelperLayoutConfig): {
     return { positions: [], labelWidth: 0, labelHeight: 0, pageWidth, pageHeight, error: "MARGIN_TOO_LARGE" };
   }
 
-  // 4. Calculate Label Dimensions
+  // 5. Calculate Label Dimensions
   // Total spacing width = (cols - 1) * spacing
   const totalSpacingX = (cols - 1) * spacingMm;
   const totalSpacingY = (rows - 1) * spacingMm;
@@ -91,7 +91,7 @@ export function calculateLabelLayout(config: HelperLayoutConfig): {
     return { positions: [], labelWidth: 0, labelHeight: 0, pageWidth, pageHeight, error: "LABEL_TOO_SMALL" };
   }
 
-  // 5. Calculate Positions
+  // 6. Calculate Positions
   // Important: PDF coordinate systems often start at Bottom-Left (like ReportLab).
   // However, most Web Canvas / SVG / jsPDF start Top-Left.
   // The Python code: y = page_height - margin - (row + 1) * label_height - row * spacing

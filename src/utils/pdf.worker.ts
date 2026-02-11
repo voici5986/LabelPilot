@@ -50,7 +50,7 @@ ctx.onmessage = async (e) => {
         });
 
         // 4. Calculate total images to draw across all pages
-        const totalCount = imageItems.reduce((acc: number, item: any) => acc + item.count, 0);
+        const totalCount = imageItems.reduce((acc: number, item: { count: number }) => acc + item.count, 0);
         const slotsPerPage = layout.positions.length;
         const totalPages = Math.ceil(totalCount / slotsPerPage);
 

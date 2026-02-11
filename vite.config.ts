@@ -55,7 +55,7 @@ export default defineConfig({
         ]
       },
       devOptions: {
-        enabled: true, // 在开发模式下也启用 PWA，解决 Hook 返回 undefined 的问题
+        enabled: false, // 关闭开发模式下的 PWA，消除终端警告
         type: 'module'
       }
     })
