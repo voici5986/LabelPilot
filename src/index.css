@@ -2,14 +2,6 @@
 
 /* 字体定义 */
 @font-face {
-  font-family: 'MiSans';
-  src: url('./assets/fonts/MiSansVF-instance.woff2') format('woff2');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
   font-family: 'MapleMono';
   src: url('./assets/fonts/MapleMono-Subset.woff2') format('woff2');
   font-weight: normal;
@@ -18,7 +10,7 @@
 }
 
 @theme {
-  --font-sans: 'MiSans', 'Inter', 'sans-serif';
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
   --font-mono: 'MapleMono', 'monospace';
 
   /* 主题原始值定义 */
