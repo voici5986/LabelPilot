@@ -1,7 +1,8 @@
-import { Printer, Globe, Sun, Moon, Monitor, Settings, ChevronDown, Download } from "lucide-react";
+import { Globe, Sun, Moon, Monitor, Settings, ChevronDown, Download } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useI18n } from "../utils/i18n";
 import { useState, useRef, useEffect } from "react";
+import { LogoIcon } from "./LogoIcon";
 import { 
     A4_WIDTH_MM, A4_HEIGHT_MM, 
     A3_WIDTH_MM, A3_HEIGHT_MM,
@@ -131,14 +132,10 @@ export function Header({
             animate={{ y: 0, opacity: 1 }}
             className="h-10 glass-panel border-x-0 border-t-0 rounded-none z-30 px-6 flex items-center justify-between shrink-0 shadow-sm"
         >
-            <div className="flex items-center gap-3">
-                <div className="bg-brand-primary text-white p-1 rounded-lg shadow-lg shadow-brand-primary/30">
-                    <Printer className="w-5 h-5" />
-                </div>
-                <div>
-                    <h1 className="font-extrabold text-xl bg-clip-text text-transparent bg-gradient-to-r from-brand-primary to-brand-secondary">
-                        {t('main_title')}
-                    </h1>
+            <div className="flex items-center gap-1">
+                <LogoIcon size={32} className="shrink-0" />
+                <div className="labelpilot-logotype text-xl">
+                    Label<span className="p-special">P</span>ilot
                 </div>
             </div>
             <div className="flex items-center gap-2 relative">

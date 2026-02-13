@@ -21,6 +21,16 @@
   --font-sans: 'MiSansVF', system-ui, -apple-system, sans-serif;
   --font-mono: 'MapleMono', monospace;
 
+  /* --- 品牌色控制中心 --- */
+  /* 修改这里即可全局改变亮/暗模式下的 UI 品牌色 */
+  --brand-primary-light: #0284C7;
+  --brand-primary-dark: #38BDF8;
+
+  /* Logo 专属配色 - 保持经典的靛蓝+点缀黄 */
+  --logo-primary: #4F46E5;
+  --logo-accent: #FFD166;
+  /* ---------------------- */
+
   /* 主题原始值定义 */
   --light-surface: var(--color-zinc-50);
   --light-text: var(--color-zinc-800);
@@ -39,10 +49,10 @@
   --color-border-subtle: var(--light-border);
   --color-glass-surface: var(--light-glass);
   --color-glass-border: color-mix(in srgb, white 50%, transparent);
+  --color-brand-primary: var(--brand-primary-light);
   --paper-brightness: 1;
 
-  /* Brand Colors */
-  --color-brand-primary: var(--color-indigo-600);
+  /* 其他品牌辅助色 */
   --color-brand-secondary: var(--color-blue-500);
   --blur-glass: 12px;
 }
@@ -57,6 +67,7 @@
     --color-border-subtle: var(--dark-border);
     --color-glass-surface: var(--dark-glass);
     --color-glass-border: color-mix(in srgb, white 8%, transparent);
+    --color-brand-primary: var(--brand-primary-dark);
     --paper-brightness: 0.9;
   }
 }
@@ -70,6 +81,7 @@
   --color-border-subtle: var(--light-border);
   --color-glass-surface: var(--light-glass);
   --color-glass-border: color-mix(in srgb, white 50%, transparent);
+  --color-brand-primary: var(--brand-primary-light);
   --paper-brightness: 1;
 }
 
@@ -81,6 +93,7 @@
   --color-border-subtle: var(--dark-border);
   --color-glass-surface: var(--dark-glass);
   --color-glass-border: color-mix(in srgb, white 8%, transparent);
+  --color-brand-primary: var(--brand-primary-dark);
   --paper-brightness: 0.9;
 }
 
@@ -104,6 +117,45 @@
   outline: none;
   border-color: var(--color-brand-primary);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-brand-primary) 20%, transparent);
+}
+
+/* LabelPilot 字标样式 */
+@utility labelpilot-logotype {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--color-text-main);
+  display: flex;
+  align-items: baseline;
+}
+
+@utility p-special {
+  position: relative;
+  display: inline-block;
+  color: var(--logo-primary);
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 20%;
+    right: -15%;
+    width: 25%;
+    height: 25%;
+    background: var(--logo-accent);
+    border-radius: 1px;
+    transform: rotate(45deg);
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    bottom: 0px;
+    left: 10%;
+    width: 70%;
+    height: 8%;
+    background: var(--logo-primary);
+    border-radius: 1px;
+    opacity: 0.6;
+  }
 }
 
 @layer base {

@@ -1,1 +1,28 @@
-<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg t="1770791994808" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1616" xmlns:xlink="http://www.w3.org/1999/xlink" width="256" height="256"><path d="M694.857143 256H329.142857c-11.493878 0-20.897959-9.404082-20.897959-20.897959s9.404082-20.897959 20.897959-20.897959h365.714286c11.493878 0 20.897959 9.404082 20.897959 20.897959s-9.404082 20.897959-20.897959 20.897959z" fill="#AF8015" p-id="1617"></path><path d="M820.244898 615.967347H203.755102V177.632653c0-45.97551 37.616327-83.591837 83.591837-83.591837h449.306122c45.97551 0 83.591837 37.616327 83.591837 83.591837v438.334694z" fill="#F2CB51" p-id="1618"></path><path d="M224.653061 824.946939h-47.020408c-45.97551 0-83.591837-37.616327-83.591837-83.591837v-83.591837c0-45.97551 37.616327-83.591837 83.591837-83.591836h668.734694c45.97551 0 83.591837 37.616327 83.591837 83.591836v83.591837c0 45.97551-37.616327 83.591837-83.591837 83.591837h-47.020408" fill="#568289" p-id="1619"></path><path d="M736.653061 929.959184H287.346939c-45.97551 0-83.591837-37.616327-83.591837-83.591837v-83.591837c0-45.97551 37.616327-83.591837 83.591837-83.591837h449.306122c45.97551 0 83.591837 37.616327 83.591837 83.591837v83.591837c0 45.97551-37.616327 83.591837-83.591837 83.591837z" fill="#90B0BA" p-id="1620"></path><path d="M694.857143 375.640816H329.142857c-11.493878 0-20.897959-9.404082-20.897959-20.897959s9.404082-20.897959 20.897959-20.897959h365.714286c11.493878 0 20.897959 9.404082 20.897959 20.897959s-9.404082 20.897959-20.897959 20.897959zM694.857143 495.804082H329.142857c-11.493878 0-20.897959-9.404082-20.897959-20.89796s9.404082-20.897959 20.897959-20.897959h365.714286c11.493878 0 20.897959 9.404082 20.897959 20.897959s-9.404082 20.897959-20.897959 20.89796z" fill="#AF8015" p-id="1621"></path></svg>
+<svg width="512" height="512" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="pwa-logo-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="1.5"/>
+      <feOffset dx="0" dy="1.5" result="offsetblur"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.15"/>
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <g transform="translate(4, 4) scale(0.9)"> 
+    {/* Bottom Layer - Gray */}
+    <rect x="12" y="6" width="64" height="44" rx="6" fill="#D1D5DB" opacity="0.8"/>
+    {/* Middle Layer - Gray */}
+    <rect x="6" y="12" width="64" height="44" rx="6" fill="#9CA3AF" opacity="0.8"/>
+    {/* Top Layer - Indigo */}
+    <g filter="url(#pwa-logo-shadow)">
+      <rect x="0" y="18" width="64" height="44" rx="6" fill="#4F46E5"/>
+      {/* Yellow Accent */}
+      <rect x="48" y="26" width="8" height="8" rx="2" fill="#FFD166"/>
+      <rect x="0.5" y="18.5" width="63" height="43" rx="5.5" stroke="white" stroke-width="0.5" opacity="0.2"/>
+    </g>
+  </g>
+</svg>

@@ -56,7 +56,7 @@ export const translations = {
     },
     zh: {
         window_title: 'LabelPilot',
-        main_title: '标签排版助手',
+        main_title: 'LabelPilot',
         file_group: '标签图片',
         layout_group: '排版设置',
         browse_btn: '点击上传标签图片',

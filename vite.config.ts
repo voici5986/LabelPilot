@@ -10,8 +10,8 @@ export default defineConfig({
       registerType: 'prompt',
       includeAssets: ['print.svg'],
       manifest: {
-        name: 'Label Printer Pro',
-        short_name: 'LabelPrint',
+        name: 'LabelPilot',
+        short_name: 'LabelPilot',
         description: 'A professional label printing tool that works offline.',
         theme_color: '#4f46e5',
         icons: [
