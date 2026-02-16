@@ -10,6 +10,7 @@ import {
     LETTER_WIDTH_MM, LETTER_HEIGHT_MM
 } from "../utils/layoutMath";
 import { NumberInput } from "./NumberInput";
+import { SegmentedControl } from "./SegmentedControl";
 import { useStore } from "../store/useStore";
 
 export function Header() {
@@ -167,51 +168,34 @@ export function Header() {
                             <div className="space-y-4">
                                 {/* App Mode Section */}
                                 <div className="space-y-3">
-                                    <label className="text-xs font-semibold text-text-muted uppercase tracking-wider">
+                                    <label className="text-sm font-semibold text-text-muted uppercase tracking-wider">
                                         {t('app_mode')}
                                     </label>
-                                    <div className="flex bg-text-main/5 p-1 rounded-lg border border-border-subtle relative overflow-hidden">
-                                        <motion.div
-                                            className="absolute bg-surface shadow-sm rounded-md z-0"
-                                            initial={false}
-                                            animate={{
-                                                x: appMode === 'image' ? 0 : '100%',
-                                                width: '50%',
-                                                height: 'calc(100% - 8px)',
-                                                top: 4,
-                                                left: 0
-                                            }}
-                                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                                        />
-                                        <button
-                                            onClick={() => onAppModeChange('image')}
-                                            className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all relative z-10 ${appMode === 'image' ? 'text-brand-primary' : 'text-text-muted hover:text-text-main'}`}
-                                        >
-                                            {t('mode_image')}
-                                        </button>
-                                        <button
-                                            onClick={() => onAppModeChange('text')}
-                                            className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all relative z-10 ${appMode === 'text' ? 'text-brand-primary' : 'text-text-muted hover:text-text-main'}`}
-                                        >
-                                            {t('mode_text')}
-                                        </button>
-                                    </div>
+                                    <SegmentedControl
+                                        layoutId="app-mode-active"
+                                        value={appMode}
+                                        onChange={onAppModeChange}
+                                        options={[
+                                            { label: t('mode_image'), value: 'image' },
+                                            { label: t('mode_text'), value: 'text' }
+                                        ]}
+                                    />
                                 </div>
 
                                 {/* Paper Size Section */}
                                 <div className="space-y-3">
-                                    <label className="text-xs font-semibold text-text-muted uppercase tracking-wider">
+                                    <label className="text-[12px] font-semibold text-text-muted uppercase tracking-wider">
                                         {t('paper_size')}
                                     </label>
 
                                     <div className="flex flex-col gap-2">
                                         <div className="flex gap-2">
                                             {/* A4 Button with Dropdown */}
-                                            <div className="relative flex-1 group" ref={presetsRef}>
-                                                <div className="flex">
+                                            <div className="relative w-1/2 group" ref={presetsRef}>
+                                                <div className="flex h-full">
                                                     <button
                                                         onClick={() => handlePaperSizeChange('A4')}
-                                                        className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-l-md border transition-all flex items-center justify-center gap-1 ${['A4', 'A3', 'A5', 'Letter'].includes(paperSize)
+                                                        className={`flex-1 px-2 py-1.5 text-sm font-medium rounded-l-md border transition-all flex items-center justify-center gap-1 ${['A4', 'A3', 'A5', 'Letter'].includes(paperSize)
                                                             ? 'bg-brand-primary/10 border-brand-primary text-brand-primary shadow-sm'
                                                             : 'border-border-subtle text-text-muted hover:border-brand-primary/50'
                                                             }`}
@@ -220,7 +204,7 @@ export function Header() {
                                                     </button>
                                                     <button
                                                         onClick={() => setIsPresetsOpen(!isPresetsOpen)}
-                                                        className={`px-1.5 py-1.5 border-y border-r rounded-r-md transition-all ${['A4', 'A3', 'A5', 'Letter'].includes(paperSize)
+                                                        className={`px-1.5 py-1.5 border-y border-r rounded-r-md transition-all flex items-center justify-center ${['A4', 'A3', 'A5', 'Letter'].includes(paperSize)
                                                             ? 'bg-brand-primary/10 border-brand-primary text-brand-primary'
                                                             : 'border-border-subtle text-text-muted hover:border-brand-primary/50'
                                                             }`}
@@ -259,7 +243,7 @@ export function Header() {
                                             {/* Custom Button */}
                                             <button
                                                 onClick={() => handlePaperSizeChange('Custom')}
-                                                className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-md border transition-all ${paperSize === 'Custom'
+                                                className={`w-1/2 px-3 py-1.5 text-sm font-medium rounded-md border transition-all flex items-center justify-center ${paperSize === 'Custom'
                                                     ? 'bg-brand-primary/10 border-brand-primary text-brand-primary shadow-sm'
                                                     : 'border-border-subtle text-text-muted hover:border-brand-primary/50'
                                                     }`}
@@ -277,7 +261,6 @@ export function Header() {
                                                 onChange={(v) => onConfigChange({ pageWidthMm: v })}
                                                 min={50}
                                                 max={1000}
-                                                labelSize="xs"
                                             />
                                             <NumberInput
                                                 label={t('paper_height')}
@@ -285,7 +268,6 @@ export function Header() {
                                                 onChange={(v) => onConfigChange({ pageHeightMm: v })}
                                                 min={50}
                                                 max={1000}
-                                                labelSize="xs"
                                             />
                                         </div>
                                     )}
@@ -294,14 +276,14 @@ export function Header() {
                                 {/* QR Prefix Section (Low Frequency) */}
                                 <div className="space-y-3 pt-2 border-t border-border-subtle/50">
                                     <div className="space-y-2">
-                                        <label className="text-xs font-semibold text-text-muted uppercase tracking-wider block ml-0.5">
+                                        <label className="text-sm font-semibold text-text-muted uppercase tracking-wider block ml-0.5">
                                             {t('qr_content_prefix')}
                                         </label>
                                         <input
                                             type="text"
                                             value={textConfig.qrContentPrefix}
                                             onChange={(e) => onTextConfigChange({ qrContentPrefix: e.target.value })}
-                                            className="w-full input-base focus:input-base-focus px-3 py-1.5 text-sm font-mono"
+                                            className="w-full input-base focus:input-base-focus px-3 py-1.5 text-sm font-mono font-semibold"
                                             placeholder={t('qr_content_prefix_hint')}
                                         />
                                     </div>

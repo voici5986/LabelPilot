@@ -10,7 +10,6 @@ interface NumberInputProps {
     isInteger?: boolean;
     decimalPlaces?: number;
     step?: number;
-    labelSize?: 'xs' | 'sm';
 }
 
 export function NumberInput({
@@ -22,7 +21,6 @@ export function NumberInput({
     isInteger,
     decimalPlaces,
     step: propsStep,
-    labelSize = 'sm'
 }: NumberInputProps) {
     // Local state to handle string input allowing intermediate states like "3."
     const [localVal, setLocalVal] = useState(String(value));
@@ -91,9 +89,11 @@ export function NumberInput({
     };
 
     return (
-        <div className="space-y-1.5">
-            <label className={`font-medium text-text-muted ml-1 ${labelSize === 'xs' ? 'text-xs' : 'text-sm'}`}>{label}</label>
-            <div className="relative">
+        <div className="space-y-1.5 flex-1">
+            <label className="text-sm font-medium text-text-muted ml-0.5 tracking-wider">
+                {label}
+            </label>
+            <div className="relative group">
                 <input
                     type="text"
                     inputMode={isInteger ? "numeric" : "decimal"}
@@ -101,14 +101,21 @@ export function NumberInput({
                     onChange={handleChange}
                     onBlur={handleBlur}
                     onFocus={(e) => (e.target as HTMLInputElement).select()}
-                    className="w-full input-base focus:input-base-focus px-3 py-1.5 text-sm font-mono font-semibold text-text-main"
+                    className="w-full input-base focus:input-base-focus pl-3 pr-8 py-1.5 text-sm font-mono font-semibold text-text-main"
                 />
-                <div className="absolute right-0 top-0 h-full flex flex-col border-l border-border-subtle">
-                    <button onClick={increment} className="flex-1 px-2 hover:bg-text-main/5 text-text-muted hover:text-brand-primary rounded-lg flex items-center justify-center group">
-                        <ChevronUp className="w-3 h-3 group-hover:scale-110 transition-transform" />
+                <div className="absolute right-0 top-0 h-full w-8 flex flex-col border-l border-border-subtle/30 overflow-hidden rounded-r-lg">
+                    <button
+                        onClick={increment}
+                        className="flex-1 flex items-center justify-center hover:bg-brand-primary/10 text-text-muted hover:text-brand-primary transition-colors group/btn"
+                    >
+                        <ChevronUp className="w-3.5 h-3.5 group-hover/btn:scale-110 transition-transform" />
                     </button>
-                    <button onClick={decrement} className="flex-1 px-2 hover:bg-text-main/5 text-text-muted hover:text-brand-primary rounded-lg flex items-center justify-center group">
-                        <ChevronDown className="w-3 h-3 group-hover:scale-110 transition-transform" />
+                    <div className="h-[1px] w-full bg-border-subtle/30" />
+                    <button
+                        onClick={decrement}
+                        className="flex-1 flex items-center justify-center hover:bg-brand-primary/10 text-text-muted hover:text-brand-primary transition-colors group/btn"
+                    >
+                        <ChevronDown className="w-3.5 h-3.5 group-hover/btn:scale-110 transition-transform" />
                     </button>
                 </div>
             </div>

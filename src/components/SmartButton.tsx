@@ -16,36 +16,28 @@ export function SmartButton({ onClick, disabled, genStatus, genProgress }: Smart
         <motion.button
             type="button"
             layout
-            whileHover={!disabled && genStatus === 'idle' ? { scale: 1.02, boxShadow: "0 10px 25px -5px rgba(79, 70, 229, 0.4)" } : {}}
-            whileTap={!disabled && genStatus === 'idle' ? { scale: 0.98 } : {}}
+            whileHover={!disabled && genStatus === 'idle' ? { filter: "brightness(1.08)" } : {}}
+            whileTap={!disabled && genStatus === 'idle' ? { filter: "brightness(0.92)" } : {}}
             initial={false}
             animate={
                 (!disabled && genStatus === 'idle') || genStatus === 'success' || genStatus === 'error' ? {
                     opacity: 1,
-                    scale: 1,
                     filter: "grayscale(0%)",
-                    boxShadow: genStatus === 'success'
-                        ? "0 10px 25px -5px rgba(34, 197, 94, 0.4)"
-                        : genStatus === 'error'
-                            ? "0 10px 25px -5px rgba(239, 68, 68, 0.4)"
-                            : "0 4px 6px -1px rgba(79, 70, 229, 0.1), 0 2px 4px -1px rgba(79, 70, 229, 0.06)"
                 } : {
                     opacity: 0.7,
-                    scale: 1,
                     filter: "grayscale(100%)",
-                    boxShadow: "none"
                 }
             }
-            transition={{ type: "spring", stiffness: 400, damping: 25 }}
+            transition={{ duration: 0.2 }}
             onClick={onClick}
             disabled={disabled || genStatus !== 'idle'}
-            className={`w-full py-3.5 px-4 rounded-lg font-bold text-sm flex items-center justify-center gap-2 relative overflow-hidden group transition-colors duration-300
+            className={`w-full py-3 px-4 rounded-lg font-bold text-sm flex items-center justify-center gap-2 relative overflow-hidden group transition-all duration-200
                 ${genStatus === 'success'
-                    ? 'bg-green-500 text-white'
+                    ? 'bg-green-600 text-white shadow-sm'
                     : genStatus === 'error'
-                        ? 'bg-red-500 text-white'
+                        ? 'bg-red-600 text-white shadow-sm'
                         : !disabled && genStatus === 'idle'
-                            ? 'bg-gradient-to-r from-brand-primary to-brand-secondary text-white'
+                            ? 'bg-brand-primary text-white shadow-[0_1px_2px_rgba(0,0,0,0.1)] active:shadow-none'
                             : genStatus === 'generating'
                                 ? 'bg-text-main/5 text-text-muted border border-border-subtle'
                                 : 'bg-text-main/10 text-text-muted cursor-not-allowed'}`}

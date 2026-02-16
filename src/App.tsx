@@ -70,8 +70,8 @@ function App() {
     <div className="flex flex-col h-screen overflow-hidden bg-background text-text-main selection:bg-brand-primary/20">
       <Header />
 
-      <main className="flex-1 flex overflow-hidden p-6 gap-6">
-        <div className="w-80 flex flex-col gap-6 scrollbar-hide">
+      <main className="flex-1 flex overflow-hidden p-3 gap-3">
+        <div className="w-80 flex flex-col gap-3 scrollbar-hide">
           <ControlPanel
             onFilesSelect={handleFilesSelect}
             onGeneratePdf={handleGeneratePdf}

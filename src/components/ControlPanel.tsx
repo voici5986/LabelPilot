@@ -8,6 +8,7 @@ import { useI18n } from "../utils/i18n";
 import { NumberInput } from "./NumberInput";
 import { SmartButton } from "./SmartButton";
 import { ThumbnailItem } from "./ThumbnailItem";
+import { SegmentedControl } from "./SegmentedControl";
 import { useMemo } from "react";
 import { useStore } from "../store/useStore";
 
@@ -110,36 +111,16 @@ export function ControlPanel({
                     </div>
 
                     {/* Orientation Controls (Merged here) */}
-                    <div className="bg-text-main/5 p-1 rounded-lg flex border border-border-subtle relative isolate mt-2">
-                        <button
-                            type="button"
-                            onClick={() => onConfigChange({ orientation: 'portrait' })}
-                            className={`flex-1 py-0.5 px-1.5 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-colors relative z-0 ${config.orientation === 'portrait' ? 'text-brand-primary' : 'text-text-muted hover:text-text-main'}`}
-                        >
-                            {config.orientation === 'portrait' && (
-                                <motion.div
-                                    layoutId="orientation-active"
-                                    className="absolute inset-0 bg-surface shadow-sm rounded-lg -z-10"
-                                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                                />
-                            )}
-                            <FileIcon className="w-4 h-4" /> {t('portrait')}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => onConfigChange({ orientation: 'landscape' })}
-                            className={`flex-1 py-2 px-3 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-colors relative z-0 ${config.orientation === 'landscape' ? 'text-brand-primary' : 'text-text-muted hover:text-text-main'}`}
-                        >
-                            {config.orientation === 'landscape' && (
-                                <motion.div
-                                    layoutId="orientation-active"
-                                    className="absolute inset-0 bg-surface shadow-sm rounded-lg -z-10"
-                                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                                />
-                            )}
-                            <FileMinus className="w-4 h-4 transform rotate-90" /> {t('landscape')}
-                        </button>
-                    </div>
+                    <SegmentedControl
+                        layoutId="orientation-active"
+                        value={config.orientation}
+                        onChange={(v) => onConfigChange({ orientation: v })}
+                        options={[
+                            { label: t('portrait'), value: 'portrait', icon: FileIcon },
+                            { label: t('landscape'), value: 'landscape', icon: FileMinus }
+                        ]}
+                        className="mt-2"
+                    />
                 </div>
 
                 {appMode === 'image' ? (
@@ -209,13 +190,13 @@ export function ControlPanel({
                             </h2>
 
                             <div className="space-y-4">
-                                <div className="space-y-1.5">
-                                    <label className="text-sm font-medium text-text-muted ml-1">{t('text_prefix')}</label>
+                                <div className="space-y-1.5 flex-1">
+                                    <label className="text-sm font-medium text-text-muted ml-0.5">{t('text_prefix')}</label>
                                     <input
                                         type="text"
                                         value={textConfig.prefix}
                                         onChange={(e) => onTextConfigChange({ prefix: e.target.value })}
-                                        className="w-full input-base focus:input-base-focus px-3 py-1.5 text-sm font-mono"
+                                        className="w-full input-base focus:input-base-focus px-3 py-1.5 text-sm font-mono font-semibold"
                                         placeholder="SN-"
                                     />
                                 </div>
@@ -304,7 +285,7 @@ export function ControlPanel({
             </div>
 
             {/* Action Button */}
-            <div className="p-2 border-t border-glass-border bg-text-main/5 backdrop-blur-sm rounded-b-xl overflow-hidden relative">
+            <div className="p-1 border-t border-glass-border backdrop-blur-sm rounded-b-xl overflow-hidden relative">
                 <SmartButton
                     onClick={onGeneratePdf}
                     disabled={appMode === 'image' ? !selectedFileName : false}

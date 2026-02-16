@@ -65,7 +65,7 @@ export const translations = {
         file_group: '标签图片',
         layout_group: '排版设置',
         browse_btn: '点击上传标签图片',
-        browse_hint: '支持 PNG, JPG 格式',
+        browse_hint: '支持 PNG, JPG',
         rows: '行数',
         cols: '列数',
         margin: '边距',
