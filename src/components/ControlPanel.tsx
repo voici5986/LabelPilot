@@ -1,4 +1,4 @@
-import { UploadCloud, Grid, Layout, File as FileIcon, FileMinus } from "lucide-react";
+import { UploadCloud, Grid, File as FileIcon, FileMinus } from "lucide-react";
 import type { HelperLayoutConfig } from "../utils/layoutMath";
 import {
     A4_WIDTH_MM, A4_HEIGHT_MM,
@@ -88,6 +88,86 @@ export function ControlPanel({
     return (
         <aside className="w-80 glass-panel border-r-0 flex flex-col z-10 m-2 rounded-xl shadow-lg">
             <div className="p-6 overflow-y-auto flex-1 space-y-6 scrollbar-hide">
+
+                {/* 1. Grid/Layout Settings */}
+                <div className="space-y-4 pb-2 border-b border-border-subtle/30">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-xs font-semibold text-text-muted uppercase tracking-wider flex items-center gap-2">
+                            <Grid className="w-4 h-4" /> {t('layout_group')}
+                        </h2>
+                        <span className="text-[13px] font-medium text-text-muted opacity-80">
+                            {paperSizeInfo}
+                        </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <NumberInput
+                            label={t('rows')}
+                            value={config.rows}
+                            onChange={(v) => onConfigChange({ rows: v })}
+                            min={1} max={maxRows}
+                            isInteger
+                        />
+                        <NumberInput
+                            label={t('cols')}
+                            value={config.cols}
+                            onChange={(v) => onConfigChange({ cols: v })}
+                            min={1} max={maxCols}
+                            isInteger
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <NumberInput
+                            label={`${t('margin')} (mm)`}
+                            value={config.marginMm}
+                            onChange={(v) => onConfigChange({ marginMm: v })}
+                            min={0} max={50}
+                            decimalPlaces={1}
+                            step={1}
+                        />
+                        <NumberInput
+                            label={`${t('spacing')} (mm)`}
+                            value={config.spacingMm}
+                            onChange={(v) => onConfigChange({ spacingMm: v })}
+                            min={0} max={30}
+                            decimalPlaces={1}
+                            step={1}
+                        />
+                    </div>
+
+                    {/* Orientation Controls (Merged here) */}
+                    <div className="bg-text-main/5 p-1 rounded-lg flex border border-border-subtle relative isolate mt-2">
+                        <button
+                            type="button"
+                            onClick={() => onConfigChange({ orientation: 'portrait' })}
+                            className={`flex-1 py-0.5 px-1.5 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-colors relative z-0 ${config.orientation === 'portrait' ? 'text-brand-primary' : 'text-text-muted hover:text-text-main'}`}
+                        >
+                            {config.orientation === 'portrait' && (
+                                <motion.div
+                                    layoutId="orientation-active"
+                                    className="absolute inset-0 bg-surface shadow-sm rounded-lg -z-10"
+                                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                />
+                            )}
+                            <FileIcon className="w-4 h-4" /> {t('portrait')}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => onConfigChange({ orientation: 'landscape' })}
+                            className={`flex-1 py-2 px-3 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-colors relative z-0 ${config.orientation === 'landscape' ? 'text-brand-primary' : 'text-text-muted hover:text-text-main'}`}
+                        >
+                            {config.orientation === 'landscape' && (
+                                <motion.div
+                                    layoutId="orientation-active"
+                                    className="absolute inset-0 bg-surface shadow-sm rounded-lg -z-10"
+                                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                />
+                            )}
+                            <FileMinus className="w-4 h-4 transform rotate-90" /> {t('landscape')}
+                        </button>
+                    </div>
+                </div>
 
                 {appMode === 'image' ? (
                     <>
@@ -209,7 +289,7 @@ export function ControlPanel({
                                     </div>
                                 </div>
 
-                                {/* QR Code Size Slider with Optimized Animation */}
+                                {/* QR Code Size Slider - NO border, integrated flow */}
                                 <AnimatePresence initial={false}>
                                     {textConfig.showQrCode && (
                                         <motion.div
@@ -222,13 +302,13 @@ export function ControlPanel({
                                             }}
                                             className="overflow-hidden"
                                         >
-                                            <div className="pt-4 mt-4 border-t border-border-subtle/50 space-y-3 px-1">
+                                            <div className="pt-1.5 pb-1 space-y-2">
                                                 <div className="flex items-center justify-between text-sm font-medium text-text-muted">
                                                     <div className="flex items-center gap-2">
                                                         <Grid className="w-3.5 h-3.5" />
                                                         <span>{t('qr_size')}</span>
                                                     </div>
-                                                    <span className="font-mono">{Math.round(textConfig.qrSizeRatio * 100)}%</span>
+                                                    <span className="font-mono text-xs opacity-80">{Math.round(textConfig.qrSizeRatio * 100)}%</span>
                                                 </div>
                                                 <input
                                                     type="range"
@@ -248,95 +328,10 @@ export function ControlPanel({
                     </>
                 )}
 
-                {/* Grid Settings */}
-                <div className="space-y-4">
-                    <h2 className="text-xs font-semibold text-text-muted uppercase tracking-wider flex items-center gap-2">
-                        <Grid className="w-4 h-4" /> {t('layout_group')}
-                    </h2>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <NumberInput
-                            label={t('rows')}
-                            value={config.rows}
-                            onChange={(v) => onConfigChange({ rows: v })}
-                            min={1} max={maxRows}
-                            isInteger
-                        />
-                        <NumberInput
-                            label={t('cols')}
-                            value={config.cols}
-                            onChange={(v) => onConfigChange({ cols: v })}
-                            min={1} max={maxCols}
-                            isInteger
-                        />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <NumberInput
-                            label={`${t('margin')} (mm)`}
-                            value={config.marginMm}
-                            onChange={(v) => onConfigChange({ marginMm: v })}
-                            min={0} max={50}
-                            decimalPlaces={1}
-                            step={1}
-                        />
-                        <NumberInput
-                            label={`${t('spacing')} (mm)`}
-                            value={config.spacingMm}
-                            onChange={(v) => onConfigChange({ spacingMm: v })}
-                            min={0} max={30}
-                            decimalPlaces={1}
-                            step={1}
-                        />
-                    </div>
-                </div>
-
-                {/* Orientation */}
-                <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                        <h2 className="text-xs font-semibold text-text-muted uppercase tracking-wider flex items-center gap-2">
-                            <Layout className="w-4 h-4" /> {t('orientation')}
-                        </h2>
-                        <span className="text-[14px] font-medium text-text-muted opacity-80">
-                            {paperSizeInfo}
-                        </span>
-                    </div>
-                    <div className="bg-text-main/5 p-1 rounded-lg flex border border-border-subtle relative isolate">
-                        <button
-                            type="button"
-                            onClick={() => onConfigChange({ orientation: 'portrait' })}
-                            className={`flex-1 py-1.5 px-3 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-colors relative z-0 ${config.orientation === 'portrait' ? 'text-brand-primary' : 'text-text-muted hover:text-text-main'}`}
-                        >
-                            {config.orientation === 'portrait' && (
-                                <motion.div
-                                    layoutId="orientation-active"
-                                    className="absolute inset-0 bg-surface shadow-sm rounded-lg -z-10"
-                                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                                />
-                            )}
-                            <FileIcon className="w-4 h-4" /> {t('portrait')}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => onConfigChange({ orientation: 'landscape' })}
-                            className={`flex-1 py-1.5 px-3 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-colors relative z-0 ${config.orientation === 'landscape' ? 'text-brand-primary' : 'text-text-muted hover:text-text-main'}`}
-                        >
-                            {config.orientation === 'landscape' && (
-                                <motion.div
-                                    layoutId="orientation-active"
-                                    className="absolute inset-0 bg-surface shadow-sm rounded-lg -z-10"
-                                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                                />
-                            )}
-                            <FileMinus className="w-4 h-4 transform rotate-90" /> {t('landscape')}
-                        </button>
-                    </div>
-                </div>
-
             </div>
 
             {/* Action Button */}
-            <div className="p-6 border-t border-glass-border bg-text-main/5 backdrop-blur-sm rounded-b-xl overflow-hidden relative">
+            <div className="p-2 border-t border-glass-border bg-text-main/5 backdrop-blur-sm rounded-b-xl overflow-hidden relative">
                 <SmartButton
                     onClick={onGeneratePdf}
                     disabled={appMode === 'image' ? !selectedFileName : false}

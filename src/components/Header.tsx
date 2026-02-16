@@ -307,13 +307,10 @@ export function Header({
 
                                 {/* QR Prefix Section (Low Frequency) */}
                                 <div className="space-y-3 pt-2 border-t border-border-subtle/50">
-                                    <label className="text-xs font-semibold text-text-muted uppercase tracking-wider flex items-center gap-2">
-                                        {t('qr_config_group')}
-                                    </label>
-                                    <div className="space-y-1.5">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-[12px] font-medium text-text-muted ml-0.5">{t('qr_content_prefix')}</span>
-                                        </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-semibold text-text-muted uppercase tracking-wider block ml-0.5">
+                                            {t('qr_content_prefix')}
+                                        </label>
                                         <input
                                             type="text"
                                             value={textConfig.qrContentPrefix}

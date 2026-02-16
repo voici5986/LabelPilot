@@ -4,7 +4,7 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=flat-square&logo=typescript)
 ![Vite](https://img.shields.io/badge/Vite-7.0-646CFF?style=flat-square&logo=vite)
 ![Tailwind](https://img.shields.io/badge/Tailwind_CSS-4.0-38B2AC?style=flat-square&logo=tailwind-css)
-![Version](https://img.shields.io/badge/Version-1.3.0-green?style=flat-square)
+![Version](https://img.shields.io/badge/Version-1.4.0-green?style=flat-square)
 
 **English** | [简体中文](./README.zh-CN.md)
 
@@ -15,6 +15,7 @@ A modern, offline-capable web application for batch generating label PDF documen
 - **🖼️ Dual Generation Modes**:
   - **Image Mode**: Batch process JPG/PNG images into labels with smart auto-filling.
   - **Text/Serial Mode**: Generate sequential labels (e.g., SN-001, SN-002) with custom prefixes and padding.
+  - **🔗 QR Code Generation**: Optional QR code integration for serial numbers. Supports custom URL prefixes for easy asset tracking.
 - **⚡ High Performance**: Powered by **Web Workers**, PDF generation is asynchronous and non-blocking, ensuring the UI remains responsive even with 100+ high-res images.
 - **🎨 Smart Button Feedback**: Integrated progress tracking and success/error status directly within the action button. No more intrusive full-screen overlays.
 - **📐 Dynamic Constraints**: Grid limits (rows/cols) automatically adjust based on page orientation (Portrait vs Landscape).
@@ -65,7 +66,7 @@ The output will be in the `dist/` directory.
 2. **Configure Layout**: Use the left sidebar to adjust rows, columns, spacing, and orientation.
 3. **Add Content**: 
    - In **Image Mode**: Upload JPG/PNG files and set quantities.
-   - In **Text Mode**: Set prefix, start number, digits, and total count.
+   - In **Text Mode**: Set prefix, start number, digits, and total count. Toggle **QR Code** for instant scannable labels.
 4. **Check Preview**: Verify the layout on the right preview panel.
 5. **Generate**: Click "Generate PDF" to download the final file.
 

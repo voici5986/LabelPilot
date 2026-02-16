@@ -4,7 +4,7 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=flat-square&logo=typescript)
 ![Vite](https://img.shields.io/badge/Vite-7.0-646CFF?style=flat-square&logo=vite)
 ![Tailwind](https://img.shields.io/badge/Tailwind_CSS-4.0-38B2AC?style=flat-square&logo=tailwind-css)
-![Version](https://img.shields.io/badge/Version-1.3.0-green?style=flat-square)
+![Version](https://img.shields.io/badge/Version-1.4.0-green?style=flat-square)
 
 [English](./README.md) | **简体中文**
 
@@ -15,6 +15,7 @@
 - **🖼️ 双重生成模式**:
   - **图片模式**: 批量处理 JPG/PNG 图片为标签，支持智能自动填充。
   - **文本/序列模式**: 生成连续的序列号标签（如 SN-001, SN-002），支持自定义前缀和补位。
+  - **🔗 二维码集成**: 序列号模式下可一键开启二维码，支持自定义 URL 前缀，方便资产扫描与跳转。
 - **⚡ 极致性能**: 利用 **Web Worker** 实现异步生成。即使处理上百张高分辨率图片，UI 依然流畅且无响应阻塞。
 - **🎨 智感按钮反馈**: 将进度追踪和成功/错误状态直接集成在操作按钮中，彻底告别侵入性的全屏遮罩层。
 - **📐 动态网格限制**: 行列上限会根据纸张方向（纵向 vs 横向）自动调整并实时修正。
@@ -65,7 +66,7 @@ pnpm build
 2. **配置排版**: 使用左侧边栏调整行数、列数、间距及纸张方向。
 3. **添加内容**:
    - **图片模式**: 上传 JPG/PNG 文件并设置份数。
-   - **文本模式**: 设置前缀、起始数字、数字位数及生成总数。
+   - **文本模式**: 设置前缀、起始数字、数字位数及生成总数。支持一键开启 **二维码** 生成。
 4. **检查预览**: 在右侧预览面板中确认排版效果。
 5. **生成文档**: 点击“生成 PDF 文档”按钮下载最终文件。
 
