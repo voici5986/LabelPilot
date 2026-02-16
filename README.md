@@ -4,19 +4,25 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=flat-square&logo=typescript)
 ![Vite](https://img.shields.io/badge/Vite-7.0-646CFF?style=flat-square&logo=vite)
 ![Tailwind](https://img.shields.io/badge/Tailwind_CSS-4.0-38B2AC?style=flat-square&logo=tailwind-css)
+![Version](https://img.shields.io/badge/Version-1.3.0-green?style=flat-square)
 
 **English** | [简体中文](./README.zh-CN.md)
 
-A modern, offline-capable web application for batch generating label PDF documents from images. Rebuilt from the ground up using React 19 to replace the legacy PyQt6 desktop application.
+A modern, offline-capable web application for batch generating label PDF documents. Rebuilt from the ground up using React 19 to replace the legacy PyQt6 desktop application.
 
 ## ✨ Key Features
 
+- **🖼️ Dual Generation Modes**:
+  - **Image Mode**: Batch process JPG/PNG images into labels with smart auto-filling.
+  - **Text/Serial Mode**: Generate sequential labels (e.g., SN-001, SN-002) with custom prefixes and padding.
 - **⚡ High Performance**: Powered by **Web Workers**, PDF generation is asynchronous and non-blocking, ensuring the UI remains responsive even with 100+ high-res images.
 - **🎨 Smart Button Feedback**: Integrated progress tracking and success/error status directly within the action button. No more intrusive full-screen overlays.
 - **📐 Dynamic Constraints**: Grid limits (rows/cols) automatically adjust based on page orientation (Portrait vs Landscape).
 - **🌍 Internationalization**: Built-in support for **English** and **Chinese**, with instant language switching.
 - **🌓 Adaptive Dark Mode**: Full dark mode support that follows your system preferences or can be manually toggled ('System', 'Light', 'Dark'). Powered by Tailwind CSS 4.
 - **👁️ Real-time Preview**: What you see is what you get with a virtual A4 canvas.
+- **📲 PWA Ready**: Supports offline use and can be installed as a standalone app.
+- **📱 Mobile Optimized**: Includes orientation guards to ensure a better experience on mobile devices.
 
 ## 🚀 One-Click Deploy with Vercel
 
@@ -29,12 +35,13 @@ A modern, offline-capable web application for batch generating label PDF documen
 - **Multithreading**: Web Workers (ES Module)
 - **PDF Engine**: jsPDF
 - **Styling**: Tailwind CSS 4.1, Framer Motion
+- **PWA**: vite-plugin-pwa
 
 ## 🚀 Getting Started
 
 ### Installation
-1. `npm install`
-2. `npm run dev`
+1. `pnpm install`
+2. `pnpm dev`
 
 ### Deployment to Vercel
 This project is optimized for Vercel. 
@@ -42,22 +49,25 @@ This project is optimized for Vercel.
 2. Import the project in Vercel.
 3. Ensure the following settings are detected:
    - **Framework Preset**: Vite
-   - **Build Command**: `npm run build`
+   - **Build Command**: `pnpm build`
    - **Output Directory**: `dist`
 4. Click **Deploy**.
 
 ## 📦 Building for Production
 ```bash
-npm run build
+pnpm build
 ```
 The output will be in the `dist/` directory. 
 
 ## 💡 Usage Guide
 
-1. **Upload Source**: Click the upload area to select your label image (JPG/PNG).
-2. **Configure Layout**: Use the left sidebar to adjust rows, columns, and spacing.
-3. **Check Preview**: Verify the layout on the right preview panel.
-4. **Generate**: Click "Generate PDF" to download the final file.
+1. **Select Mode**: Switch between **Image** and **Text** mode in the header.
+2. **Configure Layout**: Use the left sidebar to adjust rows, columns, spacing, and orientation.
+3. **Add Content**: 
+   - In **Image Mode**: Upload JPG/PNG files and set quantities.
+   - In **Text Mode**: Set prefix, start number, digits, and total count.
+4. **Check Preview**: Verify the layout on the right preview panel.
+5. **Generate**: Click "Generate PDF" to download the final file.
 
 ## 📄 License
 
