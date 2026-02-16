@@ -45,10 +45,11 @@ function App() {
   };
 
   const handleFilesSelect = (files: File[]) => {
+    const defaultCount = config.rows * config.cols;
     const newItems = files.map(file => ({
       id: Math.random().toString(36).substr(2, 9),
       file,
-      count: 1
+      count: defaultCount
     }));
     setImageItems([...imageItems, ...newItems]);
   };
