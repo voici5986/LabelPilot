@@ -1,12 +1,12 @@
 import { UploadCloud, Grid, Layout, File as FileIcon, FileMinus } from "lucide-react";
 import type { HelperLayoutConfig } from "../utils/layoutMath";
-import { 
-    A4_WIDTH_MM, A4_HEIGHT_MM, 
-    A3_WIDTH_MM, A3_HEIGHT_MM, 
-    A5_WIDTH_MM, A5_HEIGHT_MM, 
-    LETTER_WIDTH_MM, LETTER_HEIGHT_MM 
+import {
+    A4_WIDTH_MM, A4_HEIGHT_MM,
+    A3_WIDTH_MM, A3_HEIGHT_MM,
+    A5_WIDTH_MM, A5_HEIGHT_MM,
+    LETTER_WIDTH_MM, LETTER_HEIGHT_MM
 } from "../utils/layoutMath";
-import { motion, Reorder } from "framer-motion";
+import { motion, Reorder, AnimatePresence } from "framer-motion";
 import { useI18n } from "../utils/i18n";
 import { NumberInput } from "./NumberInput";
 import { SmartButton } from "./SmartButton";
@@ -33,6 +33,9 @@ interface ControlPanelProps {
         startNumber: number;
         digits: number;
         count: number;
+        showQrCode: boolean;
+        qrSizeRatio: number;
+        qrContentPrefix: string;
     };
     onTextConfigChange: (updates: Partial<ControlPanelProps['textConfig']>) => void;
 }
@@ -155,7 +158,7 @@ export function ControlPanel({
                             <div className="space-y-4">
                                 <div className="space-y-1.5">
                                     <label className="text-sm font-medium text-text-muted ml-1">{t('text_prefix')}</label>
-                                    <input 
+                                    <input
                                         type="text"
                                         value={textConfig.prefix}
                                         onChange={(e) => onTextConfigChange({ prefix: e.target.value })}
@@ -165,14 +168,14 @@ export function ControlPanel({
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
-                                    <NumberInput 
+                                    <NumberInput
                                         label={t('text_start_number')}
                                         value={textConfig.startNumber}
                                         onChange={(val) => onTextConfigChange({ startNumber: val })}
                                         min={0}
                                         max={999999}
                                     />
-                                    <NumberInput 
+                                    <NumberInput
                                         label={t('text_digits')}
                                         value={textConfig.digits}
                                         onChange={(val) => onTextConfigChange({ digits: val })}
@@ -181,13 +184,65 @@ export function ControlPanel({
                                     />
                                 </div>
 
-                                <NumberInput 
-                                    label={t('text_count')}
-                                    value={textConfig.count}
-                                    onChange={(val) => onTextConfigChange({ count: val })}
-                                    min={1}
-                                    max={500}
-                                />
+                                <div className="flex items-end gap-4">
+                                    <div className="flex-1">
+                                        <NumberInput
+                                            label={t('text_count')}
+                                            value={textConfig.count}
+                                            onChange={(val) => onTextConfigChange({ count: val })}
+                                            min={1}
+                                            max={500}
+                                        />
+                                    </div>
+                                    <div className="flex flex-col items-center gap-1.5 pb-0.5">
+                                        <label className="text-sm font-medium text-text-muted whitespace-nowrap">{t('qr_enable')}</label>
+                                        <button
+                                            type="button"
+                                            onClick={() => onTextConfigChange({ showQrCode: !textConfig.showQrCode })}
+                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary/20 ${textConfig.showQrCode ? 'bg-brand-primary' : 'bg-text-main/10'}`}
+                                            title={t('qr_enable')}
+                                        >
+                                            <span
+                                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${textConfig.showQrCode ? 'translate-x-6' : 'translate-x-1'}`}
+                                            />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* QR Code Size Slider with Optimized Animation */}
+                                <AnimatePresence initial={false}>
+                                    {textConfig.showQrCode && (
+                                        <motion.div
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: "auto", opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            transition={{
+                                                height: { type: "spring", stiffness: 300, damping: 30, restDelta: 0.1 },
+                                                opacity: { duration: 0.2, delay: 0.05 }
+                                            }}
+                                            className="overflow-hidden"
+                                        >
+                                            <div className="pt-4 mt-4 border-t border-border-subtle/50 space-y-3 px-1">
+                                                <div className="flex items-center justify-between text-sm font-medium text-text-muted">
+                                                    <div className="flex items-center gap-2">
+                                                        <Grid className="w-3.5 h-3.5" />
+                                                        <span>{t('qr_size')}</span>
+                                                    </div>
+                                                    <span className="font-mono">{Math.round(textConfig.qrSizeRatio * 100)}%</span>
+                                                </div>
+                                                <input
+                                                    type="range"
+                                                    min="0.1"
+                                                    max="0.6"
+                                                    step="0.05"
+                                                    value={textConfig.qrSizeRatio}
+                                                    onChange={(e) => onTextConfigChange({ qrSizeRatio: parseFloat(e.target.value) })}
+                                                    className="w-full h-1.5 bg-text-main/10 rounded-lg appearance-none cursor-pointer accent-brand-primary"
+                                                />
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </div>
                         </div>
                     </>

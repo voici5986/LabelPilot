@@ -5,6 +5,7 @@ import { Maximize, ChevronLeft, ChevronRight } from "lucide-react";
 import { useI18n } from "../utils/i18n";
 import { motion, AnimatePresence } from "framer-motion";
 import { mapPctToScale, getThumbBottomPct } from "../utils/zoomMath";
+import { QRCodeSVG } from "qrcode.react";
 
 import type { ImageItem } from "../App";
 
@@ -17,6 +18,9 @@ interface PreviewPanelProps {
         startNumber: number;
         digits: number;
         count: number;
+        showQrCode: boolean;
+        qrSizeRatio: number;
+        qrContentPrefix: string;
     };
 }
 
@@ -204,7 +208,7 @@ export function PreviewPanel({ config, imageItems, appMode, textConfig }: Previe
                             {layout.positions.map((pos, idx) => {
                                 // 考虑分页的索引偏移
                                 const globalIdx = currentPage * slotsPerPage + idx;
-                                
+
                                 // 根据模式决定渲染内容
                                 let content = null;
                                 if (appMode === 'image') {
@@ -226,15 +230,29 @@ export function PreviewPanel({ config, imageItems, appMode, textConfig }: Previe
                                     // 自动编号模式
                                     const currentNumber = textConfig.startNumber + globalIdx;
                                     const formattedNumber = String(currentNumber).padStart(textConfig.digits, '0');
+                                    const displayText = `${textConfig.prefix}${formattedNumber}`;
+                                    const qrValue = `${textConfig.qrContentPrefix}${displayText}`;
+
                                     content = (
-                                        <div className="flex flex-col items-center justify-center w-full h-full p-1 text-center">
-                                            <span 
+                                        <div className={`flex flex-col items-center justify-center w-full h-full p-1 text-center ${textConfig.showQrCode ? 'gap-1' : ''}`}>
+                                            {textConfig.showQrCode && (
+                                                <div className="bg-white p-0.5">
+                                                    <QRCodeSVG
+                                                        value={qrValue}
+                                                        size={Math.min(pos.width, pos.height) * textConfig.qrSizeRatio * 3.78}
+                                                        level="M"
+                                                    />
+                                                </div>
+                                            )}
+                                            <span
                                                 className="text-black font-mono font-semibold leading-tight break-all"
-                                                style={{ 
-                                                    fontSize: `${Math.min(pos.width * 0.8 / (textConfig.prefix.length + textConfig.digits), pos.height * 0.5)}mm`
+                                                style={{
+                                                    fontSize: textConfig.showQrCode
+                                                        ? `${Math.min(pos.width * 0.9 / displayText.length, pos.height * 0.2)}mm`
+                                                        : `${Math.min(pos.width * 0.8 / displayText.length, pos.height * 0.5)}mm`
                                                 }}
                                             >
-                                                {textConfig.prefix}{formattedNumber}
+                                                {displayText}
                                             </span>
                                         </div>
                                     );
@@ -270,7 +288,7 @@ export function PreviewPanel({ config, imageItems, appMode, textConfig }: Previe
                         >
                             <ChevronLeft className="w-5 h-5 text-text-main" />
                         </button>
-                        
+
                         <span className="text-sm font-medium text-text-main min-w-[80px] text-center">
                             {t('page_of', { current: currentPage + 1, total: totalPages })}
                         </span>
@@ -290,7 +308,7 @@ export function PreviewPanel({ config, imageItems, appMode, textConfig }: Previe
                 <div className="absolute bottom-4 left-14 flex flex-col items-start gap-1 pointer-events-none z-20 opacity-60">
                     <div className="flex items-end h-3">
                         <div className="w-[1.5px] h-full bg-text-muted"></div>
-                        <motion.div 
+                        <motion.div
                             className="h-[1.5px] bg-text-muted"
                             animate={{ width: `${50 * scale * baseFitScale}mm` }}
                             transition={isDragging ? { duration: 0 } : { type: "spring", stiffness: 300, damping: 30 }}

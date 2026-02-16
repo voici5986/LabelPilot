@@ -53,6 +53,11 @@ export const translations = {
         orientation_tip_desc: 'For the best label design experience, please use landscape mode.',
         install_pwa: 'Install app for better experience',
         install_btn: 'Install App',
+        qr_config_group: 'QR CODE',
+        qr_enable: 'Show QR Code',
+        qr_size: 'QR Size',
+        qr_content_prefix: 'QR URL Prefix',
+        qr_content_prefix_hint: 'e.g. https://example.com/item/',
     },
     zh: {
         window_title: 'LabelPilot',
@@ -106,5 +111,10 @@ export const translations = {
         orientation_tip_desc: '为了获得最佳的排版编辑体验，请将设备横屏使用。',
         install_pwa: '安装应用以获得更佳体验',
         install_btn: '安装应用',
+        qr_config_group: '二维码配置',
+        qr_enable: '启用二维码',
+        qr_size: '二维码大小',
+        qr_content_prefix: '二维码地址前缀',
+        qr_content_prefix_hint: '例如 https://example.com/item/',
     }
 };

@@ -33,6 +33,9 @@ interface TextConfig {
   startNumber: number;
   digits: number;
   count: number;
+  showQrCode: boolean;
+  qrSizeRatio: number;
+  qrContentPrefix: string;
 }
 
 function App() {
@@ -74,7 +77,10 @@ function App() {
       prefix: "SN-",
       startNumber: 1,
       digits: 3,
-      count: 10
+      count: 10,
+      showQrCode: false,
+      qrSizeRatio: 0.35,
+      qrContentPrefix: ""
     };
   });
 
@@ -188,13 +194,15 @@ function App() {
 
   return (
     <Layout>
-      <Header 
-        theme={theme} 
-        onThemeChange={setTheme} 
-        config={config} 
+      <Header
+        theme={theme}
+        onThemeChange={setTheme}
+        config={config}
         onConfigChange={handleConfigChange}
         appMode={appMode}
         onAppModeChange={setAppMode}
+        textConfig={textConfig}
+        onTextConfigChange={(updates) => setTextConfig(prev => ({ ...prev, ...updates }))}
       />
       <main className="flex-1 flex overflow-hidden">
         <ControlPanel

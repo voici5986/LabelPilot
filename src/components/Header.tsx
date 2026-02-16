@@ -3,11 +3,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useI18n } from "../utils/i18n";
 import { useState, useRef, useEffect } from "react";
 import { LogoIcon } from "./LogoIcon";
-import { 
-    A4_WIDTH_MM, A4_HEIGHT_MM, 
+import {
+    A4_WIDTH_MM, A4_HEIGHT_MM,
     A3_WIDTH_MM, A3_HEIGHT_MM,
     A5_WIDTH_MM, A5_HEIGHT_MM,
-    LETTER_WIDTH_MM, LETTER_HEIGHT_MM 
+    LETTER_WIDTH_MM, LETTER_HEIGHT_MM
 } from "../utils/layoutMath";
 import type { HelperLayoutConfig } from "../utils/layoutMath";
 import { NumberInput } from "./NumberInput";
@@ -19,15 +19,19 @@ interface HeaderProps {
     onConfigChange: (updates: Partial<HelperLayoutConfig>) => void;
     appMode: 'image' | 'text';
     onAppModeChange: (mode: 'image' | 'text') => void;
+    textConfig: { qrContentPrefix: string };
+    onTextConfigChange: (updates: Partial<{ qrContentPrefix: string }>) => void;
 }
 
-export function Header({ 
-    theme, 
-    onThemeChange, 
-    config, 
+export function Header({
+    theme,
+    onThemeChange,
+    config,
     onConfigChange,
     appMode,
-    onAppModeChange
+    onAppModeChange,
+    textConfig,
+    onTextConfigChange
 }: HeaderProps) {
     const { t, language, setLanguage } = useI18n();
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -99,7 +103,7 @@ export function Header({
     const paperSize = (() => {
         const w = Math.round((config.pageWidthMm || A4_WIDTH_MM) * 10) / 10;
         const h = Math.round((config.pageHeightMm || A4_HEIGHT_MM) * 10) / 10;
-        
+
         if (w === Math.round(A4_WIDTH_MM * 10) / 10 && h === Math.round(A4_HEIGHT_MM * 10) / 10) return 'A4';
         if (w === Math.round(A3_WIDTH_MM * 10) / 10 && h === Math.round(A3_HEIGHT_MM * 10) / 10) return 'A3';
         if (w === Math.round(A5_WIDTH_MM * 10) / 10 && h === Math.round(A5_HEIGHT_MM * 10) / 10) return 'A5';
@@ -117,8 +121,8 @@ export function Header({
 
         if (size === 'Custom') {
             const currentW = config.pageWidthMm || A4_WIDTH_MM;
-            onConfigChange({ 
-                pageWidthMm: Math.round(currentW * 10) / 10 + 0.1 
+            onConfigChange({
+                pageWidthMm: Math.round(currentW * 10) / 10 + 0.1
             });
         } else {
             onConfigChange(presets[size]);
@@ -168,10 +172,10 @@ export function Header({
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: 10, scale: 0.95 }}
                             className="absolute right-0 top-12 w-80 shadow-2xl p-4 z-50 border border-border-subtle rounded-xl"
-                            style={{ 
+                            style={{
                                 backgroundColor: 'var(--color-surface)',
-                                backdropFilter: 'none', 
-                                WebkitBackdropFilter: 'none' 
+                                backdropFilter: 'none',
+                                WebkitBackdropFilter: 'none'
                             }}
                         >
                             <div className="space-y-4">
@@ -213,7 +217,7 @@ export function Header({
                                     <label className="text-xs font-semibold text-text-muted uppercase tracking-wider">
                                         {t('paper_size')}
                                     </label>
-                                    
+
                                     <div className="flex flex-col gap-2">
                                         <div className="flex gap-2">
                                             {/* A4 Button with Dropdown */}
@@ -246,10 +250,10 @@ export function Header({
                                                             animate={{ opacity: 1, y: 0 }}
                                                             exit={{ opacity: 0, y: 5 }}
                                                             className="absolute left-0 right-0 top-full mt-1 border border-border-subtle rounded-md shadow-2xl z-[100] py-1 overflow-hidden"
-                                                            style={{ 
+                                                            style={{
                                                                 backgroundColor: 'var(--color-surface)',
-                                                                backdropFilter: 'none', 
-                                                                WebkitBackdropFilter: 'none' 
+                                                                backdropFilter: 'none',
+                                                                WebkitBackdropFilter: 'none'
                                                             }}
                                                         >
                                                             {(['A4', 'A3', 'A5', 'Letter'] as const).map((size) => (
@@ -299,6 +303,25 @@ export function Header({
                                             />
                                         </div>
                                     )}
+                                </div>
+
+                                {/* QR Prefix Section (Low Frequency) */}
+                                <div className="space-y-3 pt-2 border-t border-border-subtle/50">
+                                    <label className="text-xs font-semibold text-text-muted uppercase tracking-wider flex items-center gap-2">
+                                        {t('qr_config_group')}
+                                    </label>
+                                    <div className="space-y-1.5">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-[12px] font-medium text-text-muted ml-0.5">{t('qr_content_prefix')}</span>
+                                        </div>
+                                        <input
+                                            type="text"
+                                            value={textConfig.qrContentPrefix}
+                                            onChange={(e) => onTextConfigChange({ qrContentPrefix: e.target.value })}
+                                            className="w-full input-base focus:input-base-focus px-3 py-1.5 text-sm font-mono"
+                                            placeholder={t('qr_content_prefix_hint')}
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         </motion.div>

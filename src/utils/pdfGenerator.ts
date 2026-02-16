@@ -16,6 +16,9 @@ export async function generatePDF(
         startNumber: number;
         digits: number;
         count: number;
+        showQrCode: boolean;
+        qrSizeRatio: number;
+        qrContentPrefix: string;
     },
     onProgress?: (progress: number) => void
 ): Promise<void> {
