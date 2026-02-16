@@ -1,30 +1,15 @@
 import { useEffect, useMemo, useState, useRef } from "react";
 import { calculateLabelLayout, A4_WIDTH_MM, A4_HEIGHT_MM, resolveItemAtSlot } from "../utils/layoutMath";
-import type { HelperLayoutConfig } from "../utils/layoutMath";
 import { Maximize, ChevronLeft, ChevronRight } from "lucide-react";
 import { useI18n } from "../utils/i18n";
 import { motion, AnimatePresence } from "framer-motion";
 import { mapPctToScale, getThumbBottomPct } from "../utils/zoomMath";
 import { QRCodeSVG } from "qrcode.react";
+import { useStore } from "../store/useStore";
 
-import type { ImageItem } from "../App";
 
-interface PreviewPanelProps {
-    config: HelperLayoutConfig;
-    imageItems: ImageItem[];
-    appMode: 'image' | 'text';
-    textConfig: {
-        prefix: string;
-        startNumber: number;
-        digits: number;
-        count: number;
-        showQrCode: boolean;
-        qrSizeRatio: number;
-        qrContentPrefix: string;
-    };
-}
-
-export function PreviewPanel({ config, imageItems, appMode, textConfig }: PreviewPanelProps) {
+export function PreviewPanel() {
+    const { config, imageItems, appMode, textConfig } = useStore();
     const { t } = useI18n();
     const [scale, setScale] = useState(1);
     const [baseFitScale, setBaseFitScale] = useState(0.8);
@@ -170,8 +155,8 @@ export function PreviewPanel({ config, imageItems, appMode, textConfig }: Previe
     }, [isPanning, panStart]);
 
     return (
-        <section className="flex-1 flex flex-col p-2 pl-0 h-full overflow-hidden">
-            <div className="flex-1 glass-panel rounded-lg flex flex-col relative overflow-hidden shadow-inner font-sans">
+        <section className="flex-1 flex flex-col h-full overflow-hidden">
+            <div className="flex-1 glass-panel rounded-xl flex flex-col relative overflow-hidden shadow-inner font-sans">
 
                 {/* Background Pattern */}
                 <div className="absolute inset-0 opacity-10 pointer-events-none dark:opacity-5" style={{ backgroundImage: 'radial-gradient(var(--color-text-main) 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>

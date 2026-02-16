@@ -1,5 +1,5 @@
-import type { HelperLayoutConfig } from "./layoutMath";
-import type { ImageItem } from "../App";
+import type { HelperLayoutConfig, ImageItem, TextConfig } from "./layoutMath";
+import { formatDateForFilename } from "./format";
 
 /**
  * Generates PDF using a Web Worker to avoid blocking the main thread.
@@ -11,15 +11,7 @@ export async function generatePDF(
     config: HelperLayoutConfig,
     imageItems: ImageItem[],
     appMode: 'image' | 'text',
-    textConfig: {
-        prefix: string;
-        startNumber: number;
-        digits: number;
-        count: number;
-        showQrCode: boolean;
-        qrSizeRatio: number;
-        qrContentPrefix: string;
-    },
+    textConfig: TextConfig,
     onProgress?: (progress: number) => void
 ): Promise<void> {
     // Pre-read buffers and prepare for transfer
@@ -52,13 +44,7 @@ export async function generatePDF(
                 const url = URL.createObjectURL(blob);
 
                 const link = document.createElement('a');
-                const now = new Date();
-                const YY = String(now.getFullYear()).slice(-2);
-                const MM = String(now.getMonth() + 1).padStart(2, '0');
-                const DD = String(now.getDate()).padStart(2, '0');
-                const hh = String(now.getHours()).padStart(2, '0');
-                const mm = String(now.getMinutes()).padStart(2, '0');
-                const dateStr = `label_${YY}${MM}${DD}_${hh}${mm}`;
+                const dateStr = `label_${formatDateForFilename(new Date())}`;
 
                 link.href = url;
                 link.download = `${dateStr}.pdf`;

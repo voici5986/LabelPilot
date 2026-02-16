@@ -1,54 +1,24 @@
 import { useState, useEffect } from "react";
-import { Layout } from "./components/Layout";
 import { Header } from "./components/Header";
 import { ControlPanel } from "./components/ControlPanel";
 import { PreviewPanel } from "./components/PreviewPanel";
 import { ReloadPrompt } from "./components/ReloadPrompt";
 import { OrientationGuard } from "./components/OrientationGuard";
-import { A4_WIDTH_MM, A4_HEIGHT_MM } from "./utils/layoutMath";
-import type { HelperLayoutConfig } from "./utils/layoutMath";
+import { useStore } from "./store/useStore";
 import { generatePDF } from "./utils/pdfGenerator";
 import { Toast, type ToastType } from "./components/Toast";
 import { useI18n } from "./utils/i18n";
 
-// Default Config
-const DEFAULT_CONFIG: HelperLayoutConfig = {
-  rows: 3,
-  cols: 3,
-  marginMm: 10,
-  spacingMm: 10,
-  orientation: 'landscape',
-  pageWidthMm: A4_WIDTH_MM,
-  pageHeightMm: A4_HEIGHT_MM,
-};
-
-export interface ImageItem {
-  id: string;
-  file: File;
-  count: number;
-}
-
-interface TextConfig {
-  prefix: string;
-  startNumber: number;
-  digits: number;
-  count: number;
-  showQrCode: boolean;
-  qrSizeRatio: number;
-  qrContentPrefix: string;
-}
 
 function App() {
   const { t } = useI18n();
-
-  // State
-  const [config, setConfig] = useState<HelperLayoutConfig>(() => {
-    const saved = localStorage.getItem("label_printer_config");
-    return saved ? JSON.parse(saved) : DEFAULT_CONFIG;
-  });
-
-  const [imageItems, setImageItems] = useState<ImageItem[]>([]);
-
+  const {
+    config,
+    imageItems, setImageItems,
+    appMode,
+    textConfig,
+    theme
+  } = useStore();
 
   // Toast State
   const [toast, setToast] = useState<{ message: string; type: ToastType; visible: boolean }>({
@@ -60,41 +30,7 @@ function App() {
   const [genStatus, setGenStatus] = useState<'idle' | 'generating' | 'success' | 'error'>('idle');
   const [genProgress, setGenProgress] = useState(0);
 
-  // App Mode State
-  const [appMode, setAppMode] = useState<'image' | 'text'>(() => {
-    return (localStorage.getItem("app_mode") as 'image' | 'text') || 'image';
-  });
-
-  // Sync App Mode to LocalStorage
-  useEffect(() => {
-    localStorage.setItem("app_mode", appMode);
-  }, [appMode]);
-
-  // Text Mode Config State
-  const [textConfig, setTextConfig] = useState<TextConfig>(() => {
-    const saved = localStorage.getItem("label_text_config");
-    return saved ? JSON.parse(saved) : {
-      prefix: "SN-",
-      startNumber: 1,
-      digits: 3,
-      count: 10,
-      showQrCode: false,
-      qrSizeRatio: 0.35,
-      qrContentPrefix: ""
-    };
-  });
-
-  // Sync Text Config to LocalStorage
-  useEffect(() => {
-    localStorage.setItem("label_text_config", JSON.stringify(textConfig));
-  }, [textConfig]);
-
-  // Theme State
-  const [theme, setTheme] = useState<'system' | 'light' | 'dark'>(() => {
-    return (localStorage.getItem("theme_mode") as 'system' | 'light' | 'dark') || 'system';
-  });
-
-  // Sync Theme to DOM
+  // Theme Side Effect
   useEffect(() => {
     const root = document.documentElement;
     if (theme === 'system') {
@@ -102,84 +38,22 @@ function App() {
     } else {
       root.setAttribute('data-theme', theme);
     }
-    localStorage.setItem("theme_mode", theme);
   }, [theme]);
 
   const showToast = (message: string, type: ToastType) => {
     setToast({ message, type, visible: true });
   };
 
-  const closeToast = () => {
-    setToast(prev => ({ ...prev, visible: false }));
-  };
-
-  // Persist Config
-  useEffect(() => {
-    localStorage.setItem("label_printer_config", JSON.stringify(config));
-  }, [config]);
-
-  // Handlers
-  const handleConfigChange = (updates: Partial<HelperLayoutConfig>) => {
-    setConfig(prev => {
-      const next = { ...prev, ...updates };
-      // 动态行列限制与自动修正
-      if (updates.orientation) {
-        const isPortrait = next.orientation === 'portrait';
-        const maxR = isPortrait ? 20 : 10;
-        const maxC = isPortrait ? 10 : 20;
-        next.rows = Math.min(next.rows, maxR);
-        next.cols = Math.min(next.cols, maxC);
-      }
-      return next;
-    });
-  };
-
   const handleFilesSelect = (files: File[]) => {
-    let FilesToProcess = files;
-    if (files.length > 10) {
-      showToast(t('limit_reached'), 'warning');
-      FilesToProcess = files.slice(0, 10);
-    }
-
-    const totalSlots = config.rows * config.cols;
-    const numFiles = FilesToProcess.length;
-
-    const newItems: ImageItem[] = FilesToProcess.map((file, idx) => {
-      let initialCount = 1;
-
-      if (numFiles === 1) {
-        // 单图模式：初始填满全页
-        initialCount = totalSlots;
-      } else if (numFiles > 1) {
-        // 多图模式：平分格子，最后一份拿余数
-        const baseCount = Math.floor(totalSlots / numFiles);
-        initialCount = (idx === numFiles - 1)
-          ? totalSlots - (baseCount * (numFiles - 1))
-          : baseCount;
-      }
-
-      // 兜底
-      if (initialCount <= 0) initialCount = 1;
-
-      return {
-        id: Math.random().toString(36).substring(2, 9),
-        file,
-        count: initialCount
-      };
-    });
-
-    setImageItems(newItems);
+    const newItems = files.map(file => ({
+      id: Math.random().toString(36).substr(2, 9),
+      file,
+      count: 1
+    }));
+    setImageItems([...imageItems, ...newItems]);
   };
 
-  const handleItemCountChange = (id: string, count: number) => {
-    setImageItems(prev => prev.map(item => item.id === id ? { ...item, count } : item));
-  };
-
-
-  const handleGenerateValues = async () => {
-    if (appMode === 'image' && imageItems.length === 0) return;
-    setGenStatus('generating');
-    setGenProgress(0);
+  const handleGeneratePdf = async () => {
     try {
       await generatePDF(config, imageItems, appMode, textConfig, (p: number) => setGenProgress(p));
       setGenStatus('success');
@@ -193,56 +67,36 @@ function App() {
   };
 
   return (
-    <Layout>
-      <Header
-        theme={theme}
-        onThemeChange={setTheme}
-        config={config}
-        onConfigChange={handleConfigChange}
-        appMode={appMode}
-        onAppModeChange={setAppMode}
-        textConfig={textConfig}
-        onTextConfigChange={(updates) => setTextConfig(prev => ({ ...prev, ...updates }))}
-      />
-      <main className="flex-1 flex overflow-hidden">
-        <ControlPanel
-          config={config}
-          onConfigChange={handleConfigChange}
-          onFilesSelect={handleFilesSelect}
-          imageItems={imageItems}
-          onReorder={setImageItems}
-          onItemCountChange={handleItemCountChange}
-          onGeneratePdf={handleGenerateValues}
-          genStatus={genStatus}
-          genProgress={genProgress}
-          maxRows={config.orientation === 'portrait' ? 20 : 10}
-          maxCols={config.orientation === 'portrait' ? 10 : 20}
-          appMode={appMode}
-          textConfig={textConfig}
-          onTextConfigChange={(updates) => setTextConfig(prev => ({ ...prev, ...updates }))}
-        />
-        <PreviewPanel
-          config={config}
-          imageItems={imageItems}
-          appMode={appMode}
-          textConfig={textConfig}
-        />
+    <div className="flex flex-col h-screen overflow-hidden bg-background text-text-main selection:bg-brand-primary/20">
+      <Header />
+
+      <main className="flex-1 flex overflow-hidden p-6 gap-6">
+        <div className="w-80 flex flex-col gap-6 scrollbar-hide">
+          <ControlPanel
+            onFilesSelect={handleFilesSelect}
+            onGeneratePdf={handleGeneratePdf}
+            genStatus={genStatus}
+            genProgress={genProgress}
+          />
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <PreviewPanel />
+        </div>
       </main>
 
-      {/* PWA Update Prompt */}
+      {toast.visible && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          isVisible={toast.visible}
+          onClose={() => setToast(prev => ({ ...prev, visible: false }))}
+        />
+      )}
+
       <ReloadPrompt />
-
-      {/* Mobile Orientation Guard */}
       <OrientationGuard />
-
-      {/* Toast Notification */}
-      <Toast
-        message={toast.message}
-        type={toast.type}
-        isVisible={toast.visible}
-        onClose={closeToast}
-      />
-    </Layout>
+    </div>
   );
 }
 

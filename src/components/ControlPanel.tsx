@@ -1,10 +1,7 @@
 import { UploadCloud, Grid, File as FileIcon, FileMinus } from "lucide-react";
-import type { HelperLayoutConfig } from "../utils/layoutMath";
 import {
     A4_WIDTH_MM, A4_HEIGHT_MM,
-    A3_WIDTH_MM, A3_HEIGHT_MM,
-    A5_WIDTH_MM, A5_HEIGHT_MM,
-    LETTER_WIDTH_MM, LETTER_HEIGHT_MM
+    getPaperSizeLabel
 } from "../utils/layoutMath";
 import { motion, Reorder, AnimatePresence } from "framer-motion";
 import { useI18n } from "../utils/i18n";
@@ -12,50 +9,30 @@ import { NumberInput } from "./NumberInput";
 import { SmartButton } from "./SmartButton";
 import { ThumbnailItem } from "./ThumbnailItem";
 import { useMemo } from "react";
-
-import type { ImageItem } from "../App";
+import { useStore } from "../store/useStore";
 
 interface ControlPanelProps {
-    config: HelperLayoutConfig;
-    onConfigChange: (updates: Partial<HelperLayoutConfig>) => void;
     onFilesSelect: (files: File[]) => void;
-    imageItems: ImageItem[];
-    onReorder: (newItems: ImageItem[]) => void;
-    onItemCountChange: (id: string, count: number) => void;
     onGeneratePdf: () => void;
     genStatus?: 'idle' | 'generating' | 'success' | 'error';
     genProgress?: number;
     maxRows?: number;
     maxCols?: number;
-    appMode: 'image' | 'text';
-    textConfig: {
-        prefix: string;
-        startNumber: number;
-        digits: number;
-        count: number;
-        showQrCode: boolean;
-        qrSizeRatio: number;
-        qrContentPrefix: string;
-    };
-    onTextConfigChange: (updates: Partial<ControlPanelProps['textConfig']>) => void;
 }
 
 export function ControlPanel({
-    config,
-    onConfigChange,
     onFilesSelect,
-    imageItems,
-    onReorder,
-    onItemCountChange,
     onGeneratePdf,
     genStatus = 'idle',
     genProgress = 0,
     maxRows = 20,
     maxCols = 20,
-    appMode,
-    textConfig,
-    onTextConfigChange
 }: ControlPanelProps) {
+    const {
+        config, setConfig: onConfigChange,
+        imageItems, setImageItems: onReorder, updateItemCount: onItemCountChange,
+        appMode, textConfig, setTextConfig: onTextConfigChange
+    } = useStore();
     const { t } = useI18n();
 
     // 局部化逻辑：计算显示的文件名或数量
@@ -76,17 +53,13 @@ export function ControlPanel({
         const w = Math.round((config.pageWidthMm || A4_WIDTH_MM) * 10) / 10;
         const h = Math.round((config.pageHeightMm || A4_HEIGHT_MM) * 10) / 10;
 
-        let label = 'Custom';
-        if (w === Math.round(A4_WIDTH_MM * 10) / 10 && h === Math.round(A4_HEIGHT_MM * 10) / 10) label = 'A4';
-        else if (w === Math.round(A3_WIDTH_MM * 10) / 10 && h === Math.round(A3_HEIGHT_MM * 10) / 10) label = 'A3';
-        else if (w === Math.round(A5_WIDTH_MM * 10) / 10 && h === Math.round(A5_HEIGHT_MM * 10) / 10) label = 'A5';
-        else if (w === Math.round(LETTER_WIDTH_MM * 10) / 10 && h === Math.round(LETTER_HEIGHT_MM * 10) / 10) label = 'Letter';
+        const label = getPaperSizeLabel(config.pageWidthMm || A4_WIDTH_MM, config.pageHeightMm || A4_HEIGHT_MM);
 
         return `${label}, ${w}×${h}mm`;
     }, [config.pageWidthMm, config.pageHeightMm]);
 
     return (
-        <aside className="w-80 glass-panel border-r-0 flex flex-col z-10 m-2 rounded-xl shadow-lg">
+        <aside className="w-80 glass-panel border-r-0 flex flex-col z-10 rounded-xl shadow-lg h-full overflow-hidden">
             <div className="p-6 overflow-y-auto flex-1 space-y-6 scrollbar-hide">
 
                 {/* 1. Grid/Layout Settings */}

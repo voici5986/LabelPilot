@@ -9,30 +9,16 @@ import {
     A5_WIDTH_MM, A5_HEIGHT_MM,
     LETTER_WIDTH_MM, LETTER_HEIGHT_MM
 } from "../utils/layoutMath";
-import type { HelperLayoutConfig } from "../utils/layoutMath";
 import { NumberInput } from "./NumberInput";
+import { useStore } from "../store/useStore";
 
-interface HeaderProps {
-    theme: 'system' | 'light' | 'dark';
-    onThemeChange: (theme: 'system' | 'light' | 'dark') => void;
-    config: HelperLayoutConfig;
-    onConfigChange: (updates: Partial<HelperLayoutConfig>) => void;
-    appMode: 'image' | 'text';
-    onAppModeChange: (mode: 'image' | 'text') => void;
-    textConfig: { qrContentPrefix: string };
-    onTextConfigChange: (updates: Partial<{ qrContentPrefix: string }>) => void;
-}
-
-export function Header({
-    theme,
-    onThemeChange,
-    config,
-    onConfigChange,
-    appMode,
-    onAppModeChange,
-    textConfig,
-    onTextConfigChange
-}: HeaderProps) {
+export function Header() {
+    const {
+        theme, setTheme: onThemeChange,
+        config, setConfig: onConfigChange,
+        appMode, setAppMode: onAppModeChange,
+        textConfig, setTextConfig: onTextConfigChange
+    } = useStore();
     const { t, language, setLanguage } = useI18n();
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isPresetsOpen, setIsPresetsOpen] = useState(false);

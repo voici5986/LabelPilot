@@ -13,6 +13,22 @@ export interface HelperLayoutConfig {
   pageHeightMm?: number; // Defaults to A4
 }
 
+export interface ImageItem {
+  id: string;
+  file: File;
+  count: number;
+}
+
+export interface TextConfig {
+  prefix: string;
+  startNumber: number;
+  digits: number;
+  count: number;
+  showQrCode: boolean;
+  qrSizeRatio: number;
+  qrContentPrefix: string;
+}
+
 export interface LabelPosition {
   x: number; // mm
   y: number; // mm
@@ -31,7 +47,25 @@ export const A5_HEIGHT_MM = 210;
 export const LETTER_WIDTH_MM = 215.9;
 export const LETTER_HEIGHT_MM = 279.4;
 
-export type PaperSize = 'A4' | 'Letter' | 'Custom';
+export type PaperSize = 'A4' | 'Letter' | 'A3' | 'A5' | 'Custom';
+
+/**
+ * Returns a human-readable label for the given paper dimensions.
+ */
+export function getPaperSizeLabel(width: number, height: number): string {
+  const w = Math.round(width * 10) / 10;
+  const h = Math.round(height * 10) / 10;
+
+  const isMatch = (dw: number, dh: number) =>
+    w === Math.round(dw * 10) / 10 && h === Math.round(dh * 10) / 10;
+
+  if (isMatch(A4_WIDTH_MM, A4_HEIGHT_MM)) return 'A4';
+  if (isMatch(A3_WIDTH_MM, A3_HEIGHT_MM)) return 'A3';
+  if (isMatch(A5_WIDTH_MM, A5_HEIGHT_MM)) return 'A5';
+  if (isMatch(LETTER_WIDTH_MM, LETTER_HEIGHT_MM)) return 'Letter';
+
+  return 'Custom';
+}
 
 /**
  * Calculates the dimensions and positions of labels on a page.
