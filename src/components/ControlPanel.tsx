@@ -1,7 +1,8 @@
 import { UploadCloud, Grid, File as FileIcon, FileMinus } from "lucide-react";
 import {
     A4_WIDTH_MM, A4_HEIGHT_MM,
-    getPaperSizeLabel
+    getPaperSizeLabel,
+    calculateLabelLayout
 } from "../utils/layoutMath";
 import { motion, Reorder, AnimatePresence } from "framer-motion";
 import { useI18n } from "../utils/i18n";
@@ -35,6 +36,9 @@ export function ControlPanel({
         appMode, textConfig, setTextConfig: onTextConfigChange
     } = useStore();
     const { t } = useI18n();
+
+    const layout = useMemo(() => calculateLabelLayout(config), [config]);
+    const layoutError = layout.error;
 
     // 局部化逻辑：计算显示的文件名或数量
     const selectedFileName = useMemo(() => {
@@ -288,7 +292,7 @@ export function ControlPanel({
             <div className="p-1 border-t border-glass-border backdrop-blur-sm rounded-b-xl overflow-hidden relative">
                 <SmartButton
                     onClick={onGeneratePdf}
-                    disabled={appMode === 'image' ? !selectedFileName : false}
+                    disabled={!!layoutError || (appMode === 'image' ? !selectedFileName : false)}
                     genStatus={genStatus}
                     genProgress={genProgress}
                 />

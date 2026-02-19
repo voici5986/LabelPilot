@@ -182,3 +182,12 @@ export function resolveItemAtSlot<T extends { count: number }>(
 
   return null;
 }
+
+/**
+ * Formats the text content for a label based on the configuration.
+ */
+export function formatLabelText(index: number, config: TextConfig): string {
+  const currentNumber = config.startNumber + index;
+  const formattedNumber = String(currentNumber).padStart(config.digits, '0');
+  return `${config.prefix}${formattedNumber}`;
+}

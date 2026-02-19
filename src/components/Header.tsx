@@ -7,7 +7,8 @@ import {
     A4_WIDTH_MM, A4_HEIGHT_MM,
     A3_WIDTH_MM, A3_HEIGHT_MM,
     A5_WIDTH_MM, A5_HEIGHT_MM,
-    LETTER_WIDTH_MM, LETTER_HEIGHT_MM
+    LETTER_WIDTH_MM, LETTER_HEIGHT_MM,
+    getPaperSizeLabel
 } from "../utils/layoutMath";
 import { NumberInput } from "./NumberInput";
 import { SegmentedControl } from "./SegmentedControl";
@@ -88,16 +89,10 @@ export function Header() {
         dark: Moon,
     }[theme];
 
-    const derivedPaperSize = (() => {
-        const w = Math.round((config.pageWidthMm || A4_WIDTH_MM) * 10) / 10;
-        const h = Math.round((config.pageHeightMm || A4_HEIGHT_MM) * 10) / 10;
-
-        if (w === Math.round(A4_WIDTH_MM * 10) / 10 && h === Math.round(A4_HEIGHT_MM * 10) / 10) return 'A4';
-        if (w === Math.round(A3_WIDTH_MM * 10) / 10 && h === Math.round(A3_HEIGHT_MM * 10) / 10) return 'A3';
-        if (w === Math.round(A5_WIDTH_MM * 10) / 10 && h === Math.round(A5_HEIGHT_MM * 10) / 10) return 'A5';
-        if (w === Math.round(LETTER_WIDTH_MM * 10) / 10 && h === Math.round(LETTER_HEIGHT_MM * 10) / 10) return 'Letter';
-        return 'Custom';
-    })();
+    const derivedPaperSize = getPaperSizeLabel(
+        config.pageWidthMm || A4_WIDTH_MM,
+        config.pageHeightMm || A4_HEIGHT_MM
+    );
     const paperSize = isCustomPaper ? 'Custom' : derivedPaperSize;
 
     const handlePaperSizeChange = (size: 'A4' | 'A3' | 'A5' | 'Letter' | 'Custom') => {

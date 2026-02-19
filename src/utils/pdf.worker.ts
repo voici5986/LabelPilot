@@ -1,5 +1,5 @@
 import jsPDF from "jspdf";
-import { calculateLabelLayout, resolveItemAtSlot } from "./layoutMath";
+import { calculateLabelLayout, resolveItemAtSlot, formatLabelText } from "./layoutMath";
 import QRCode from "qrcode";
 
 /**
@@ -11,6 +11,8 @@ ctx.onmessage = async (e) => {
     const { config, imageItems, appMode, textConfig } = e.data;
 
     try {
+        const nextTick = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+        let qrBatchCount = 0;
         // 1. Calculate Layout
         const layout = calculateLabelLayout(config);
         if (layout.error) {
@@ -88,9 +90,7 @@ ctx.onmessage = async (e) => {
                     pdf.addImage(img.data, img.format, x, y, w, h, undefined, 'FAST');
                 } else {
                     // 文本模式 (可选带二维码)
-                    const currentNumber = textConfig.startNumber + globalIdx;
-                    const formattedNumber = String(currentNumber).padStart(textConfig.digits, '0');
-                    const text = `${textConfig.prefix}${formattedNumber}`;
+                    const text = formatLabelText(globalIdx, textConfig);
 
                     if (textConfig.showQrCode) {
                         // 二维码内容
@@ -99,11 +99,15 @@ ctx.onmessage = async (e) => {
                         // 生成二维码图片数据
                         // 使用 toDataURL，qrcode 库在 OffscreenCanvas 模式下表现良好
                         try {
+                            qrBatchCount += 1;
                             const qrDataUrl = await QRCode.toDataURL(qrValue, {
                                 margin: 1,
                                 errorCorrectionLevel: 'M',
                                 width: 256 // 足够清晰的像素大小
                             });
+                            if (qrBatchCount % 50 === 0) {
+                                await nextTick();
+                            }
 
                             // 布局计算：二维码在上方，文字在下方
                             // 二维码尺寸由 qrSizeRatio 决定，取 (宽, 高) 的最小值

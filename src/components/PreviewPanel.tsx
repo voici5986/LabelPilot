@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useRef } from "react";
-import { calculateLabelLayout, A4_WIDTH_MM, A4_HEIGHT_MM, resolveItemAtSlot } from "../utils/layoutMath";
-import { Maximize, ChevronLeft, ChevronRight } from "lucide-react";
+import { calculateLabelLayout, A4_WIDTH_MM, A4_HEIGHT_MM, resolveItemAtSlot, formatLabelText } from "../utils/layoutMath";
+import { Maximize, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
 import { useI18n } from "../utils/i18n";
 import { motion, AnimatePresence } from "framer-motion";
 import { mapPctToScale, getThumbBottomPct } from "../utils/zoomMath";
@@ -8,12 +8,13 @@ import { QRCodeSVG } from "qrcode.react";
 import { useStore } from "../store/useStore";
 
 
+import { translations } from "../utils/translations";
+
 export function PreviewPanel() {
-    const { config, imageItems, appMode, textConfig } = useStore();
+    const { config, imageItems, imageUrlMap, appMode, textConfig } = useStore();
     const { t } = useI18n();
     const [scale, setScale] = useState(1);
     const [baseFitScale, setBaseFitScale] = useState(0.8);
-    const [imageUrls, setImageUrls] = useState<Map<string, string>>(new Map());
     const containerRef = useRef<HTMLDivElement>(null);
 
     // Zoom control states
@@ -52,21 +53,6 @@ export function PreviewPanel() {
         return () => window.removeEventListener('resize', updateFitScale);
     }, [config.orientation, config.pageWidthMm, config.pageHeightMm]);
 
-    // 处理图片 URL 列表生命周期
-    useEffect(() => {
-        if (imageItems && imageItems.length > 0) {
-            const newMap = new Map<string, string>();
-            imageItems.forEach(item => {
-                newMap.set(item.id, URL.createObjectURL(item.file));
-            });
-            setImageUrls(newMap);
-            return () => {
-                newMap.forEach(url => URL.revokeObjectURL(url));
-            };
-        }
-        setImageUrls(new Map());
-    }, [imageItems]);
-
     const layout = useMemo(() => calculateLabelLayout(config), [config]);
 
     const totalCount = useMemo(() => {
@@ -80,6 +66,7 @@ export function PreviewPanel() {
     const slotsPerPage = Math.max(1, layout.positions.length);
     const totalPages = Math.max(1, Math.ceil(totalCount / slotsPerPage));
     const [currentPage, setCurrentPage] = useState(0);
+    const [pageInput, setPageInput] = useState(String(currentPage + 1));
 
     // Reset current page if total pages change
     useEffect(() => {
@@ -87,6 +74,10 @@ export function PreviewPanel() {
             setCurrentPage(Math.max(0, totalPages - 1));
         }
     }, [totalPages, currentPage]);
+    
+    useEffect(() => {
+        setPageInput(String(currentPage + 1));
+    }, [currentPage]);
 
     const isPortrait = config.orientation === 'portrait';
     const baseW = config.pageWidthMm || A4_WIDTH_MM;
@@ -167,6 +158,19 @@ export function PreviewPanel() {
                     onMouseDown={handleMouseDown}
                     className={`flex-1 overflow-auto text-center p-2 scrollbar-thin scrollbar-thumb-text-main/20 select-none ${isPanning ? 'cursor-grabbing' : 'cursor-grab'}`}
                 >
+                    {layout.error ? (
+                        <div className="w-full h-full flex items-center justify-center p-8">
+                            <div className="bg-surface/80 backdrop-blur-md p-6 rounded-xl border border-red-200/50 dark:border-red-800/50 shadow-xl flex flex-col items-center gap-3 text-red-600 dark:text-red-400">
+                                <AlertCircle className="w-10 h-10" />
+                                <div className="text-center">
+                                    <p className="font-medium text-lg">{t('layout_error_title')}</p>
+                                    <p className="text-sm opacity-80">
+                                        {layout.error ? t(layout.error.toLowerCase() as keyof typeof translations.zh) || layout.error : ''}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
                     <div className="inline-block text-left align-top" style={{
                         width: `${paperWidthMm * scale * baseFitScale}mm`,
                         height: `${paperHeightMm * scale * baseFitScale}mm`,
@@ -198,7 +202,7 @@ export function PreviewPanel() {
                                 let content = null;
                                 if (appMode === 'image') {
                                     const item = resolveItemAtSlot(globalIdx, imageItems);
-                                    const currentImageUrl = item ? imageUrls.get(item.id) : null;
+                                    const currentImageUrl = item ? imageUrlMap.get(item.id) : null;
                                     if (currentImageUrl) {
                                         content = (
                                             <img
@@ -213,9 +217,7 @@ export function PreviewPanel() {
                                     }
                                 } else if (globalIdx < totalCount) {
                                     // 自动编号模式
-                                    const currentNumber = textConfig.startNumber + globalIdx;
-                                    const formattedNumber = String(currentNumber).padStart(textConfig.digits, '0');
-                                    const displayText = `${textConfig.prefix}${formattedNumber}`;
+                                    const displayText = formatLabelText(globalIdx, textConfig);
                                     const qrValue = `${textConfig.qrContentPrefix}${displayText}`;
 
                                     content = (
@@ -260,11 +262,12 @@ export function PreviewPanel() {
                             })}
                         </motion.div>
                     </div>
+                    )}
                 </div>
 
                 {/* Page Navigation Controls */}
-                {totalPages > 1 && (
-                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-4 z-30 bg-surface/80 backdrop-blur-md px-4 py-1.5 rounded-full border border-border-subtle shadow-lg">
+                {!layout.error && totalPages > 1 && (
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 z-30 bg-surface/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-border-subtle shadow-lg">
                         <button
                             disabled={currentPage === 0}
                             onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
@@ -274,9 +277,27 @@ export function PreviewPanel() {
                             <ChevronLeft className="w-5 h-5 text-text-main" />
                         </button>
 
-                        <span className="text-sm font-medium text-text-main min-w-[80px] text-center">
-                            {t('page_of', { current: currentPage + 1, total: totalPages })}
-                        </span>
+                        <div className="text-sm font-medium text-text-main flex items-center justify-center gap-1.5">
+                            <input
+                                type="text"
+                                inputMode="numeric"
+                                value={pageInput}
+                                onChange={(e) => setPageInput(e.target.value.replace(/[^\d]/g, ''))}
+                                onBlur={() => {
+                                    const parsed = parseInt(pageInput || '1', 10);
+                                    const next = Math.min(totalPages, Math.max(1, isNaN(parsed) ? 1 : parsed));
+                                    setCurrentPage(next - 1);
+                                }}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        (e.target as HTMLInputElement).blur();
+                                    }
+                                }}
+                                className="w-10 text-center input-base focus:input-base-focus px-1 py-0.5 text-sm"
+                                aria-label={t('page_of', { current: currentPage + 1, total: totalPages })}
+                            />
+                            <span>/ {totalPages}</span>
+                        </div>
 
                         <button
                             disabled={currentPage === totalPages - 1}

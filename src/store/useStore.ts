@@ -12,6 +12,7 @@ interface AppState {
 
     // Non-persistent state
     imageItems: ImageItem[];
+    imageUrlMap: Map<string, string>;
 
     // Actions
     setConfig: (updates: Partial<HelperLayoutConfig>) => void;
@@ -50,6 +51,7 @@ export const useStore = create<AppState>()(
             appMode: 'image',
             theme: 'system',
             imageItems: [],
+            imageUrlMap: new Map(),
 
             setConfig: (updates) => set((state) => {
                 const next = { ...state.config, ...updates };
@@ -69,7 +71,31 @@ export const useStore = create<AppState>()(
 
             setTheme: (theme) => set({ theme }),
 
-            setImageItems: (items) => set({ imageItems: items }),
+            setImageItems: (items) => set((state) => {
+                const nextMap = new Map(state.imageUrlMap);
+                const nextIds = new Set(items.map((item) => item.id));
+                const prevFilesById = new Map(state.imageItems.map((item) => [item.id, item.file]));
+
+                for (const item of items) {
+                    const prevFile = prevFilesById.get(item.id);
+                    const existingUrl = nextMap.get(item.id);
+                    if (!existingUrl || (prevFile && prevFile !== item.file)) {
+                        if (existingUrl) {
+                            URL.revokeObjectURL(existingUrl);
+                        }
+                        nextMap.set(item.id, URL.createObjectURL(item.file));
+                    }
+                }
+
+                for (const [id, url] of state.imageUrlMap) {
+                    if (!nextIds.has(id)) {
+                        URL.revokeObjectURL(url);
+                        nextMap.delete(id);
+                    }
+                }
+
+                return { imageItems: items, imageUrlMap: nextMap };
+            }),
 
             updateItemCount: (id, count) => set((state) => ({
                 imageItems: state.imageItems.map(item => item.id === id ? { ...item, count } : item)

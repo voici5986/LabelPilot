@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { X } from "lucide-react";
 import type { ImageItem } from "../utils/layoutMath";
+import { useStore } from "../store/useStore";
 
 interface ThumbnailItemProps {
     item: ImageItem;
@@ -10,13 +10,8 @@ interface ThumbnailItemProps {
 }
 
 export function ThumbnailItem({ item, onCountChange, onRemove }: ThumbnailItemProps) {
-    const [url, setUrl] = useState<string>("");
-
-    useEffect(() => {
-        const u = URL.createObjectURL(item.file);
-        setUrl(u);
-        return () => URL.revokeObjectURL(u);
-    }, [item.file]);
+    const imageUrlMap = useStore((state) => state.imageUrlMap);
+    const url = imageUrlMap.get(item.id) || "";
 
     const handleCountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = parseInt(e.target.value) || 1;
