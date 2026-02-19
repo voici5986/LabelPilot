@@ -50,7 +50,7 @@ export function PreviewPanel() {
         updateFitScale();
         window.addEventListener('resize', updateFitScale);
         return () => window.removeEventListener('resize', updateFitScale);
-    }, [config.orientation]);
+    }, [config.orientation, config.pageWidthMm, config.pageHeightMm]);
 
     // 处理图片 URL 列表生命周期
     useEffect(() => {
@@ -77,7 +77,7 @@ export function PreviewPanel() {
         }
     }, [imageItems, appMode, textConfig.count]);
 
-    const slotsPerPage = layout.positions.length;
+    const slotsPerPage = Math.max(1, layout.positions.length);
     const totalPages = Math.max(1, Math.ceil(totalCount / slotsPerPage));
     const [currentPage, setCurrentPage] = useState(0);
 

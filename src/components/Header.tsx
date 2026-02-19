@@ -23,6 +23,7 @@ export function Header() {
     const { t, language, setLanguage } = useI18n();
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isPresetsOpen, setIsPresetsOpen] = useState(false);
+    const [isCustomPaper, setIsCustomPaper] = useState(false);
     const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
     const [canInstall, setCanInstall] = useState(false);
     const settingsRef = useRef<HTMLDivElement>(null);
@@ -87,7 +88,7 @@ export function Header() {
         dark: Moon,
     }[theme];
 
-    const paperSize = (() => {
+    const derivedPaperSize = (() => {
         const w = Math.round((config.pageWidthMm || A4_WIDTH_MM) * 10) / 10;
         const h = Math.round((config.pageHeightMm || A4_HEIGHT_MM) * 10) / 10;
 
@@ -97,6 +98,7 @@ export function Header() {
         if (w === Math.round(LETTER_WIDTH_MM * 10) / 10 && h === Math.round(LETTER_HEIGHT_MM * 10) / 10) return 'Letter';
         return 'Custom';
     })();
+    const paperSize = isCustomPaper ? 'Custom' : derivedPaperSize;
 
     const handlePaperSizeChange = (size: 'A4' | 'A3' | 'A5' | 'Letter' | 'Custom') => {
         const presets = {
@@ -107,12 +109,10 @@ export function Header() {
         };
 
         if (size === 'Custom') {
-            const currentW = config.pageWidthMm || A4_WIDTH_MM;
-            onConfigChange({
-                pageWidthMm: Math.round(currentW * 10) / 10 + 0.1
-            });
+            setIsCustomPaper(true);
         } else {
             onConfigChange(presets[size]);
+            setIsCustomPaper(false);
         }
         setIsPresetsOpen(false);
     };

@@ -53,14 +53,11 @@ export const useStore = create<AppState>()(
 
             setConfig: (updates) => set((state) => {
                 const next = { ...state.config, ...updates };
-                // Handle orientation constraints
-                if (updates.orientation) {
-                    const isPortrait = next.orientation === 'portrait';
-                    const maxR = isPortrait ? 20 : 10;
-                    const maxC = isPortrait ? 10 : 20;
-                    next.rows = Math.min(next.rows, maxR);
-                    next.cols = Math.min(next.cols, maxC);
-                }
+                const isPortrait = next.orientation === 'portrait';
+                const maxR = isPortrait ? 20 : 10;
+                const maxC = isPortrait ? 10 : 20;
+                next.rows = Math.min(Math.max(1, next.rows), maxR);
+                next.cols = Math.min(Math.max(1, next.cols), maxC);
                 return { config: next };
             }),
 

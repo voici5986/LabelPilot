@@ -47,7 +47,9 @@ function App() {
   const handleFilesSelect = (files: File[]) => {
     const defaultCount = config.rows * config.cols;
     const newItems = files.map(file => ({
-      id: Math.random().toString(36).substr(2, 9),
+      id: (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
+        ? crypto.randomUUID()
+        : Math.random().toString(36).slice(2, 11),
       file,
       count: defaultCount
     }));
@@ -55,9 +57,13 @@ function App() {
   };
 
   const handleGeneratePdf = async () => {
+    if (genStatus === 'generating') return;
     try {
+      setGenStatus('generating');
+      setGenProgress(0);
       await generatePDF(config, imageItems, appMode, textConfig, (p: number) => setGenProgress(p));
       setGenStatus('success');
+      setGenProgress(100);
       // Auto reset after 2.5s
       setTimeout(() => setGenStatus('idle'), 2500);
     } catch (e) {

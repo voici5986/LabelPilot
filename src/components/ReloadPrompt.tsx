@@ -2,9 +2,11 @@ import { useRegisterSW } from 'virtual:pwa-register/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RefreshCw, X } from 'lucide-react';
 import { useI18n } from '../utils/i18n';
+import { useEffect, useRef } from 'react';
 
 export function ReloadPrompt() {
     const { t } = useI18n();
+    const updateIntervalRef = useRef<number | null>(null);
     const {
         offlineReady,
         needRefresh,
@@ -14,7 +16,10 @@ export function ReloadPrompt() {
             console.log('SW Registered');
             // 自动检查更新逻辑
             if (r) {
-                setInterval(() => {
+                if (updateIntervalRef.current !== null) {
+                    clearInterval(updateIntervalRef.current);
+                }
+                updateIntervalRef.current = window.setInterval(() => {
                     r.update();
                 }, 60 * 60 * 1000); // 每小时检查一次
             }
@@ -31,6 +36,15 @@ export function ReloadPrompt() {
         setOfflineReady(false);
         setNeedUpdate(false);
     };
+
+    useEffect(() => {
+        return () => {
+            if (updateIntervalRef.current !== null) {
+                clearInterval(updateIntervalRef.current);
+                updateIntervalRef.current = null;
+            }
+        };
+    }, []);
 
     return (
         <AnimatePresence>
