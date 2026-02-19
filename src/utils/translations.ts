@@ -44,7 +44,7 @@ export const translations = {
         text_config_group: 'TEXT CONFIG',
         text_prefix: 'Prefix',
         text_start_number: 'Start Number',
-        text_digits: 'Number Length',
+        text_digits: 'Minimum Digits',
         text_count: 'Total Count',
         orientation_tip_title: 'Please Rotate Your Device',
         orientation_tip_desc: 'For the best label design experience, please use landscape mode.',
