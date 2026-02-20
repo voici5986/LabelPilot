@@ -13,8 +13,8 @@
   },
   "dependencies": {
     "framer-motion": "^12.34.2",
-    "jspdf": "^4.1.0",
-    "lucide-react": "^0.574.0",
+    "jspdf": "^4.2.0",
+    "lucide-react": "^0.575.0",
     "qrcode": "^1.5.4",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.4",
@@ -47,5 +47,12 @@
     "vite": "^7.3.1",
     "vite-plugin-pwa": "^1.2.0",
     "vitest": "^4.0.18"
+  },
+  "pnpm": {
+    "peerDependencyRules": {
+      "allowedVersions": {
+        "eslint": "10"
+      }
+    }
   }
 }

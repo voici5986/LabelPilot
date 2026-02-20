@@ -19,6 +19,8 @@ A modern, offline-capable web application for batch generating label PDF documen
 - **⚡ High Performance**: Powered by **Web Workers**, PDF generation is asynchronous and non-blocking, ensuring the UI remains responsive even with 100+ high-res images.
 - **🎨 Smart Button Feedback**: Integrated progress tracking and success/error status directly within the action button. No more intrusive full-screen overlays.
 - **📐 Dynamic Constraints**: Grid limits (rows/cols) automatically adjust based on page orientation (Portrait vs Landscape).
+- **🛡️ Smart Layout Validation**: Real-time detection of invalid layouts (e.g., margins exceeding paper size) with visual error feedback.
+- **🚀 Enhanced Preview Navigation**: Jump directly to specific pages with the new input-based pagination control.
 - **🌍 Internationalization**: Built-in support for **English** and **Chinese**, with instant language switching.
 - **🌓 Adaptive Dark Mode**: Full dark mode support that follows your system preferences or can be manually toggled ('System', 'Light', 'Dark'). Powered by Tailwind CSS 4.
 - **👁️ Real-time Preview**: What you see is what you get with a virtual A4 canvas.
