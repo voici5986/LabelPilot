@@ -1,7 +1,7 @@
 import { Globe, Sun, Moon, Monitor, Settings, ChevronDown, Download } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useI18n } from "../utils/i18nContext";
-import { translations } from "../utils/translations";
+import type { Translations } from "../utils/i18nContext";
 import { useState, useRef, useEffect } from "react";
 import { LogoIcon } from "./LogoIcon";
 import {
@@ -14,8 +14,9 @@ import {
 import { NumberInput } from "./NumberInput";
 import { SegmentedControl } from "./SegmentedControl";
 import { useStore } from "../store/useStore";
+import { useShallow } from "zustand/shallow";
 
-const PAPER_SIZE_KEYS: Record<string, keyof typeof translations.zh> = {
+const PAPER_SIZE_KEYS: Record<string, keyof Translations> = {
     A4: 'paper_type_a4',
     A3: 'paper_type_a3',
     A5: 'paper_type_a5',
@@ -25,11 +26,24 @@ const PAPER_SIZE_KEYS: Record<string, keyof typeof translations.zh> = {
 
 export function Header() {
     const {
-        theme, setTheme: onThemeChange,
-        config, setConfig: onConfigChange,
-        appMode, setAppMode: onAppModeChange,
-        textConfig, setTextConfig: onTextConfigChange
-    } = useStore();
+        theme,
+        onThemeChange,
+        config,
+        onConfigChange,
+        appMode,
+        onAppModeChange,
+        textConfig,
+        onTextConfigChange
+    } = useStore(useShallow((state) => ({
+        theme: state.theme,
+        onThemeChange: state.setTheme,
+        config: state.config,
+        onConfigChange: state.setConfig,
+        appMode: state.appMode,
+        onAppModeChange: state.setAppMode,
+        textConfig: state.textConfig,
+        onTextConfigChange: state.setTextConfig
+    })));
     const { t, language, setLanguage } = useI18n();
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isPresetsOpen, setIsPresetsOpen] = useState(false);

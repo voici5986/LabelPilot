@@ -42,12 +42,16 @@ ctx.onmessage = async (e) => {
 
             const uint8Array = new Uint8Array(arrayBuffer);
 
+            const width = bitmap.width;
+            const height = bitmap.height;
+            bitmap.close();
+
             return {
                 ...item,
                 data: uint8Array,
                 format,
-                width: bitmap.width,
-                height: bitmap.height
+                width,
+                height
             };
         })) : [];
 

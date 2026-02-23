@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { I18nContext } from '../utils/i18nContext';
 
 interface Props {
     children: ReactNode;
@@ -10,6 +11,9 @@ interface State {
 }
 
 export class ErrorBoundary extends Component<Props, State> {
+    public static contextType = I18nContext;
+    public declare context: React.ContextType<typeof I18nContext>;
+
     public state: State = {
         hasError: false
     };
@@ -23,6 +27,7 @@ export class ErrorBoundary extends Component<Props, State> {
     }
 
     public render() {
+        const t = this.context?.t;
         if (this.state.hasError) {
             return this.props.fallback || (
                 <div className="min-h-screen flex items-center justify-center p-6 bg-background">
@@ -32,15 +37,17 @@ export class ErrorBoundary extends Component<Props, State> {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                             </svg>
                         </div>
-                        <h1 className="text-xl font-bold text-text-main">应用运行遇到问题</h1>
+                        <h1 className="text-xl font-bold text-text-main">
+                            {t ? t('error_title') : '应用运行遇到问题'}
+                        </h1>
                         <p className="text-text-muted text-sm pb-4">
-                            抱歉，渲染过程中发生了一个未预料的错误。您可以尝试刷新页面恢复。
+                            {t ? t('error_desc') : '抱歉，渲染过程中发生了一个未预料的错误。您可以尝试刷新页面恢复。'}
                         </p>
                         <button
                             onClick={() => window.location.reload()}
                             className="w-full py-2.5 bg-brand-primary text-white rounded-lg font-semibold hover:brightness-110 transition-all shadow-sm"
                         >
-                            刷新页面
+                            {t ? t('error_reload') : '刷新页面'}
                         </button>
                     </div>
                 </div>

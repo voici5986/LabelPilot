@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Header } from "./components/Header";
 import { ControlPanel } from "./components/ControlPanel";
 import { PreviewPanel } from "./components/PreviewPanel";
 import { ReloadPrompt } from "./components/ReloadPrompt";
 import { OrientationGuard } from "./components/OrientationGuard";
 import { useStore } from "./store/useStore";
+import { useShallow } from "zustand/shallow";
 import { generatePDF } from "./utils/pdfGenerator";
 import { Toast, type ToastType } from "./components/Toast";
 import { useI18n } from "./utils/i18nContext";
@@ -14,11 +15,19 @@ function App() {
   const { t } = useI18n();
   const {
     config,
-    imageItems, setImageItems,
+    imageItems,
+    setImageItems,
     appMode,
     textConfig,
     theme
-  } = useStore();
+  } = useStore(useShallow((state) => ({
+    config: state.config,
+    imageItems: state.imageItems,
+    setImageItems: state.setImageItems,
+    appMode: state.appMode,
+    textConfig: state.textConfig,
+    theme: state.theme
+  })));
 
   // Toast State
   const [toast, setToast] = useState<{ message: string; type: ToastType; visible: boolean }>({
@@ -29,6 +38,7 @@ function App() {
 
   const [genStatus, setGenStatus] = useState<'idle' | 'generating' | 'success' | 'error'>('idle');
   const [genProgress, setGenProgress] = useState(0);
+  const resetTimerRef = useRef<number | null>(null);
 
   // Theme Side Effect
   useEffect(() => {
@@ -65,13 +75,27 @@ function App() {
       setGenStatus('success');
       setGenProgress(100);
       // Auto reset after 2.5s
-      setTimeout(() => setGenStatus('idle'), 2500);
+      if (resetTimerRef.current !== null) {
+        window.clearTimeout(resetTimerRef.current);
+      }
+      resetTimerRef.current = window.setTimeout(() => setGenStatus('idle'), 2500);
     } catch (e) {
       setGenStatus('error');
       showToast(t('gen_failed') + ": " + (e as Error).message, 'error');
-      setTimeout(() => setGenStatus('idle'), 3000);
+      if (resetTimerRef.current !== null) {
+        window.clearTimeout(resetTimerRef.current);
+      }
+      resetTimerRef.current = window.setTimeout(() => setGenStatus('idle'), 3000);
     }
   };
+
+  useEffect(() => {
+    return () => {
+      if (resetTimerRef.current !== null) {
+        window.clearTimeout(resetTimerRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-background text-text-main selection:bg-brand-primary/20">

@@ -8,6 +8,7 @@ import { ThumbnailItem } from "./ThumbnailItem";
 import { SegmentedControl } from "./SegmentedControl";
 import { useMemo } from "react";
 import { useStore } from "../store/useStore";
+import { useShallow } from "zustand/shallow";
 
 interface ControlPanelProps {
     onFilesSelect: (files: File[]) => void;
@@ -27,10 +28,24 @@ export function ControlPanel({
     maxCols = 20,
 }: ControlPanelProps) {
     const {
-        config, setConfig: onConfigChange,
-        imageItems, setImageItems: onReorder, updateItemCount: onItemCountChange,
-        appMode, textConfig, setTextConfig: onTextConfigChange
-    } = useStore();
+        config,
+        onConfigChange,
+        imageItems,
+        onReorder,
+        onItemCountChange,
+        appMode,
+        textConfig,
+        onTextConfigChange
+    } = useStore(useShallow((state) => ({
+        config: state.config,
+        onConfigChange: state.setConfig,
+        imageItems: state.imageItems,
+        onReorder: state.setImageItems,
+        onItemCountChange: state.updateItemCount,
+        appMode: state.appMode,
+        textConfig: state.textConfig,
+        onTextConfigChange: state.setTextConfig
+    })));
     const { t } = useI18n();
 
     const layout = useMemo(() => calculateLabelLayout(config), [config]);

@@ -59,6 +59,9 @@ export const translations = {
         rows_cols_positive: 'Rows/Cols must be positive',
         margin_spacing_positive: 'Margin/Spacing must be positive',
         label_too_small: 'Label size is too small or negative',
+        error_title: 'Something went wrong',
+        error_desc: 'Sorry, an unexpected error occurred during rendering. Try refreshing the page.',
+        error_reload: 'Reload Page',
     },
     zh: {
         window_title: 'LabelPilot',
@@ -118,5 +121,8 @@ export const translations = {
         rows_cols_positive: '行数/列数必须大于 0',
         margin_spacing_positive: '边距/间距必须为正数',
         label_too_small: '计算出的标签尺寸过小或为负数',
+        error_title: '应用运行遇到问题',
+        error_desc: '抱歉，渲染过程中发生了一个未预料的错误。您可以尝试刷新页面恢复。',
+        error_reload: '刷新页面',
     }
 };

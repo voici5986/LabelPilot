@@ -1,9 +1,9 @@
-import { create } from 'zustand';
+import { create, type StoreApi, type UseBoundStore } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { HelperLayoutConfig, ImageItem, TextConfig } from '../utils/layoutMath';
 import { A4_WIDTH_MM, A4_HEIGHT_MM } from '../utils/layoutMath';
 
-interface AppState {
+export interface AppState {
     // Configs
     config: HelperLayoutConfig;
     textConfig: TextConfig;
@@ -118,4 +118,4 @@ export const useStore = create<AppState>()(
             }),
         }
     )
-);
+) as UseBoundStore<StoreApi<AppState>>;

@@ -14,12 +14,19 @@ import { motion, AnimatePresence } from "framer-motion";
 import { mapPctToScale, getThumbBottomPct } from "../utils/zoomMath";
 import { QRCodeSVG } from "qrcode.react";
 import { useStore } from "../store/useStore";
+import { useShallow } from "zustand/shallow";
 
 
-import { translations } from "../utils/translations";
+import type { Translations } from "../utils/i18nContext";
 
 export function PreviewPanel() {
-    const { config, imageItems, imageUrlMap, appMode, textConfig } = useStore();
+    const { config, imageItems, imageUrlMap, appMode, textConfig } = useStore(useShallow((state) => ({
+        config: state.config,
+        imageItems: state.imageItems,
+        imageUrlMap: state.imageUrlMap,
+        appMode: state.appMode,
+        textConfig: state.textConfig
+    })));
     const { t } = useI18n();
     const [scale, setScale] = useState(1);
     const [baseFitScale, setBaseFitScale] = useState(0.8);
@@ -51,8 +58,24 @@ export function PreviewPanel() {
         };
 
         updateFitScale();
-        window.addEventListener('resize', updateFitScale);
-        return () => window.removeEventListener('resize', updateFitScale);
+
+        const node = containerRef.current;
+        let ro: ResizeObserver | null = null;
+
+        if (node && 'ResizeObserver' in window) {
+            ro = new ResizeObserver(() => updateFitScale());
+            ro.observe(node);
+        } else {
+            window.addEventListener('resize', updateFitScale);
+        }
+
+        return () => {
+            if (ro) {
+                ro.disconnect();
+            } else {
+                window.removeEventListener('resize', updateFitScale);
+            }
+        };
     }, [config]);
 
     const layout = useMemo(() => calculateLabelLayout(config), [config]);
@@ -163,7 +186,7 @@ export function PreviewPanel() {
                                 <div className="text-center">
                                     <p className="font-medium text-lg">{t('layout_error_title')}</p>
                                     <p className="text-sm opacity-80">
-                                        {layout.error ? t(layout.error.toLowerCase() as keyof typeof translations.zh) || layout.error : ''}
+                                        {layout.error ? t(layout.error.toLowerCase() as keyof Translations) || layout.error : ''}
                                     </p>
                                 </div>
                             </div>
