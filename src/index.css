@@ -2,33 +2,33 @@
 
 /* 字体定义 */
 @font-face {
-  font-family: 'MiSansVF';
-  src: url('./assets/fonts/MiSansVF_gb2312.woff2') format('woff2');
+  font-family: "MiSansVF";
+  src: url("./assets/fonts/MiSansVF_gb2312.woff2") format("woff2");
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'MapleMono';
-  src: url('./assets/fonts/MapleMono-Subset.woff2') format('woff2');
+  font-family: "MapleMono";
+  src: url("./assets/fonts/MapleMono-Subset.woff2") format("woff2");
   font-weight: normal;
   font-style: normal;
   font-display: swap;
 }
 
 @theme {
-  --font-sans: 'MiSansVF', system-ui, -apple-system, sans-serif;
-  --font-mono: 'MapleMono', monospace;
+  --font-sans: "MiSansVF", system-ui, -apple-system, sans-serif;
+  --font-mono: "MapleMono", monospace;
 
   /* --- 品牌色控制中心 --- */
   /* 修改这里即可全局改变亮/暗模式下的 UI 品牌色 */
-  --brand-primary-light: #0284C7;
-  --brand-primary-dark: #38BDF8;
+  --brand-primary-light: #0284c7;
+  --brand-primary-dark: #38bdf8;
 
   /* Logo 专属配色 - 保持经典的靛蓝+点缀黄 */
-  --logo-primary: #4F46E5;
-  --logo-accent: #FFD166;
+  --logo-primary: #4f46e5;
+  --logo-accent: #ffd166;
   /* ---------------------- */
 
   /* 主题原始值定义 */
@@ -73,7 +73,7 @@
 }
 
 /* 2. 手动模式强制覆盖 (放在后面确保优先级) */
-:root[data-theme='light'] {
+:root[data-theme="light"] {
   color-scheme: light;
   --color-surface: var(--light-surface);
   --color-text-main: var(--light-text);
@@ -85,7 +85,7 @@
   --paper-brightness: 1;
 }
 
-:root[data-theme='dark'] {
+:root[data-theme="dark"] {
   color-scheme: dark;
   --color-surface: var(--dark-surface);
   --color-text-main: var(--dark-text);
@@ -134,7 +134,7 @@
   color: var(--logo-primary);
 
   &::after {
-    content: '';
+    content: "";
     position: absolute;
     bottom: 20%;
     right: -15%;
@@ -146,7 +146,7 @@
   }
 
   &::before {
-    content: '';
+    content: "";
     position: absolute;
     bottom: 0px;
     left: 10%;
@@ -162,7 +162,8 @@
   body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+    transition-property:
+      color, background-color, border-color, text-decoration-color, fill, stroke;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     transition-duration: 300ms;
     background-color: var(--color-surface);

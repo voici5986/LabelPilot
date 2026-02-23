@@ -43,11 +43,14 @@ A modern, offline-capable web application for batch generating label PDF documen
 ## 🚀 Getting Started
 
 ### Installation
+
 1. `pnpm install`
 2. `pnpm dev`
 
 ### Deployment to Vercel
-This project is optimized for Vercel. 
+
+This project is optimized for Vercel.
+
 1. Fork this repository to your own GitHub account.
 2. Import the project in Vercel.
 3. Ensure the following settings are detected:
@@ -57,16 +60,18 @@ This project is optimized for Vercel.
 4. Click **Deploy**.
 
 ## 📦 Building for Production
+
 ```bash
 pnpm build
 ```
-The output will be in the `dist/` directory. 
+
+The output will be in the `dist/` directory.
 
 ## 💡 Usage Guide
 
 1. **Select Mode**: Switch between **Image** and **Text** mode in the header.
 2. **Configure Layout**: Use the left sidebar to adjust rows, columns, spacing, and orientation.
-3. **Add Content**: 
+3. **Add Content**:
    - In **Image Mode**: Upload JPG/PNG files and set quantities.
    - In **Text Mode**: Set prefix, start number, digits, and total count. Toggle **QR Code** for instant scannable labels.
 4. **Check Preview**: Verify the layout on the right preview panel.

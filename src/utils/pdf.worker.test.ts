@@ -58,7 +58,10 @@ const setupWorker = async () => {
   (globalThis as unknown as { self: WorkerSelf }).self = { postMessage };
   await import("./pdf.worker");
   const workerSelf = (globalThis as unknown as { self: WorkerSelf }).self;
-  return { postMessage, onmessage: workerSelf.onmessage as (e: { data: unknown }) => void };
+  return {
+    postMessage,
+    onmessage: workerSelf.onmessage as (e: { data: unknown }) => void,
+  };
 };
 
 beforeEach(() => {
@@ -76,7 +79,9 @@ beforeEach(() => {
 describe("pdf.worker", () => {
   it("releases image bitmaps and completes in image mode", async () => {
     const closeMock = vi.fn();
-    (globalThis as unknown as { createImageBitmap?: unknown }).createImageBitmap = vi.fn(async () => ({
+    (
+      globalThis as unknown as { createImageBitmap?: unknown }
+    ).createImageBitmap = vi.fn(async () => ({
       width: 100,
       height: 50,
       close: closeMock,
@@ -107,7 +112,9 @@ describe("pdf.worker", () => {
   });
 
   it("posts error when layout is invalid", async () => {
-    (globalThis as unknown as { createImageBitmap?: unknown }).createImageBitmap = vi.fn();
+    (
+      globalThis as unknown as { createImageBitmap?: unknown }
+    ).createImageBitmap = vi.fn();
     const { postMessage, onmessage } = await setupWorker();
 
     onmessage({
@@ -127,7 +134,9 @@ describe("pdf.worker", () => {
   });
 
   it("handles large text counts as a smoke test", async () => {
-    (globalThis as unknown as { createImageBitmap?: unknown }).createImageBitmap = vi.fn();
+    (
+      globalThis as unknown as { createImageBitmap?: unknown }
+    ).createImageBitmap = vi.fn();
     const { postMessage, onmessage } = await setupWorker();
 
     onmessage({

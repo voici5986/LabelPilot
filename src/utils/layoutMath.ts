@@ -8,7 +8,7 @@ export interface HelperLayoutConfig {
   cols: number;
   marginMm: number;
   spacingMm: number;
-  orientation: 'landscape' | 'portrait';
+  orientation: "landscape" | "portrait";
   pageWidthMm?: number; // Defaults to A4
   pageHeightMm?: number; // Defaults to A4
 }
@@ -50,26 +50,38 @@ export const A5_HEIGHT_MM = 210;
 export const LETTER_WIDTH_MM = 215.9;
 export const LETTER_HEIGHT_MM = 279.4;
 
-export type PaperSize = 'A4' | 'Letter' | 'A3' | 'A5' | 'Custom';
+export type PaperSize = "A4" | "Letter" | "A3" | "A5" | "Custom";
 
-export function resolvePageDimensions(config: Pick<HelperLayoutConfig, 'orientation' | 'pageWidthMm' | 'pageHeightMm'>): {
+export function resolvePageDimensions(
+  config: Pick<
+    HelperLayoutConfig,
+    "orientation" | "pageWidthMm" | "pageHeightMm"
+  >,
+): {
   pageWidth: number;
   pageHeight: number;
 } {
   const baseWidth = config.pageWidthMm || A4_WIDTH_MM;
   const baseHeight = config.pageHeightMm || A4_HEIGHT_MM;
-  const isLandscape = config.orientation === 'landscape';
+  const isLandscape = config.orientation === "landscape";
 
   return {
-    pageWidth: isLandscape ? Math.max(baseWidth, baseHeight) : Math.min(baseWidth, baseHeight),
-    pageHeight: isLandscape ? Math.min(baseWidth, baseHeight) : Math.max(baseWidth, baseHeight)
+    pageWidth: isLandscape
+      ? Math.max(baseWidth, baseHeight)
+      : Math.min(baseWidth, baseHeight),
+    pageHeight: isLandscape
+      ? Math.min(baseWidth, baseHeight)
+      : Math.max(baseWidth, baseHeight),
   };
 }
 
-export function normalizePaperDimensions(width: number, height: number): { width: number; height: number } {
+export function normalizePaperDimensions(
+  width: number,
+  height: number,
+): { width: number; height: number } {
   return {
     width: Math.min(width, height),
-    height: Math.max(width, height)
+    height: Math.max(width, height),
   };
 }
 
@@ -83,15 +95,20 @@ export function getPaperSizeLabel(width: number, height: number): string {
   const isMatch = (dw: number, dh: number) =>
     w === Math.round(dw * 10) / 10 && h === Math.round(dh * 10) / 10;
 
-  if (isMatch(A4_WIDTH_MM, A4_HEIGHT_MM)) return 'A4';
-  if (isMatch(A3_WIDTH_MM, A3_HEIGHT_MM)) return 'A3';
-  if (isMatch(A5_WIDTH_MM, A5_HEIGHT_MM)) return 'A5';
-  if (isMatch(LETTER_WIDTH_MM, LETTER_HEIGHT_MM)) return 'Letter';
+  if (isMatch(A4_WIDTH_MM, A4_HEIGHT_MM)) return "A4";
+  if (isMatch(A3_WIDTH_MM, A3_HEIGHT_MM)) return "A3";
+  if (isMatch(A5_WIDTH_MM, A5_HEIGHT_MM)) return "A5";
+  if (isMatch(LETTER_WIDTH_MM, LETTER_HEIGHT_MM)) return "Letter";
 
-  return 'Custom';
+  return "Custom";
 }
 
-export function getPaperSizeInfo(config: Pick<HelperLayoutConfig, 'orientation' | 'pageWidthMm' | 'pageHeightMm'>): {
+export function getPaperSizeInfo(
+  config: Pick<
+    HelperLayoutConfig,
+    "orientation" | "pageWidthMm" | "pageHeightMm"
+  >,
+): {
   label: string;
   baseWidthMm: number;
   baseHeightMm: number;
@@ -109,7 +126,7 @@ export function getPaperSizeInfo(config: Pick<HelperLayoutConfig, 'orientation' 
     baseWidthMm,
     baseHeightMm,
     pageWidthMm: pageWidth,
-    pageHeightMm: pageHeight
+    pageHeightMm: pageHeight,
   };
 }
 
@@ -132,22 +149,36 @@ export function calculateLabelLayout(config: HelperLayoutConfig): {
     spacingMm,
     orientation,
     pageWidthMm,
-    pageHeightMm
+    pageHeightMm,
   } = config;
 
   // 1. Determine Base Page Size + Orientation
   const { pageWidth, pageHeight } = resolvePageDimensions({
     orientation,
     pageWidthMm,
-    pageHeightMm
+    pageHeightMm,
   });
 
   // 3. Validate Inputs
   if (rows <= 0 || cols <= 0) {
-    return { positions: [], labelWidth: 0, labelHeight: 0, pageWidth, pageHeight, error: "ROWS_COLS_POSITIVE" };
+    return {
+      positions: [],
+      labelWidth: 0,
+      labelHeight: 0,
+      pageWidth,
+      pageHeight,
+      error: "ROWS_COLS_POSITIVE",
+    };
   }
   if (marginMm < 0 || spacingMm < 0) {
-    return { positions: [], labelWidth: 0, labelHeight: 0, pageWidth, pageHeight, error: "MARGIN_SPACING_POSITIVE" };
+    return {
+      positions: [],
+      labelWidth: 0,
+      labelHeight: 0,
+      pageWidth,
+      pageHeight,
+      error: "MARGIN_SPACING_POSITIVE",
+    };
   }
 
   // 4. Calculate Usable Area
@@ -155,7 +186,14 @@ export function calculateLabelLayout(config: HelperLayoutConfig): {
   const usableHeight = pageHeight - 2 * marginMm;
 
   if (usableWidth <= 0 || usableHeight <= 0) {
-    return { positions: [], labelWidth: 0, labelHeight: 0, pageWidth, pageHeight, error: "MARGIN_TOO_LARGE" };
+    return {
+      positions: [],
+      labelWidth: 0,
+      labelHeight: 0,
+      pageWidth,
+      pageHeight,
+      error: "MARGIN_TOO_LARGE",
+    };
   }
 
   // 5. Calculate Label Dimensions
@@ -167,7 +205,14 @@ export function calculateLabelLayout(config: HelperLayoutConfig): {
   const labelHeight = (usableHeight - totalSpacingY) / rows;
 
   if (labelWidth <= 0 || labelHeight <= 0) {
-    return { positions: [], labelWidth: 0, labelHeight: 0, pageWidth, pageHeight, error: "LABEL_TOO_SMALL" };
+    return {
+      positions: [],
+      labelWidth: 0,
+      labelHeight: 0,
+      pageWidth,
+      pageHeight,
+      error: "LABEL_TOO_SMALL",
+    };
   }
 
   // 6. Calculate Positions
@@ -192,7 +237,7 @@ export function calculateLabelLayout(config: HelperLayoutConfig): {
         width: labelWidth,
         height: labelHeight,
         row: r,
-        col: c
+        col: c,
       });
     }
   }
@@ -202,7 +247,7 @@ export function calculateLabelLayout(config: HelperLayoutConfig): {
     labelWidth,
     labelHeight,
     pageWidth,
-    pageHeight
+    pageHeight,
   };
 }
 
@@ -212,7 +257,7 @@ export function calculateLabelLayout(config: HelperLayoutConfig): {
  */
 export function resolveItemAtSlot<T extends { count: number }>(
   idx: number,
-  items: T[]
+  items: T[],
 ): T | null {
   if (items.length === 0) return null;
 
@@ -233,45 +278,49 @@ export function resolveItemAtSlot<T extends { count: number }>(
  */
 export function formatLabelText(index: number, config: TextConfig): string {
   const currentNumber = config.startNumber + index;
-  const formattedNumber = String(currentNumber).padStart(config.digits, '0');
+  const formattedNumber = String(currentNumber).padStart(config.digits, "0");
   return `${config.prefix}${formattedNumber}`;
 }
 
-export function getQrSizeMm(pos: Pick<LabelPosition, 'width' | 'height'>, qrSizeRatio: number): number {
+export function getQrSizeMm(
+  pos: Pick<LabelPosition, "width" | "height">,
+  qrSizeRatio: number,
+): number {
   return Math.min(pos.width, pos.height) * qrSizeRatio;
 }
 
 export function getLabelTextFontSizeMm(
   text: string,
-  pos: Pick<LabelPosition, 'width' | 'height'>,
-  showQrCode: boolean
+  pos: Pick<LabelPosition, "width" | "height">,
+  showQrCode: boolean,
 ): number {
   if (text.length === 0) return 0;
-  
+
   // Courier 字体在 PDF 中的宽高比通常约为 0.6
   // 这意味着: 字符宽度 = 字号 * 0.6
   // 例如: 10pt 的 Courier 字符宽度约为 6pt
-  const FONT_ASPECT_RATIO = 0.6; 
-  
+  const FONT_ASPECT_RATIO = 0.6;
+
   const widthFactor = showQrCode ? 0.9 : 0.8;
   const heightFactor = showQrCode ? 0.2 : 0.5;
 
   // 1. 根据宽度限制计算最大字号
   // 公式: 可用宽度 = 字符数 * (字号 * 宽高比)
   // 字号 = 可用宽度 / (字符数 * 宽高比)
-  const maxByWidth = (pos.width * widthFactor) / (text.length * FONT_ASPECT_RATIO);
-  
+  const maxByWidth =
+    (pos.width * widthFactor) / (text.length * FONT_ASPECT_RATIO);
+
   // 2. 根据高度限制计算最大字号
   // 字号 = 可用高度
   const maxByHeight = pos.height * heightFactor;
-  
+
   return Math.min(maxByWidth, maxByHeight);
 }
 
 export function getTextLayoutBoxes(
-  pos: Pick<LabelPosition, 'width' | 'height'>,
+  pos: Pick<LabelPosition, "width" | "height">,
   showQrCode: boolean,
-  qrSizeRatio: number
+  qrSizeRatio: number,
 ): {
   qrDimMm: number;
   qrTopMm: number;
@@ -285,7 +334,7 @@ export function getTextLayoutBoxes(
       qrTopMm: 0,
       qrLeftMm: 0,
       textBoxTopMm: 0,
-      textBoxHeightMm: pos.height
+      textBoxHeightMm: pos.height,
     };
   }
 
@@ -300,6 +349,6 @@ export function getTextLayoutBoxes(
     qrTopMm,
     qrLeftMm,
     textBoxTopMm,
-    textBoxHeightMm
+    textBoxHeightMm,
   };
 }
