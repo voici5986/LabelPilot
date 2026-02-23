@@ -1,15 +1,15 @@
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RefreshCw, X } from 'lucide-react';
-import { useI18n } from '../utils/i18n';
+import { useI18n } from '../utils/i18nContext';
 import { useEffect, useRef } from 'react';
 
 export function ReloadPrompt() {
     const { t } = useI18n();
     const updateIntervalRef = useRef<number | null>(null);
     const {
-        offlineReady,
-        needRefresh,
+        offlineReady: offlineReadySW,
+        needRefresh: needRefreshSW,
         updateServiceWorker,
     } = useRegisterSW({
         onRegistered(r: ServiceWorkerRegistration | undefined) {
@@ -29,13 +29,20 @@ export function ReloadPrompt() {
         },
     });
 
-    const [_, setOfflineReady] = offlineReady || [false, () => {}];
-    const [isNeedUpdate, setNeedUpdate] = needRefresh || [false, () => {}];
+    const [offlineReady, setOfflineReady] = offlineReadySW || [false, () => {}];
+    const [isNeedUpdate, setNeedUpdate] = needRefreshSW || [false, () => {}];
 
     const close = () => {
         setOfflineReady(false);
         setNeedUpdate(false);
     };
+
+    // 使用 offlineReady 状态
+    useEffect(() => {
+        if (offlineReady) {
+            console.log('App is ready to work offline');
+        }
+    }, [offlineReady]);
 
     useEffect(() => {
         return () => {

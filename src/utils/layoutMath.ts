@@ -38,6 +38,9 @@ export interface LabelPosition {
   col: number;
 }
 
+export const MM_TO_PX = 3.78;
+export const MM_PER_PT = 0.3527;
+
 export const A4_WIDTH_MM = 210;
 export const A4_HEIGHT_MM = 297;
 export const A3_WIDTH_MM = 297;
@@ -48,6 +51,27 @@ export const LETTER_WIDTH_MM = 215.9;
 export const LETTER_HEIGHT_MM = 279.4;
 
 export type PaperSize = 'A4' | 'Letter' | 'A3' | 'A5' | 'Custom';
+
+export function resolvePageDimensions(config: Pick<HelperLayoutConfig, 'orientation' | 'pageWidthMm' | 'pageHeightMm'>): {
+  pageWidth: number;
+  pageHeight: number;
+} {
+  const baseWidth = config.pageWidthMm || A4_WIDTH_MM;
+  const baseHeight = config.pageHeightMm || A4_HEIGHT_MM;
+  const isLandscape = config.orientation === 'landscape';
+
+  return {
+    pageWidth: isLandscape ? Math.max(baseWidth, baseHeight) : Math.min(baseWidth, baseHeight),
+    pageHeight: isLandscape ? Math.min(baseWidth, baseHeight) : Math.max(baseWidth, baseHeight)
+  };
+}
+
+export function normalizePaperDimensions(width: number, height: number): { width: number; height: number } {
+  return {
+    width: Math.min(width, height),
+    height: Math.max(width, height)
+  };
+}
 
 /**
  * Returns a human-readable label for the given paper dimensions.
@@ -65,6 +89,28 @@ export function getPaperSizeLabel(width: number, height: number): string {
   if (isMatch(LETTER_WIDTH_MM, LETTER_HEIGHT_MM)) return 'Letter';
 
   return 'Custom';
+}
+
+export function getPaperSizeInfo(config: Pick<HelperLayoutConfig, 'orientation' | 'pageWidthMm' | 'pageHeightMm'>): {
+  label: string;
+  baseWidthMm: number;
+  baseHeightMm: number;
+  pageWidthMm: number;
+  pageHeightMm: number;
+} {
+  const baseWidthMm = config.pageWidthMm || A4_WIDTH_MM;
+  const baseHeightMm = config.pageHeightMm || A4_HEIGHT_MM;
+  const { pageWidth, pageHeight } = resolvePageDimensions(config);
+  const normalized = normalizePaperDimensions(baseWidthMm, baseHeightMm);
+  const label = getPaperSizeLabel(normalized.width, normalized.height);
+
+  return {
+    label,
+    baseWidthMm,
+    baseHeightMm,
+    pageWidthMm: pageWidth,
+    pageHeightMm: pageHeight
+  };
 }
 
 /**
@@ -89,13 +135,12 @@ export function calculateLabelLayout(config: HelperLayoutConfig): {
     pageHeightMm
   } = config;
 
-  // 1. Determine Base Page Size
-  const baseWidth = pageWidthMm || A4_WIDTH_MM;
-  const baseHeight = pageHeightMm || A4_HEIGHT_MM;
-
-  // 2. Handle Orientation
-  const pageWidth = orientation === 'landscape' ? Math.max(baseWidth, baseHeight) : Math.min(baseWidth, baseHeight);
-  const pageHeight = orientation === 'landscape' ? Math.min(baseWidth, baseHeight) : Math.max(baseWidth, baseHeight);
+  // 1. Determine Base Page Size + Orientation
+  const { pageWidth, pageHeight } = resolvePageDimensions({
+    orientation,
+    pageWidthMm,
+    pageHeightMm
+  });
 
   // 3. Validate Inputs
   if (rows <= 0 || cols <= 0) {
@@ -190,4 +235,71 @@ export function formatLabelText(index: number, config: TextConfig): string {
   const currentNumber = config.startNumber + index;
   const formattedNumber = String(currentNumber).padStart(config.digits, '0');
   return `${config.prefix}${formattedNumber}`;
+}
+
+export function getQrSizeMm(pos: Pick<LabelPosition, 'width' | 'height'>, qrSizeRatio: number): number {
+  return Math.min(pos.width, pos.height) * qrSizeRatio;
+}
+
+export function getLabelTextFontSizeMm(
+  text: string,
+  pos: Pick<LabelPosition, 'width' | 'height'>,
+  showQrCode: boolean
+): number {
+  if (text.length === 0) return 0;
+  
+  // Courier 字体在 PDF 中的宽高比通常约为 0.6
+  // 这意味着: 字符宽度 = 字号 * 0.6
+  // 例如: 10pt 的 Courier 字符宽度约为 6pt
+  const FONT_ASPECT_RATIO = 0.6; 
+  
+  const widthFactor = showQrCode ? 0.9 : 0.8;
+  const heightFactor = showQrCode ? 0.2 : 0.5;
+
+  // 1. 根据宽度限制计算最大字号
+  // 公式: 可用宽度 = 字符数 * (字号 * 宽高比)
+  // 字号 = 可用宽度 / (字符数 * 宽高比)
+  const maxByWidth = (pos.width * widthFactor) / (text.length * FONT_ASPECT_RATIO);
+  
+  // 2. 根据高度限制计算最大字号
+  // 字号 = 可用高度
+  const maxByHeight = pos.height * heightFactor;
+  
+  return Math.min(maxByWidth, maxByHeight);
+}
+
+export function getTextLayoutBoxes(
+  pos: Pick<LabelPosition, 'width' | 'height'>,
+  showQrCode: boolean,
+  qrSizeRatio: number
+): {
+  qrDimMm: number;
+  qrTopMm: number;
+  qrLeftMm: number;
+  textBoxTopMm: number;
+  textBoxHeightMm: number;
+} {
+  if (!showQrCode) {
+    return {
+      qrDimMm: 0,
+      qrTopMm: 0,
+      qrLeftMm: 0,
+      textBoxTopMm: 0,
+      textBoxHeightMm: pos.height
+    };
+  }
+
+  const qrDimMm = getQrSizeMm(pos, qrSizeRatio);
+  const qrTopMm = pos.height * 0.1;
+  const qrLeftMm = (pos.width - qrDimMm) / 2;
+  const textBoxTopMm = qrTopMm + qrDimMm;
+  const textBoxHeightMm = Math.max(0, pos.height - textBoxTopMm);
+
+  return {
+    qrDimMm,
+    qrTopMm,
+    qrLeftMm,
+    textBoxTopMm,
+    textBoxHeightMm
+  };
 }

@@ -63,9 +63,14 @@ export const useStore = create<AppState>()(
                 return { config: next };
             }),
 
-            setTextConfig: (updates) => set((state) => ({
-                textConfig: { ...state.textConfig, ...updates }
-            })),
+            setTextConfig: (updates) => set((state) => {
+                const next = { ...state.textConfig, ...updates };
+                next.digits = Math.max(1, next.digits);
+                next.count = Math.max(1, next.count);
+                next.startNumber = Math.max(0, next.startNumber);
+                next.qrSizeRatio = Math.min(Math.max(0.1, next.qrSizeRatio), 0.6);
+                return { textConfig: next };
+            }),
 
             setAppMode: (mode) => set({ appMode: mode }),
 

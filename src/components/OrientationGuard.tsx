@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { RotateCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useI18n } from '../utils/i18n';
+import { useI18n } from '../utils/i18nContext';
 
 export function OrientationGuard() {
     const { t } = useI18n();

@@ -1,6 +1,7 @@
 import { Globe, Sun, Moon, Monitor, Settings, ChevronDown, Download } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useI18n } from "../utils/i18n";
+import { useI18n } from "../utils/i18nContext";
+import { translations } from "../utils/translations";
 import { useState, useRef, useEffect } from "react";
 import { LogoIcon } from "./LogoIcon";
 import {
@@ -8,11 +9,19 @@ import {
     A3_WIDTH_MM, A3_HEIGHT_MM,
     A5_WIDTH_MM, A5_HEIGHT_MM,
     LETTER_WIDTH_MM, LETTER_HEIGHT_MM,
-    getPaperSizeLabel
+    getPaperSizeInfo
 } from "../utils/layoutMath";
 import { NumberInput } from "./NumberInput";
 import { SegmentedControl } from "./SegmentedControl";
 import { useStore } from "../store/useStore";
+
+const PAPER_SIZE_KEYS: Record<string, keyof typeof translations.zh> = {
+    A4: 'paper_type_a4',
+    A3: 'paper_type_a3',
+    A5: 'paper_type_a5',
+    Letter: 'paper_type_letter',
+    Custom: 'paper_type_custom'
+};
 
 export function Header() {
     const {
@@ -25,13 +34,19 @@ export function Header() {
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isPresetsOpen, setIsPresetsOpen] = useState(false);
     const [isCustomPaper, setIsCustomPaper] = useState(false);
-    const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+    const [deferredPrompt, setDeferredPrompt] = useState<Event | null>(null);
     const [canInstall, setCanInstall] = useState(false);
     const settingsRef = useRef<HTMLDivElement>(null);
     const presetsRef = useRef<HTMLDivElement>(null);
 
+    // Initialize paper size state based on config
     useEffect(() => {
-        const handleBeforeInstallPrompt = (e: any) => {
+        const info = getPaperSizeInfo(config);
+        setIsCustomPaper(info.label === 'Custom');
+    }, [config]);
+
+    useEffect(() => {
+        const handleBeforeInstallPrompt = (e: Event) => {
             e.preventDefault();
             setDeferredPrompt(e);
             setCanInstall(true);
@@ -49,7 +64,9 @@ export function Header() {
 
     const handleInstallClick = async () => {
         if (!deferredPrompt) return;
+        // @ts-expect-error - prompt() is not standard yet
         deferredPrompt.prompt();
+        // @ts-expect-error - userChoice is not standard yet
         const { outcome } = await deferredPrompt.userChoice;
         if (outcome === 'accepted') {
             setCanInstall(false);
@@ -89,11 +106,8 @@ export function Header() {
         dark: Moon,
     }[theme];
 
-    const derivedPaperSize = getPaperSizeLabel(
-        config.pageWidthMm || A4_WIDTH_MM,
-        config.pageHeightMm || A4_HEIGHT_MM
-    );
-    const paperSize = isCustomPaper ? 'Custom' : derivedPaperSize;
+    const paperSizeInfo = getPaperSizeInfo(config);
+    const paperSize = isCustomPaper ? 'Custom' : paperSizeInfo.label;
 
     const handlePaperSizeChange = (size: 'A4' | 'A3' | 'A5' | 'Letter' | 'Custom') => {
         const presets = {
@@ -195,7 +209,7 @@ export function Header() {
                                                             : 'border-border-subtle text-text-muted hover:border-brand-primary/50'
                                                             }`}
                                                     >
-                                                        {['A4', 'A3', 'A5', 'Letter'].includes(paperSize) ? t(`paper_type_${paperSize.toLowerCase()}` as any) : t('paper_type_a4')}
+                                                        {t(PAPER_SIZE_KEYS[paperSize] || 'paper_type_a4')}
                                                     </button>
                                                     <button
                                                         onClick={() => setIsPresetsOpen(!isPresetsOpen)}
@@ -227,7 +241,7 @@ export function Header() {
                                                                     onClick={() => handlePaperSizeChange(size)}
                                                                     className={`w-full text-left px-3 py-1.5 text-sm hover:bg-brand-primary/10 transition-colors ${paperSize === size ? 'text-brand-primary font-semibold bg-brand-primary/5' : 'text-text-main'}`}
                                                                 >
-                                                                    {t(`paper_type_${size.toLowerCase()}` as any)}
+                                                                    {t(PAPER_SIZE_KEYS[size])}
                                                                 </button>
                                                             ))}
                                                         </motion.div>

@@ -1,11 +1,7 @@
 import { UploadCloud, Grid, File as FileIcon, FileMinus } from "lucide-react";
-import {
-    A4_WIDTH_MM, A4_HEIGHT_MM,
-    getPaperSizeLabel,
-    calculateLabelLayout
-} from "../utils/layoutMath";
+import { getPaperSizeInfo, calculateLabelLayout } from "../utils/layoutMath";
 import { motion, Reorder, AnimatePresence } from "framer-motion";
-import { useI18n } from "../utils/i18n";
+import { useI18n } from "../utils/i18nContext";
 import { NumberInput } from "./NumberInput";
 import { SmartButton } from "./SmartButton";
 import { ThumbnailItem } from "./ThumbnailItem";
@@ -55,13 +51,11 @@ export function ControlPanel({
 
     // Calculate current paper size info
     const paperSizeInfo = useMemo(() => {
-        const w = Math.round((config.pageWidthMm || A4_WIDTH_MM) * 10) / 10;
-        const h = Math.round((config.pageHeightMm || A4_HEIGHT_MM) * 10) / 10;
-
-        const label = getPaperSizeLabel(config.pageWidthMm || A4_WIDTH_MM, config.pageHeightMm || A4_HEIGHT_MM);
-
-        return `${label}, ${w}×${h}mm`;
-    }, [config.pageWidthMm, config.pageHeightMm]);
+        const info = getPaperSizeInfo(config);
+        const w = Math.round(info.pageWidthMm * 10) / 10;
+        const h = Math.round(info.pageHeightMm * 10) / 10;
+        return `${info.label}, ${w}×${h}mm`;
+    }, [config]);
 
     return (
         <aside className="w-80 glass-panel border-r-0 flex flex-col z-10 rounded-xl shadow-lg h-full overflow-hidden">

@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Download, CheckCircle, AlertCircle } from "lucide-react";
-import { useI18n } from "../utils/i18n";
+import { useI18n } from "../utils/i18nContext";
 
 interface SmartButtonProps {
     onClick: () => void;

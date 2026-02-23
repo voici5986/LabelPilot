@@ -1,7 +1,15 @@
 import { useEffect, useMemo, useState, useRef } from "react";
-import { calculateLabelLayout, A4_WIDTH_MM, A4_HEIGHT_MM, resolveItemAtSlot, formatLabelText } from "../utils/layoutMath";
+import {
+    calculateLabelLayout,
+    resolvePageDimensions,
+    resolveItemAtSlot,
+    formatLabelText,
+    getLabelTextFontSizeMm,
+    getTextLayoutBoxes,
+    MM_TO_PX
+} from "../utils/layoutMath";
 import { Maximize, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
-import { useI18n } from "../utils/i18n";
+import { useI18n } from "../utils/i18nContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { mapPctToScale, getThumbBottomPct } from "../utils/zoomMath";
 import { QRCodeSVG } from "qrcode.react";
@@ -35,15 +43,9 @@ export function PreviewPanel() {
             const containerW = containerRef.current.clientWidth - HORIZONTAL_GAP;
             const containerH = containerRef.current.clientHeight - (TOP_GAP + BOTTOM_GAP);
 
-            const isPortrait = config.orientation === 'portrait';
-            const baseW = config.pageWidthMm || A4_WIDTH_MM;
-            const baseH = config.pageHeightMm || A4_HEIGHT_MM;
-            const paperWidthMm = isPortrait ? Math.min(baseW, baseH) : Math.max(baseW, baseH);
-            const paperHeightMm = isPortrait ? Math.max(baseW, baseH) : Math.min(baseW, baseH);
-
-            const mmToPx = 3.78;
-            const paperW = paperWidthMm * mmToPx;
-            const paperH = paperHeightMm * mmToPx;
+            const { pageWidth, pageHeight } = resolvePageDimensions(config);
+            const paperW = pageWidth * MM_TO_PX;
+            const paperH = pageHeight * MM_TO_PX;
 
             setBaseFitScale(Math.min(containerW / paperW, containerH / paperH));
         };
@@ -51,7 +53,7 @@ export function PreviewPanel() {
         updateFitScale();
         window.addEventListener('resize', updateFitScale);
         return () => window.removeEventListener('resize', updateFitScale);
-    }, [config.orientation, config.pageWidthMm, config.pageHeightMm]);
+    }, [config]);
 
     const layout = useMemo(() => calculateLabelLayout(config), [config]);
 
@@ -79,11 +81,7 @@ export function PreviewPanel() {
         setPageInput(String(currentPage + 1));
     }, [currentPage]);
 
-    const isPortrait = config.orientation === 'portrait';
-    const baseW = config.pageWidthMm || A4_WIDTH_MM;
-    const baseH = config.pageHeightMm || A4_HEIGHT_MM;
-    const paperWidthMm = isPortrait ? Math.min(baseW, baseH) : Math.max(baseW, baseH);
-    const paperHeightMm = isPortrait ? Math.max(baseW, baseH) : Math.min(baseW, baseH);
+    const { pageWidth: paperWidthMm, pageHeight: paperHeightMm } = resolvePageDimensions(config);
 
     const handleSliderChange = (e: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent) => {
         if (!sliderTrackRef.current) return;
@@ -219,28 +217,53 @@ export function PreviewPanel() {
                                     // 自动编号模式
                                     const displayText = formatLabelText(globalIdx, textConfig);
                                     const qrValue = `${textConfig.qrContentPrefix}${displayText}`;
+                                    const fontSizeMm = getLabelTextFontSizeMm(displayText, pos, textConfig.showQrCode);
+                                    const {
+                                        qrDimMm,
+                                        qrTopMm,
+                                        qrLeftMm,
+                                        textBoxTopMm,
+                                        textBoxHeightMm
+                                    } = getTextLayoutBoxes(pos, textConfig.showQrCode, textConfig.qrSizeRatio);
 
                                     content = (
-                                        <div className={`flex flex-col items-center justify-center w-full h-full p-1 text-center ${textConfig.showQrCode ? 'gap-1' : ''}`}>
+                                        <div className="w-full h-full text-center">
                                             {textConfig.showQrCode && (
-                                                <div className="bg-white p-0.5">
+                                                <div
+                                                    className="absolute flex items-center justify-center"
+                                                    style={{
+                                                        left: `${qrLeftMm}mm`,
+                                                        top: `${qrTopMm}mm`,
+                                                        width: `${qrDimMm}mm`,
+                                                        height: `${qrDimMm}mm`
+                                                    }}
+                                                >
                                                     <QRCodeSVG
                                                         value={qrValue}
-                                                        size={Math.min(pos.width, pos.height) * textConfig.qrSizeRatio * 3.78}
+                                                        size={qrDimMm * MM_TO_PX}
                                                         level="M"
                                                     />
                                                 </div>
                                             )}
-                                            <span
-                                                className="text-black font-mono font-semibold leading-tight break-all"
+                                            <div
+                                                className="absolute flex items-center justify-center w-full"
                                                 style={{
-                                                    fontSize: textConfig.showQrCode
-                                                        ? `${Math.min(pos.width * 0.9 / displayText.length, pos.height * 0.2)}mm`
-                                                        : `${Math.min(pos.width * 0.8 / displayText.length, pos.height * 0.5)}mm`
+                                                    top: `${textBoxTopMm}mm`,
+                                                    height: `${textBoxHeightMm}mm`
                                                 }}
                                             >
-                                                {displayText}
-                                            </span>
+                                                <span
+                                                    className="text-black font-bold leading-tight break-all"
+                                                    style={{
+                                                        fontSize: `${fontSizeMm}mm`,
+                                                        fontFamily: '"Courier New", Courier, monospace',
+                                                        letterSpacing: '0px',
+                                                        lineHeight: '1'
+                                                    }}
+                                                >
+                                                    {displayText}
+                                                </span>
+                                            </div>
                                         </div>
                                     );
                                 }

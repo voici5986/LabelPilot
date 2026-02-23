@@ -1,5 +1,12 @@
 import jsPDF from "jspdf";
-import { calculateLabelLayout, resolveItemAtSlot, formatLabelText } from "./layoutMath";
+import {
+    calculateLabelLayout,
+    resolveItemAtSlot,
+    formatLabelText,
+    getLabelTextFontSizeMm,
+    getTextLayoutBoxes,
+    MM_PER_PT
+} from "./layoutMath";
 import QRCode from "qrcode";
 
 /**
@@ -109,28 +116,31 @@ ctx.onmessage = async (e) => {
                                 await nextTick();
                             }
 
-                            // 布局计算：二维码在上方，文字在下方
-                            // 二维码尺寸由 qrSizeRatio 决定，取 (宽, 高) 的最小值
-                            const qrDim = Math.min(pos.width, pos.height) * textConfig.qrSizeRatio;
-                            const qrX = pos.x + (pos.width - qrDim) / 2;
-                            const qrY = pos.y + pos.height * 0.1; // 上留白 10%
+                            // Shared layout metrics with preview
+                            const {
+                                qrDimMm,
+                                qrTopMm,
+                                qrLeftMm,
+                                textBoxTopMm,
+                                textBoxHeightMm
+                            } = getTextLayoutBoxes(pos, true, textConfig.qrSizeRatio);
+                            const qrX = pos.x + qrLeftMm;
+                            const qrY = pos.y + qrTopMm;
 
-                            pdf.addImage(qrDataUrl, 'PNG', qrX, qrY, qrDim, qrDim);
+                            pdf.addImage(qrDataUrl, 'PNG', qrX, qrY, qrDimMm, qrDimMm);
 
                             // 绘制下方文字
                             pdf.setFont("courier", "bold");
                             // 字号自动计算：占剩余空间的 80%
-                            const targetTextHeight = pos.height * 0.2;
-                            const fontSizePt = Math.min(
-                                (pos.width * 0.9 / (text.length * 0.6)) / 0.3527,
-                                targetTextHeight / 0.3527
-                            );
+                            const fontSizeMm = getLabelTextFontSizeMm(text, pos, true);
+                            const fontSizePt = fontSizeMm / MM_PER_PT;
                             pdf.setFontSize(fontSizePt);
-                            const textWidth = pdf.getStringUnitWidth(text) * fontSizePt * 0.3527;
+                            const textWidth = pdf.getStringUnitWidth(text) * fontSizePt * MM_PER_PT;
+                            const textHeight = fontSizePt * MM_PER_PT;
                             pdf.text(
                                 text,
                                 pos.x + (pos.width - textWidth) / 2,
-                                qrY + qrDim + (pos.height - (qrY - pos.y) - qrDim + fontSizePt * 0.3527) / 2,
+                                pos.y + textBoxTopMm + (textBoxHeightMm + textHeight) / 2,
                                 { align: "left" }
                             );
                         } catch (qrErr) {
@@ -140,17 +150,16 @@ ctx.onmessage = async (e) => {
                     } else {
                         // 仅文字模式
                         pdf.setFont("courier", "bold");
-                        const fontSizePt = Math.min(
-                            (pos.width * 0.8 / (text.length * 0.6)) / 0.3527,
-                            (pos.height * 0.5) / 0.3527
-                        );
+                        const fontSizeMm = getLabelTextFontSizeMm(text, pos, false);
+                        const fontSizePt = fontSizeMm / MM_PER_PT;
                         pdf.setFontSize(fontSizePt);
-                        const textWidth = pdf.getStringUnitWidth(text) * fontSizePt * 0.3527;
-                        const textHeight = fontSizePt * 0.3527;
+                        const textWidth = pdf.getStringUnitWidth(text) * fontSizePt * MM_PER_PT;
+                        const textHeight = fontSizePt * MM_PER_PT;
+                        const { textBoxTopMm, textBoxHeightMm } = getTextLayoutBoxes(pos, false, textConfig.qrSizeRatio);
                         pdf.text(
                             text,
                             pos.x + (pos.width - textWidth) / 2,
-                            pos.y + (pos.height + textHeight / 2) / 2,
+                            pos.y + textBoxTopMm + (textBoxHeightMm + textHeight) / 2,
                             { align: "left" }
                         );
                     }

@@ -7,7 +7,7 @@ import { OrientationGuard } from "./components/OrientationGuard";
 import { useStore } from "./store/useStore";
 import { generatePDF } from "./utils/pdfGenerator";
 import { Toast, type ToastType } from "./components/Toast";
-import { useI18n } from "./utils/i18n";
+import { useI18n } from "./utils/i18nContext";
 
 
 function App() {

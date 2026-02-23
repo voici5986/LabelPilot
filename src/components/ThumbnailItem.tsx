@@ -56,6 +56,13 @@ export function ThumbnailItem({ item, onCountChange, onRemove }: ThumbnailItemPr
                     value={item.count}
                     onChange={handleCountChange}
                     onFocus={(e) => e.target.select()}
+                    onMouseDown={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        const input = e.currentTarget;
+                        input.focus();
+                        input.select();
+                    }}
                     className="w-6 h-4 bg-transparent text-white text-[14px] font-semibold text-center focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     onClick={(e) => e.stopPropagation()}
                 />

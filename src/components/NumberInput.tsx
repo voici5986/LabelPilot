@@ -27,11 +27,9 @@ export function NumberInput({
 
     // Sync from parent prop to local state
     useEffect(() => {
-        const parsed = parseFloat(localVal);
-        if (parsed !== value && !isNaN(value)) {
-            setLocalVal(String(value));
-        }
-    }, [value, localVal]);
+        const next = String(value);
+        setLocalVal((prev) => (prev === next ? prev : next));
+    }, [value]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const nextVal = e.target.value;
