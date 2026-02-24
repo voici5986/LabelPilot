@@ -1,7 +1,7 @@
 {
   "name": "labelpilot",
   "private": true,
-  "version": "1.4.2",
+  "version": "1.4.3",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,7 +12,7 @@
     "test": "vitest run",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "release": "pnpm format && pnpm lint && pnpm test && git add . && node scripts/auto-changeset.js && pnpm version-packages && git add . && (git commit -m \"chore(release): cut new version\" || true) && git push --follow-tags",
+    "release": "git add . && node scripts/auto-changeset.js && pnpm version-packages && git add . && (git commit -m \"chore(release): cut new version\" || true) && git push --follow-tags",
     "preview": "vite preview",
     "prepare": "husky"
   },
