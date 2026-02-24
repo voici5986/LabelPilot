@@ -10,20 +10,11 @@
     "format": "prettier . --write",
     "format:check": "prettier . --check",
     "test": "vitest run",
-    "commit": "cz",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "release": "pnpm format && pnpm lint && pnpm test && node scripts/auto-changeset.js && pnpm version-packages && git add . && git commit -m \"chore(release): cut new version\" && git push --follow-tags",
+    "release": "pnpm format && pnpm lint && pnpm test && git add . && node scripts/auto-changeset.js && pnpm version-packages && git add . && (git commit -m \"chore(release): cut new version\" || true) && git push --follow-tags",
     "preview": "vite preview",
     "prepare": "husky"
-  },
-  "config": {
-    "commitizen": {
-      "path": "node_modules/cz-customizable"
-    },
-    "cz-customizable": {
-      "config": ".cz-config.cjs"
-    }
   },
   "lint-staged": {
     "*.{js,ts,tsx}": [
@@ -58,8 +49,6 @@
     "@vitejs/plugin-react": "^5.1.4",
     "@vitest/ui": "^4.0.18",
     "autoprefixer": "^10.4.24",
-    "commitizen": "^4.3.1",
-    "cz-customizable": "^7.5.1",
     "eslint": "^10.0.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^7.0.1",

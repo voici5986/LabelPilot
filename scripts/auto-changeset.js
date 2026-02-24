@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, readdirSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { execSync } from "node:child_process";
 
@@ -12,13 +12,18 @@ const files = readdirSync(changesetDir).filter(
 if (files.length === 0) {
   console.log("🦋 No unreleased changesets found, creating a default patch...");
 
-  // 2. 获取最近一次 git commit 信息作为默认日志内容
-  let commitMsg = "Routine update";
+  // 2. 获取当前暂存区或者工作区的改动概要作为日志内容
+  let commitMsg = "Routine update and version bump";
   try {
-    commitMsg = execSync("git log -1 --pretty=%B")
-      .toString()
-      .trim()
-      .split("\n")[0];
+    // 优先获取暂存区的改动文件名
+    const status = execSync("git status --short").toString().trim();
+    if (!status) {
+      console.log(
+        "⚠️ No changes detected in the repository. Skipping changeset creation.",
+      );
+      process.exit(0);
+    }
+    commitMsg = `Automated release for changes:\n${status}`;
   } catch (e) {
     // ignore
   }
