@@ -1,1 +1,5 @@
-npx lint-staged
+pnpm format
+pnpm lint
+pnpm test
+node scripts/auto-changeset.js
+git add .
