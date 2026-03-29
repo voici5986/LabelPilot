@@ -26,7 +26,7 @@
   "dependencies": {
     "framer-motion": "^12.38.0",
     "jspdf": "^4.2.1",
-    "lucide-react": "^1.0.1",
+    "lucide-react": "^1.7.0",
     "qrcode": "^1.5.4",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.4",
@@ -51,7 +51,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
-    "@vitest/ui": "^4.1.1",
+    "@vitest/ui": "^4.1.2",
     "autoprefixer": "^10.4.27",
     "eslint": "^10.1.0",
     "eslint-config-prettier": "^10.1.8",
@@ -67,9 +67,9 @@
     "tailwindcss": "^4.2.2",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.57.2",
-    "vite": "^8.0.2",
+    "vite": "^8.0.3",
     "vite-plugin-pwa": "^1.2.0",
-    "vitest": "^4.1.1"
+    "vitest": "^4.1.2"
   },
   "pnpm": {
     "peerDependencyRules": {
