@@ -6,14 +6,35 @@ import type { Language } from "./translations";
 import { I18nContext } from "./i18nContext";
 import type { Translations } from "./i18nContext";
 
+const STORAGE_KEY = "label_printer_lang";
+
+function isLanguage(value: string | null): value is Language {
+  return value === "en" || value === "zh";
+}
+
+function readStoredLanguage(): Language {
+  try {
+    const value = localStorage.getItem(STORAGE_KEY);
+    return isLanguage(value) ? value : "zh";
+  } catch {
+    return "zh";
+  }
+}
+
+function writeStoredLanguage(lang: Language) {
+  try {
+    localStorage.setItem(STORAGE_KEY, lang);
+  } catch {
+    // Storage can be unavailable in private mode or locked-down browsers.
+  }
+}
+
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<Language>(() => {
-    return (localStorage.getItem("label_printer_lang") as Language) || "zh";
-  });
+  const [language, setLanguageState] = useState<Language>(readStoredLanguage);
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
-    localStorage.setItem("label_printer_lang", lang);
+    writeStoredLanguage(lang);
   };
 
   const t = (

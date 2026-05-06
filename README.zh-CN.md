@@ -1,10 +1,10 @@
 # LabelPilot (Web 版)
 
 ![React](https://img.shields.io/badge/React-19.2-61DAFB?style=flat-square&logo=react&logoColor=black)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=flat-square&logo=typescript)
-![Vite](https://img.shields.io/badge/Vite-7.0-646CFF?style=flat-square&logo=vite)
-![Tailwind](https://img.shields.io/badge/Tailwind_CSS-4.0-38B2AC?style=flat-square&logo=tailwind-css)
-![Version](https://img.shields.io/badge/Version-1.4.0-green?style=flat-square)
+![TypeScript](https://img.shields.io/badge/TypeScript-6.0-blue?style=flat-square&logo=typescript)
+![Vite](https://img.shields.io/badge/Vite-8.0-646CFF?style=flat-square&logo=vite)
+![Tailwind](https://img.shields.io/badge/Tailwind_CSS-4.2-38B2AC?style=flat-square&logo=tailwind-css)
+![Version](https://img.shields.io/badge/Version-1.4.3-green?style=flat-square)
 
 [English](./README.md) | **简体中文**
 
@@ -33,11 +33,11 @@
 
 ## 🛠️ 技术栈
 
-- **框架**: React 19.2.3
-- **构建工具**: Vite 7.3
+- **框架**: React 19.2.5
+- **构建工具**: Vite 8.0
 - **并行计算**: Web Workers (ES Module)
 - **PDF 引擎**: jsPDF
-- **样式与动画**: Tailwind CSS 4.1, Framer Motion
+- **样式与动画**: Tailwind CSS 4.2, Framer Motion
 - **PWA**: vite-plugin-pwa
 
 ## 🚀 快速开始

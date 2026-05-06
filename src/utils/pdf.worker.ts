@@ -14,6 +14,114 @@ import QRCode from "qrcode";
  */
 const ctx: Worker = self as unknown as Worker;
 
+type ImageWorkerItem = {
+  buffer: ArrayBuffer;
+  type: string;
+  id: string;
+  count: number;
+};
+
+type ImageDimensions = {
+  width: number;
+  height: number;
+};
+
+function readPngDimensions(data: Uint8Array): ImageDimensions | null {
+  if (
+    data.length < 24 ||
+    data[0] !== 0x89 ||
+    data[1] !== 0x50 ||
+    data[2] !== 0x4e ||
+    data[3] !== 0x47
+  ) {
+    return null;
+  }
+
+  const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+  return {
+    width: view.getUint32(16),
+    height: view.getUint32(20),
+  };
+}
+
+function isJpegStartOfFrame(marker: number): boolean {
+  return (
+    (marker >= 0xc0 && marker <= 0xc3) ||
+    (marker >= 0xc5 && marker <= 0xc7) ||
+    (marker >= 0xc9 && marker <= 0xcb) ||
+    (marker >= 0xcd && marker <= 0xcf)
+  );
+}
+
+function readJpegDimensions(data: Uint8Array): ImageDimensions | null {
+  if (data.length < 4 || data[0] !== 0xff || data[1] !== 0xd8) return null;
+
+  const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+  let offset = 2;
+
+  while (offset + 4 <= data.length) {
+    if (data[offset] !== 0xff) {
+      offset += 1;
+      continue;
+    }
+
+    const marker = data[offset + 1];
+    const blockLength = view.getUint16(offset + 2);
+    if (blockLength < 2 || offset + 2 + blockLength > data.length) return null;
+
+    if (isJpegStartOfFrame(marker)) {
+      return {
+        height: view.getUint16(offset + 5),
+        width: view.getUint16(offset + 7),
+      };
+    }
+
+    offset += 2 + blockLength;
+  }
+
+  return null;
+}
+
+function parseImageDimensions(
+  data: Uint8Array,
+  type: string,
+): ImageDimensions | null {
+  if (type === "image/png") return readPngDimensions(data);
+  if (type === "image/jpeg" || type === "image/jpg") {
+    return readJpegDimensions(data);
+  }
+  return null;
+}
+
+async function getImageDimensions(
+  buffer: ArrayBuffer,
+  type: string,
+): Promise<ImageDimensions> {
+  if (typeof createImageBitmap === "function") {
+    let bitmap: ImageBitmap | null = null;
+    try {
+      const blob = new Blob([buffer], { type });
+      bitmap = await createImageBitmap(blob);
+      return {
+        width: bitmap.width,
+        height: bitmap.height,
+      };
+    } catch (error) {
+      const parsed = parseImageDimensions(new Uint8Array(buffer), type);
+      if (parsed) return parsed;
+      throw error instanceof Error
+        ? error
+        : new Error("Failed to read image dimensions");
+    } finally {
+      bitmap?.close();
+    }
+  }
+
+  const parsed = parseImageDimensions(new Uint8Array(buffer), type);
+  if (parsed) return parsed;
+  throw new Error("Unsupported image format");
+}
+
 ctx.onmessage = async (e) => {
   const { config, imageItems, appMode, textConfig } = e.data;
 
@@ -31,41 +139,34 @@ ctx.onmessage = async (e) => {
     const loadedImages =
       appMode === "image"
         ? await Promise.all(
-            imageItems.map(
-              async (
-                item: { buffer: ArrayBuffer; type: string; id: string },
-                idx: number,
-              ) => {
-                // Report progress for loading (0% - 30%)
-                ctx.postMessage({
-                  type: "progress",
-                  data: Math.round(((idx + 1) / imageItems.length) * 30),
-                });
+            imageItems.map(async (item: ImageWorkerItem, idx: number) => {
+              // Report progress for loading (0% - 30%)
+              ctx.postMessage({
+                type: "progress",
+                data: Math.round(((idx + 1) / imageItems.length) * 30),
+              });
 
-                const arrayBuffer = item.buffer;
-                const blob = new Blob([arrayBuffer], { type: item.type });
-                const bitmap = await createImageBitmap(blob);
+              const arrayBuffer = item.buffer;
 
-                let format: "PNG" | "JPEG" = "PNG";
-                if (item.type === "image/jpeg" || item.type === "image/jpg") {
-                  format = "JPEG";
-                }
+              let format: "PNG" | "JPEG" = "PNG";
+              if (item.type === "image/jpeg" || item.type === "image/jpg") {
+                format = "JPEG";
+              }
 
-                const uint8Array = new Uint8Array(arrayBuffer);
+              const uint8Array = new Uint8Array(arrayBuffer);
+              const { width, height } = await getImageDimensions(
+                arrayBuffer,
+                item.type,
+              );
 
-                const width = bitmap.width;
-                const height = bitmap.height;
-                bitmap.close();
-
-                return {
-                  ...item,
-                  data: uint8Array,
-                  format,
-                  width,
-                  height,
-                };
-              },
-            ),
+              return {
+                ...item,
+                data: uint8Array,
+                format,
+                width,
+                height,
+              };
+            }),
           )
         : [];
 
@@ -173,8 +274,11 @@ ctx.onmessage = async (e) => {
                 { align: "left" },
               );
             } catch (qrErr) {
-              console.error("QR Generation failed", qrErr);
-              // 降级只画文字
+              const detail =
+                qrErr instanceof Error ? qrErr.message : String(qrErr);
+              throw new Error(`QR code generation failed: ${detail}`, {
+                cause: qrErr,
+              });
             }
           } else {
             // 仅文字模式

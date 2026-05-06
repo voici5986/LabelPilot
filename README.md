@@ -1,10 +1,10 @@
 # LabelPilot (Web Version)
 
 ![React](https://img.shields.io/badge/React-19.2-61DAFB?style=flat-square&logo=react&logoColor=black)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=flat-square&logo=typescript)
-![Vite](https://img.shields.io/badge/Vite-7.0-646CFF?style=flat-square&logo=vite)
-![Tailwind](https://img.shields.io/badge/Tailwind_CSS-4.0-38B2AC?style=flat-square&logo=tailwind-css)
-![Version](https://img.shields.io/badge/Version-1.4.0-green?style=flat-square)
+![TypeScript](https://img.shields.io/badge/TypeScript-6.0-blue?style=flat-square&logo=typescript)
+![Vite](https://img.shields.io/badge/Vite-8.0-646CFF?style=flat-square&logo=vite)
+![Tailwind](https://img.shields.io/badge/Tailwind_CSS-4.2-38B2AC?style=flat-square&logo=tailwind-css)
+![Version](https://img.shields.io/badge/Version-1.4.3-green?style=flat-square)
 
 **English** | [简体中文](./README.zh-CN.md)
 
@@ -33,11 +33,11 @@ A modern, offline-capable web application for batch generating label PDF documen
 
 ## 🛠️ Tech Stack
 
-- **Framework**: React 19.2.3
-- **Build Tool**: Vite 7.3
+- **Framework**: React 19.2.5
+- **Build Tool**: Vite 8.0
 - **Multithreading**: Web Workers (ES Module)
 - **PDF Engine**: jsPDF
-- **Styling**: Tailwind CSS 4.1, Framer Motion
+- **Styling**: Tailwind CSS 4.2, Framer Motion
 - **PWA**: vite-plugin-pwa
 
 ## 🚀 Getting Started
