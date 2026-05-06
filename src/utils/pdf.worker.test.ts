@@ -66,6 +66,7 @@ const setupWorker = async () => {
 
 beforeEach(() => {
   vi.resetModules();
+  vi.stubGlobal("createImageBitmap", undefined);
   mockJsPdfInstance.addImage.mockClear();
   mockJsPdfInstance.setFont.mockClear();
   mockJsPdfInstance.setFontSize.mockClear();
@@ -77,7 +78,7 @@ beforeEach(() => {
 });
 
 describe("pdf.worker", () => {
-  it("releases image bitmaps and completes in image mode", async () => {
+  it("draws repeated image labels across pages and releases bitmaps", async () => {
     const closeMock = vi.fn();
     (
       globalThis as unknown as { createImageBitmap?: unknown }
@@ -94,7 +95,7 @@ describe("pdf.worker", () => {
       data: {
         config: createBaseConfig(),
         imageItems: [
-          { id: "1", count: 1, name: "x.png", type: "image/png", buffer },
+          { id: "1", count: 3, name: "x.png", type: "image/png", buffer },
         ],
         appMode: "image",
         textConfig: createTextConfig(),
@@ -105,6 +106,8 @@ describe("pdf.worker", () => {
     await flushAsync();
 
     expect(closeMock).toHaveBeenCalledTimes(1);
+    expect(mockJsPdfInstance.addImage).toHaveBeenCalledTimes(3);
+    expect(mockJsPdfInstance.addPage).toHaveBeenCalledTimes(2);
     expect(postMessage).toHaveBeenCalledWith(
       expect.objectContaining({ type: "complete" }),
       expect.any(Array),
@@ -154,6 +157,111 @@ describe("pdf.worker", () => {
     expect(postMessage).toHaveBeenCalledWith(
       expect.objectContaining({ type: "complete" }),
       expect.any(Array),
+    );
+    expect(mockJsPdfInstance.text).toHaveBeenCalledTimes(1000);
+  });
+
+  it("writes sequential text labels in text mode", async () => {
+    const { postMessage, onmessage } = await setupWorker();
+
+    onmessage({
+      data: {
+        config: { ...createBaseConfig(), cols: 2 },
+        imageItems: [],
+        appMode: "text",
+        textConfig: createTextConfig({
+          prefix: "ASSET-",
+          startNumber: 8,
+          digits: 4,
+          count: 3,
+        }),
+      },
+    });
+
+    await flushAsync();
+    await flushAsync();
+
+    expect(mockJsPdfInstance.text).toHaveBeenNthCalledWith(
+      1,
+      "ASSET-0008",
+      expect.any(Number),
+      expect.any(Number),
+      { align: "left" },
+    );
+    expect(mockJsPdfInstance.text).toHaveBeenNthCalledWith(
+      3,
+      "ASSET-0010",
+      expect.any(Number),
+      expect.any(Number),
+      { align: "left" },
+    );
+    expect(mockJsPdfInstance.addPage).toHaveBeenCalledTimes(1);
+    expect(postMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "complete" }),
+      expect.any(Array),
+    );
+  });
+
+  it("uses QR content prefix and draws QR images", async () => {
+    const { postMessage, onmessage } = await setupWorker();
+
+    onmessage({
+      data: {
+        config: createBaseConfig(),
+        imageItems: [],
+        appMode: "text",
+        textConfig: createTextConfig({
+          count: 1,
+          showQrCode: true,
+          qrContentPrefix: "https://example.test/item/",
+        }),
+      },
+    });
+
+    await flushAsync();
+    await flushAsync();
+
+    expect(qrMock.toDataURL).toHaveBeenCalledWith(
+      "https://example.test/item/SN-001",
+      expect.objectContaining({
+        errorCorrectionLevel: "M",
+      }),
+    );
+    expect(mockJsPdfInstance.addImage).toHaveBeenCalledWith(
+      "data:image/png;base64,xyz",
+      "PNG",
+      expect.any(Number),
+      expect.any(Number),
+      expect.any(Number),
+      expect.any(Number),
+    );
+    expect(postMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "complete" }),
+      expect.any(Array),
+    );
+  });
+
+  it("posts an error when QR generation fails", async () => {
+    qrMock.toDataURL.mockRejectedValueOnce(new Error("qr boom"));
+    const { postMessage, onmessage } = await setupWorker();
+
+    onmessage({
+      data: {
+        config: createBaseConfig(),
+        imageItems: [],
+        appMode: "text",
+        textConfig: createTextConfig({ showQrCode: true }),
+      },
+    });
+
+    await flushAsync();
+    await flushAsync();
+
+    expect(postMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "error",
+        data: expect.stringContaining("QR code generation failed"),
+      }),
     );
   });
 });
