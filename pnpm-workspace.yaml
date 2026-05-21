@@ -1,3 +1,11 @@
+allowBuilds:
+  core-js: true
 onlyBuiltDependencies:
   - core-js
   - esbuild
+
+# 允许的 Peer 依赖版本，解决依赖版本冲突警告
+peerDependencyRules:
+  allowedVersions:
+    eslint: "10"
+    vite: "8"
