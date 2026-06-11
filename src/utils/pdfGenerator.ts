@@ -45,21 +45,27 @@ export async function generatePDF(
       if (type === "progress") {
         onProgress?.(data);
       } else if (type === "complete") {
-        const blob = new Blob([data], { type: "application/pdf" });
-        const url = URL.createObjectURL(blob);
+        let url: string | null = null;
+        let link: HTMLAnchorElement | null = null;
 
-        const link = document.createElement("a");
-        const dateStr = `label_${formatDateForFilename(new Date())}`;
+        try {
+          const blob = new Blob([data], { type: "application/pdf" });
+          url = URL.createObjectURL(blob);
+          link = document.createElement("a");
+          const dateStr = `label_${formatDateForFilename(new Date())}`;
 
-        link.href = url;
-        link.download = `${dateStr}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        URL.revokeObjectURL(url);
-        worker.terminate();
-        resolve();
+          link.href = url;
+          link.download = `${dateStr}.pdf`;
+          document.body.appendChild(link);
+          link.click();
+          resolve();
+        } catch (error) {
+          reject(error);
+        } finally {
+          link?.remove();
+          if (url) URL.revokeObjectURL(url);
+          worker.terminate();
+        }
       } else if (type === "error") {
         worker.terminate();
         reject(new Error(data));
