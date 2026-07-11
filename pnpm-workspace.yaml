@@ -2,6 +2,7 @@ allowBuilds:
   core-js: true
 minimumReleaseAgeExclude:
   - prettier@3.9.1
+  - vite@8.1.2
 onlyBuiltDependencies:
   - core-js
   - esbuild
