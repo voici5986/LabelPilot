@@ -5,7 +5,12 @@ import type {
   ImageItem,
   TextConfig,
 } from "../utils/layoutMath";
-import { A4_WIDTH_MM, A4_HEIGHT_MM } from "../utils/layoutMath";
+import {
+  A4_WIDTH_MM,
+  A4_HEIGHT_MM,
+  DEFAULT_TEXT_CONFIG,
+  normalizeTextConfig,
+} from "../utils/layoutMath";
 
 export interface AppState {
   // Configs
@@ -37,15 +42,11 @@ const DEFAULT_CONFIG: HelperLayoutConfig = {
   pageHeightMm: A4_HEIGHT_MM,
 };
 
-const DEFAULT_TEXT_CONFIG: TextConfig = {
-  prefix: "SN-",
-  startNumber: 1,
-  digits: 3,
-  count: 10,
-  showQrCode: false,
-  qrSizeRatio: 0.35,
-  qrContentPrefix: "",
-};
+function asRecord(value: unknown): Record<string, unknown> {
+  return typeof value === "object" && value !== null
+    ? (value as Record<string, unknown>)
+    : {};
+}
 
 export const useStore = create<AppState>()(
   persist(
@@ -70,11 +71,10 @@ export const useStore = create<AppState>()(
 
       setTextConfig: (updates) =>
         set((state) => {
-          const next = { ...state.textConfig, ...updates };
-          next.digits = Math.max(1, next.digits);
-          next.count = Math.max(1, next.count);
-          next.startNumber = Math.max(0, next.startNumber);
-          next.qrSizeRatio = Math.min(Math.max(0.1, next.qrSizeRatio), 0.6);
+          const next = normalizeTextConfig(
+            { ...state.textConfig, ...updates },
+            state.textConfig,
+          );
           return { textConfig: next };
         }),
 
@@ -128,6 +128,36 @@ export const useStore = create<AppState>()(
         appMode: state.appMode,
         theme: state.theme,
       }),
+      merge: (persistedState, currentState) => {
+        const persisted = asRecord(persistedState);
+        const persistedConfig = asRecord(persisted.config);
+        const persistedTextConfig = asRecord(persisted.textConfig);
+
+        return {
+          ...currentState,
+          config: {
+            ...currentState.config,
+            ...persistedConfig,
+          } as HelperLayoutConfig,
+          textConfig: normalizeTextConfig(
+            {
+              ...currentState.textConfig,
+              ...persistedTextConfig,
+            },
+            currentState.textConfig,
+          ),
+          appMode:
+            persisted.appMode === "image" || persisted.appMode === "text"
+              ? persisted.appMode
+              : currentState.appMode,
+          theme:
+            persisted.theme === "system" ||
+            persisted.theme === "light" ||
+            persisted.theme === "dark"
+              ? persisted.theme
+              : currentState.theme,
+        };
+      },
     },
   ),
 ) as UseBoundStore<StoreApi<AppState>>;

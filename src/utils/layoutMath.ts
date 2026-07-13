@@ -29,6 +29,89 @@ export interface TextConfig {
   qrContentPrefix: string;
 }
 
+export const TEXT_CONFIG_LIMITS = {
+  startNumber: { min: 0, max: 999_999 },
+  digits: { min: 1, max: 10 },
+  count: { min: 1, max: 500 },
+  qrSizeRatio: { min: 0.1, max: 0.6 },
+} as const;
+
+export const DEFAULT_TEXT_CONFIG: TextConfig = {
+  prefix: "SN-",
+  startNumber: 1,
+  digits: 3,
+  count: 10,
+  showQrCode: false,
+  qrSizeRatio: 0.35,
+  qrContentPrefix: "",
+};
+
+function normalizeFiniteNumber(
+  value: unknown,
+  fallback: number,
+  min: number,
+  max: number,
+  integer = false,
+): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
+
+  const normalized = integer ? Math.trunc(value) : value;
+  return Math.min(max, Math.max(min, normalized));
+}
+
+/**
+ * Normalizes text settings at every trust boundary (UI, persisted state and
+ * worker messages) so malformed values cannot reach layout/PDF loops.
+ */
+export function normalizeTextConfig(
+  value: unknown,
+  fallback: TextConfig = DEFAULT_TEXT_CONFIG,
+): TextConfig {
+  const source =
+    typeof value === "object" && value !== null
+      ? (value as Record<string, unknown>)
+      : {};
+
+  return {
+    prefix: typeof source.prefix === "string" ? source.prefix : fallback.prefix,
+    startNumber: normalizeFiniteNumber(
+      source.startNumber,
+      fallback.startNumber,
+      TEXT_CONFIG_LIMITS.startNumber.min,
+      TEXT_CONFIG_LIMITS.startNumber.max,
+      true,
+    ),
+    digits: normalizeFiniteNumber(
+      source.digits,
+      fallback.digits,
+      TEXT_CONFIG_LIMITS.digits.min,
+      TEXT_CONFIG_LIMITS.digits.max,
+      true,
+    ),
+    count: normalizeFiniteNumber(
+      source.count,
+      fallback.count,
+      TEXT_CONFIG_LIMITS.count.min,
+      TEXT_CONFIG_LIMITS.count.max,
+      true,
+    ),
+    showQrCode:
+      typeof source.showQrCode === "boolean"
+        ? source.showQrCode
+        : fallback.showQrCode,
+    qrSizeRatio: normalizeFiniteNumber(
+      source.qrSizeRatio,
+      fallback.qrSizeRatio,
+      TEXT_CONFIG_LIMITS.qrSizeRatio.min,
+      TEXT_CONFIG_LIMITS.qrSizeRatio.max,
+    ),
+    qrContentPrefix:
+      typeof source.qrContentPrefix === "string"
+        ? source.qrContentPrefix
+        : fallback.qrContentPrefix,
+  };
+}
+
 export interface LabelPosition {
   x: number; // mm
   y: number; // mm
@@ -277,9 +360,14 @@ export function resolveItemAtSlot<T extends { count: number }>(
  * Formats the text content for a label based on the configuration.
  */
 export function formatLabelText(index: number, config: TextConfig): string {
-  const currentNumber = config.startNumber + index;
-  const formattedNumber = String(currentNumber).padStart(config.digits, "0");
-  return `${config.prefix}${formattedNumber}`;
+  const safeConfig = normalizeTextConfig(config);
+  const safeIndex = Number.isFinite(index) && index > 0 ? Math.trunc(index) : 0;
+  const currentNumber = safeConfig.startNumber + safeIndex;
+  const formattedNumber = String(currentNumber).padStart(
+    safeConfig.digits,
+    "0",
+  );
+  return `${safeConfig.prefix}${formattedNumber}`;
 }
 
 export function getQrSizeMm(

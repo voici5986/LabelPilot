@@ -31,6 +31,19 @@ export function NumberInput({
     setLocalVal((prev) => (prev === next ? prev : next));
   }, [value]);
 
+  const normalizeValue = (candidate: number) => {
+    if (!Number.isFinite(candidate)) return min;
+
+    let next = Math.min(max, Math.max(min, candidate));
+    if (isInteger) {
+      next = Math.round(next);
+    } else if (decimalPlaces !== undefined) {
+      const multiplier = Math.pow(10, decimalPlaces);
+      next = Math.round(next * multiplier) / multiplier;
+    }
+    return next;
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const nextVal = e.target.value;
 
@@ -47,26 +60,16 @@ export function NumberInput({
       if (parts.length === 2 && parts[1].length > decimalPlaces) return;
     }
 
-    setLocalVal(nextVal);
     const num = parseFloat(nextVal);
-    if (!isNaN(num)) {
-      onChange(num);
-    }
+    if (!Number.isFinite(num)) return;
+
+    const normalized = normalizeValue(num);
+    setLocalVal(normalized === num ? nextVal : String(normalized));
+    onChange(normalized);
   };
 
   const handleBlur = () => {
-    let num = parseFloat(localVal);
-    if (isNaN(num)) num = min;
-
-    if (num < min) num = min;
-    if (num > max) num = max;
-
-    if (isInteger) {
-      num = Math.round(num);
-    } else if (decimalPlaces !== undefined) {
-      const m = Math.pow(10, decimalPlaces);
-      num = Math.round(num * m) / m;
-    }
+    const num = normalizeValue(parseFloat(localVal));
 
     setLocalVal(String(num));
     onChange(num);
@@ -77,15 +80,11 @@ export function NumberInput({
     (isInteger ? 1 : decimalPlaces ? Math.pow(10, -decimalPlaces) : 1);
 
   const increment = () => {
-    const newVal = Math.min(max, value + step);
-    const fixed = Number(newVal.toFixed(decimalPlaces || 0));
-    onChange(fixed);
+    onChange(normalizeValue(value + step));
   };
 
   const decrement = () => {
-    const newVal = Math.max(min, value - step);
-    const fixed = Number(newVal.toFixed(decimalPlaces || 0));
-    onChange(fixed);
+    onChange(normalizeValue(value - step));
   };
 
   return (
@@ -105,6 +104,7 @@ export function NumberInput({
         />
         <div className="absolute right-0 top-0 h-full w-8 flex flex-col border-l border-border-subtle/30 overflow-hidden rounded-r-lg">
           <button
+            type="button"
             onClick={increment}
             className="flex-1 flex items-center justify-center hover:bg-brand-primary/10 text-text-muted hover:text-brand-primary transition-colors group/btn"
           >
@@ -112,6 +112,7 @@ export function NumberInput({
           </button>
           <div className="h-[1px] w-full bg-border-subtle/30" />
           <button
+            type="button"
             onClick={decrement}
             className="flex-1 flex items-center justify-center hover:bg-brand-primary/10 text-text-muted hover:text-brand-primary transition-colors group/btn"
           >

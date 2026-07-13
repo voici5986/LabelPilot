@@ -238,6 +238,7 @@ export function ControlPanel({
                     onChange={(val) => onTextConfigChange({ startNumber: val })}
                     min={0}
                     max={999999}
+                    isInteger
                   />
                   <NumberInput
                     label={t("text_digits")}
@@ -245,6 +246,7 @@ export function ControlPanel({
                     onChange={(val) => onTextConfigChange({ digits: val })}
                     min={1}
                     max={10}
+                    isInteger
                   />
                 </div>
 
@@ -256,6 +258,7 @@ export function ControlPanel({
                       onChange={(val) => onTextConfigChange({ count: val })}
                       min={1}
                       max={500}
+                      isInteger
                     />
                   </div>
                   <div className="flex flex-col items-center gap-1.5 pb-0.5">

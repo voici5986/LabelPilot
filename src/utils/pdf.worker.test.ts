@@ -7,6 +7,8 @@ const mockJsPdfInstance = {
   setFontSize: vi.fn(),
   getStringUnitWidth: vi.fn(() => 1),
   text: vi.fn(),
+  setFillColor: vi.fn(),
+  rect: vi.fn(),
   addPage: vi.fn(),
   output: vi.fn(() => new ArrayBuffer(8)),
 };
@@ -15,14 +17,6 @@ vi.mock("jspdf", () => ({
   default: vi.fn(function () {
     return mockJsPdfInstance;
   }),
-}));
-
-const qrMock = {
-  toDataURL: vi.fn(async () => "data:image/png;base64,xyz"),
-};
-
-vi.mock("qrcode", () => ({
-  default: qrMock,
 }));
 
 const createBaseConfig = (): HelperLayoutConfig => ({
@@ -53,6 +47,36 @@ type WorkerSelf = {
   onmessage?: (e: { data: unknown }) => void;
 };
 
+const fillTextMock = vi.fn();
+
+class MockOffscreenCanvas {
+  width: number;
+  height: number;
+
+  constructor(width: number, height: number) {
+    this.width = width;
+    this.height = height;
+  }
+
+  getContext() {
+    return {
+      fillStyle: "",
+      textAlign: "",
+      textBaseline: "",
+      font: "",
+      fillRect: vi.fn(),
+      measureText: vi.fn(() => ({ width: 100 })),
+      fillText: fillTextMock,
+    };
+  }
+
+  async convertToBlob() {
+    return new Blob([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], {
+      type: "image/png",
+    });
+  }
+}
+
 const setupWorker = async () => {
   const postMessage = vi.fn();
   (globalThis as unknown as { self: WorkerSelf }).self = { postMessage };
@@ -72,9 +96,11 @@ beforeEach(() => {
   mockJsPdfInstance.setFontSize.mockClear();
   mockJsPdfInstance.getStringUnitWidth.mockClear();
   mockJsPdfInstance.text.mockClear();
+  mockJsPdfInstance.setFillColor.mockClear();
+  mockJsPdfInstance.rect.mockClear();
   mockJsPdfInstance.addPage.mockClear();
   mockJsPdfInstance.output.mockClear();
-  qrMock.toDataURL.mockClear();
+  fillTextMock.mockClear();
 });
 
 describe("pdf.worker", () => {
@@ -136,7 +162,7 @@ describe("pdf.worker", () => {
     );
   });
 
-  it("handles large text counts as a smoke test", async () => {
+  it("clamps unsafe text counts before entering PDF loops", async () => {
     (
       globalThis as unknown as { createImageBitmap?: unknown }
     ).createImageBitmap = vi.fn();
@@ -158,7 +184,7 @@ describe("pdf.worker", () => {
       expect.objectContaining({ type: "complete" }),
       expect.any(Array),
     );
-    expect(mockJsPdfInstance.text).toHaveBeenCalledTimes(1000);
+    expect(mockJsPdfInstance.text).toHaveBeenCalledTimes(500);
   });
 
   it("writes sequential text labels in text mode", async () => {
@@ -202,7 +228,7 @@ describe("pdf.worker", () => {
     );
   });
 
-  it("uses QR content prefix and draws QR images", async () => {
+  it("draws QR modules without relying on DOM canvas APIs", async () => {
     const { postMessage, onmessage } = await setupWorker();
 
     onmessage({
@@ -221,20 +247,15 @@ describe("pdf.worker", () => {
     await flushAsync();
     await flushAsync();
 
-    expect(qrMock.toDataURL).toHaveBeenCalledWith(
-      "https://example.test/item/SN-001",
-      expect.objectContaining({
-        errorCorrectionLevel: "M",
-      }),
+    expect(mockJsPdfInstance.setFillColor).toHaveBeenCalledWith(0, 0, 0);
+    expect(mockJsPdfInstance.rect).toHaveBeenCalledWith(
+      expect.any(Number),
+      expect.any(Number),
+      expect.any(Number),
+      expect.any(Number),
+      "F",
     );
-    expect(mockJsPdfInstance.addImage).toHaveBeenCalledWith(
-      "data:image/png;base64,xyz",
-      "PNG",
-      expect.any(Number),
-      expect.any(Number),
-      expect.any(Number),
-      expect.any(Number),
-    );
+    expect(mockJsPdfInstance.addImage).not.toHaveBeenCalled();
     expect(postMessage).toHaveBeenCalledWith(
       expect.objectContaining({ type: "complete" }),
       expect.any(Array),
@@ -242,7 +263,6 @@ describe("pdf.worker", () => {
   });
 
   it("posts an error when QR generation fails", async () => {
-    qrMock.toDataURL.mockRejectedValueOnce(new Error("qr boom"));
     const { postMessage, onmessage } = await setupWorker();
 
     onmessage({
@@ -250,7 +270,10 @@ describe("pdf.worker", () => {
         config: createBaseConfig(),
         imageItems: [],
         appMode: "text",
-        textConfig: createTextConfig({ showQrCode: true }),
+        textConfig: createTextConfig({
+          showQrCode: true,
+          qrContentPrefix: "x".repeat(5_000),
+        }),
       },
     });
 
@@ -262,6 +285,71 @@ describe("pdf.worker", () => {
         type: "error",
         data: expect.stringContaining("QR code generation failed"),
       }),
+    );
+  });
+
+  it("clamps an oversized digit count before formatting", async () => {
+    const { postMessage, onmessage } = await setupWorker();
+
+    onmessage({
+      data: {
+        config: createBaseConfig(),
+        imageItems: [],
+        appMode: "text",
+        textConfig: createTextConfig({ digits: 999_999_999 }),
+      },
+    });
+
+    await flushAsync();
+    await flushAsync();
+
+    expect(mockJsPdfInstance.text).toHaveBeenCalledWith(
+      "SN-0000000001",
+      expect.any(Number),
+      expect.any(Number),
+      { align: "left" },
+    );
+    expect(postMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "complete" }),
+      expect.any(Array),
+    );
+  });
+
+  it("rasterizes Unicode text instead of passing it to Courier", async () => {
+    vi.stubGlobal("OffscreenCanvas", MockOffscreenCanvas);
+    const { postMessage, onmessage } = await setupWorker();
+
+    onmessage({
+      data: {
+        config: createBaseConfig(),
+        imageItems: [],
+        appMode: "text",
+        textConfig: createTextConfig({ prefix: "中文-" }),
+      },
+    });
+
+    await flushAsync();
+    await flushAsync();
+
+    expect(fillTextMock).toHaveBeenCalledWith(
+      "中文-001",
+      expect.any(Number),
+      expect.any(Number),
+    );
+    expect(mockJsPdfInstance.addImage).toHaveBeenCalledWith(
+      expect.any(Uint8Array),
+      "PNG",
+      expect.any(Number),
+      expect.any(Number),
+      expect.any(Number),
+      expect.any(Number),
+      undefined,
+      "FAST",
+    );
+    expect(mockJsPdfInstance.text).not.toHaveBeenCalled();
+    expect(postMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "complete" }),
+      expect.any(Array),
     );
   });
 });

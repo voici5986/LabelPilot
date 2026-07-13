@@ -117,4 +117,17 @@ describe("ControlPanel", () => {
       qrSizeRatio: 0.5,
     });
   });
+
+  it("clamps an oversized digit count during input", () => {
+    useStore.setState({ appMode: "text" });
+    renderControlPanel();
+
+    const digitsInput = screen.getByDisplayValue("3");
+    fireEvent.change(digitsInput, {
+      target: { value: "999999999" },
+    });
+
+    expect(digitsInput).toHaveProperty("value", "10");
+    expect(useStore.getState().textConfig.digits).toBe(10);
+  });
 });

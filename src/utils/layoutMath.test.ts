@@ -5,6 +5,7 @@ import {
   A4_HEIGHT_MM,
   resolveItemAtSlot,
   formatLabelText,
+  normalizeTextConfig,
 } from "./layoutMath";
 
 describe("calculateLabelLayout", () => {
@@ -148,5 +149,37 @@ describe("formatLabelText", () => {
     const config = { ...defaultConfig, digits: 1 };
     expect(formatLabelText(0, config)).toBe("ABC1");
     expect(formatLabelText(9, config)).toBe("ABC10");
+  });
+
+  it("should cap padding before calling padStart", () => {
+    const config = { ...defaultConfig, digits: 999_999_999 };
+    const formatted = formatLabelText(0, config);
+
+    expect(formatted.slice(3)).toHaveLength(10);
+    expect(formatted).toBe("ABC0000000001");
+  });
+});
+
+describe("normalizeTextConfig", () => {
+  it("normalizes non-finite, fractional and out-of-range values", () => {
+    expect(
+      normalizeTextConfig({
+        prefix: "资产-",
+        startNumber: -10,
+        digits: 999_999_999,
+        count: Number.POSITIVE_INFINITY,
+        showQrCode: true,
+        qrSizeRatio: 2,
+        qrContentPrefix: "id:",
+      }),
+    ).toEqual({
+      prefix: "资产-",
+      startNumber: 0,
+      digits: 10,
+      count: 10,
+      showQrCode: true,
+      qrSizeRatio: 0.6,
+      qrContentPrefix: "id:",
+    });
   });
 });
