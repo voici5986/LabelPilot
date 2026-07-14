@@ -48,6 +48,7 @@ type WorkerSelf = {
 };
 
 const fillTextMock = vi.fn();
+const drawImageMock = vi.fn();
 
 class MockOffscreenCanvas {
   width: number;
@@ -65,6 +66,7 @@ class MockOffscreenCanvas {
       textBaseline: "",
       font: "",
       fillRect: vi.fn(),
+      drawImage: drawImageMock,
       measureText: vi.fn(() => ({ width: 100 })),
       fillText: fillTextMock,
     };
@@ -101,6 +103,7 @@ beforeEach(() => {
   mockJsPdfInstance.addPage.mockClear();
   mockJsPdfInstance.output.mockClear();
   fillTextMock.mockClear();
+  drawImageMock.mockClear();
 });
 
 describe("pdf.worker", () => {
@@ -140,7 +143,130 @@ describe("pdf.worker", () => {
     );
   });
 
-  it("posts error when layout is invalid", async () => {
+  it("normalizes JPEG orientation before embedding the image", async () => {
+    const closeMock = vi.fn();
+    const createBitmap = vi.fn(async () => ({
+      width: 50,
+      height: 100,
+      close: closeMock,
+    }));
+    vi.stubGlobal("createImageBitmap", createBitmap);
+    vi.stubGlobal("OffscreenCanvas", MockOffscreenCanvas);
+    const { postMessage, onmessage } = await setupWorker();
+
+    onmessage({
+      data: {
+        config: createBaseConfig(),
+        imageItems: [
+          {
+            id: "1",
+            count: 1,
+            name: "phone.jpg",
+            type: "image/jpeg",
+            buffer: new ArrayBuffer(4),
+          },
+        ],
+        appMode: "image",
+        textConfig: createTextConfig(),
+      },
+    });
+    await flushAsync();
+    await flushAsync();
+
+    expect(createBitmap).toHaveBeenCalledWith(expect.any(Blob), {
+      imageOrientation: "from-image",
+    });
+    expect(drawImageMock).toHaveBeenCalledOnce();
+    expect(mockJsPdfInstance.addImage).toHaveBeenCalledWith(
+      expect.any(Uint8Array),
+      "JPEG",
+      expect.any(Number),
+      expect.any(Number),
+      expect.any(Number),
+      expect.any(Number),
+      undefined,
+      "FAST",
+    );
+    expect(closeMock).toHaveBeenCalledOnce();
+    expect(postMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "complete" }),
+      expect.any(Array),
+    );
+  });
+
+  it("rejects images that exceed the decoded dimension budget", async () => {
+    (
+      globalThis as unknown as { createImageBitmap?: unknown }
+    ).createImageBitmap = vi.fn(async () => ({
+      width: 10_001,
+      height: 10,
+      close: vi.fn(),
+    }));
+    const { postMessage, onmessage } = await setupWorker();
+
+    onmessage({
+      data: {
+        config: createBaseConfig(),
+        imageItems: [
+          {
+            id: "1",
+            count: 1,
+            name: "huge.png",
+            type: "image/png",
+            buffer: new ArrayBuffer(4),
+          },
+        ],
+        appMode: "image",
+        textConfig: createTextConfig(),
+      },
+    });
+    await flushAsync();
+
+    expect(postMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "error",
+        data: expect.objectContaining({ code: "image_error_dimensions" }),
+      }),
+    );
+  });
+
+  it("normalizes malformed image counts before PDF loops", async () => {
+    (
+      globalThis as unknown as { createImageBitmap?: unknown }
+    ).createImageBitmap = vi.fn(async () => ({
+      width: 100,
+      height: 50,
+      close: vi.fn(),
+    }));
+    const { postMessage, onmessage } = await setupWorker();
+
+    onmessage({
+      data: {
+        config: createBaseConfig(),
+        imageItems: [
+          {
+            id: "1",
+            count: Number.POSITIVE_INFINITY,
+            name: "label.png",
+            type: "image/png",
+            buffer: new ArrayBuffer(4),
+          },
+        ],
+        appMode: "image",
+        textConfig: createTextConfig(),
+      },
+    });
+    await flushAsync();
+    await flushAsync();
+
+    expect(mockJsPdfInstance.addImage).toHaveBeenCalledTimes(1);
+    expect(postMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "complete" }),
+      expect.any(Array),
+    );
+  });
+
+  it("normalizes invalid layout values from worker messages", async () => {
     (
       globalThis as unknown as { createImageBitmap?: unknown }
     ).createImageBitmap = vi.fn();
@@ -158,7 +284,8 @@ describe("pdf.worker", () => {
     await flushAsync();
 
     expect(postMessage).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "error" }),
+      expect.objectContaining({ type: "complete" }),
+      expect.any(Array),
     );
   });
 
@@ -262,7 +389,7 @@ describe("pdf.worker", () => {
     );
   });
 
-  it("posts an error when QR generation fails", async () => {
+  it("caps oversized QR prefixes at the worker boundary", async () => {
     const { postMessage, onmessage } = await setupWorker();
 
     onmessage({
@@ -281,10 +408,8 @@ describe("pdf.worker", () => {
     await flushAsync();
 
     expect(postMessage).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: "error",
-        data: expect.stringContaining("QR code generation failed"),
-      }),
+      expect.objectContaining({ type: "complete" }),
+      expect.any(Array),
     );
   });
 
@@ -351,5 +476,33 @@ describe("pdf.worker", () => {
       expect.objectContaining({ type: "complete" }),
       expect.any(Array),
     );
+  });
+
+  it("reports actual work phases with structured progress", async () => {
+    const { postMessage, onmessage } = await setupWorker();
+
+    onmessage({
+      data: {
+        config: createBaseConfig(),
+        imageItems: [],
+        appMode: "text",
+        textConfig: createTextConfig({ count: 2 }),
+      },
+    });
+    await flushAsync();
+    await flushAsync();
+
+    expect(postMessage).toHaveBeenCalledWith({
+      type: "progress",
+      data: { percent: 20, phase: "preparing" },
+    });
+    expect(postMessage).toHaveBeenCalledWith({
+      type: "progress",
+      data: { percent: 90, phase: "rendering" },
+    });
+    expect(postMessage).toHaveBeenCalledWith({
+      type: "progress",
+      data: { percent: 95, phase: "serializing" },
+    });
   });
 });

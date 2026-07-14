@@ -1,62 +1,40 @@
 import jsPDF from "jspdf";
-import pdfTextFontUrl from "../assets/fonts/MiSansVF_gb2312.woff2?url";
 import {
   calculateLabelLayout,
   resolveItemAtSlot,
   formatLabelText,
   getLabelTextFontSizeMm,
   getTextLayoutBoxes,
+  normalizeLayoutConfig,
   normalizeTextConfig,
   MM_PER_PT,
   type LabelPosition,
   type TextConfig,
 } from "./layoutMath";
-import QRCode from "qrcode";
+import { AppError, serializeAppError, type AppErrorCode } from "./appError";
+import {
+  validateImageDimensions,
+  validateImageFiles,
+  validateImageLabelCount,
+  normalizeImageItemCount,
+} from "./imageLimits";
+import { createQrMatrix, QR_QUIET_ZONE_MODULES } from "./qrCode";
+import { validateTextOutput } from "./textValidation";
+import type { PdfProgressPhase } from "./pdfProgress";
 
 /**
  * PDF Generation Worker
  */
 const ctx: Worker = self as unknown as Worker;
 
-const QR_QUIET_ZONE_MODULES = 4;
-const PDF_TEXT_FONT_FAMILY = "LabelPilotPdfText";
+const PDF_TEXT_FONT_FAMILY =
+  '"Segoe UI", "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif';
 const RASTER_TEXT_PX_PER_MM = 300 / 25.4;
 const MAX_TEXT_CANVAS_WIDTH = 2048;
 const MAX_TEXT_CANVAS_HEIGHT = 1024;
 
-type WorkerFontSet = {
-  add: (font: FontFace) => void;
-};
-
-let unicodeFontFamilyPromise: Promise<string> | null = null;
-
 function needsRasterText(text: string): boolean {
   return /[^\x20-\x7e]/u.test(text);
-}
-
-async function getUnicodeFontFamily(): Promise<string> {
-  const workerScope = self as unknown as { fonts?: WorkerFontSet };
-  if (typeof FontFace !== "function" || !workerScope.fonts) {
-    return "sans-serif";
-  }
-
-  unicodeFontFamilyPromise ??= (async () => {
-    const response = await fetch(pdfTextFontUrl);
-    if (!response.ok) {
-      throw new Error(`Unicode font request failed (${response.status})`);
-    }
-
-    const fontFace = new FontFace(
-      PDF_TEXT_FONT_FAMILY,
-      await response.arrayBuffer(),
-      { weight: "100 900" },
-    );
-    await fontFace.load();
-    workerScope.fonts?.add(fontFace);
-    return `"${PDF_TEXT_FONT_FAMILY}", sans-serif`;
-  })();
-
-  return unicodeFontFamilyPromise;
 }
 
 async function renderTextAsPng(
@@ -66,7 +44,7 @@ async function renderTextAsPng(
   fontSizeMm: number,
 ): Promise<Uint8Array> {
   if (typeof OffscreenCanvas !== "function") {
-    throw new Error("This browser cannot render Unicode text in PDF files");
+    throw new AppError("unicode_render_unsupported");
   }
 
   const scale = Math.min(
@@ -78,7 +56,7 @@ async function renderTextAsPng(
   const heightPx = Math.max(1, Math.ceil(heightMm * scale));
   const canvas = new OffscreenCanvas(widthPx, heightPx);
   const context = canvas.getContext("2d");
-  if (!context) throw new Error("Unable to create a PDF text canvas");
+  if (!context) throw new AppError("unicode_render_failed");
 
   context.fillStyle = "#ffffff";
   context.fillRect(0, 0, widthPx, heightPx);
@@ -86,20 +64,19 @@ async function renderTextAsPng(
   context.textAlign = "center";
   context.textBaseline = "middle";
 
-  const fontFamily = await getUnicodeFontFamily();
   let fontSizePx = Math.max(1, Math.min(fontSizeMm * scale, heightPx * 0.8));
-  context.font = `700 ${fontSizePx}px ${fontFamily}`;
+  context.font = `700 ${fontSizePx}px ${PDF_TEXT_FONT_FAMILY}`;
 
   const maxTextWidth = widthPx * 0.9;
   const measuredWidth = context.measureText(text).width;
   if (measuredWidth > maxTextWidth && measuredWidth > 0) {
     fontSizePx *= maxTextWidth / measuredWidth;
-    context.font = `700 ${fontSizePx}px ${fontFamily}`;
+    context.font = `700 ${fontSizePx}px ${PDF_TEXT_FONT_FAMILY}`;
   }
 
   context.fillText(text, widthPx / 2, heightPx / 2);
   const blob = await canvas.convertToBlob({ type: "image/png" });
-  if (blob.size === 0) throw new Error("Unicode text rendering was empty");
+  if (blob.size === 0) throw new AppError("unicode_render_failed");
   return new Uint8Array(await blob.arrayBuffer());
 }
 
@@ -110,9 +87,7 @@ function drawQrCode(
   y: number,
   sizeMm: number,
 ): void {
-  const matrix = QRCode.create(value, {
-    errorCorrectionLevel: "M",
-  }).modules;
+  const matrix = createQrMatrix(value);
   const fullSize = matrix.size + QR_QUIET_ZONE_MODULES * 2;
   const moduleSize = sizeMm / fullSize;
   const offset = QR_QUIET_ZONE_MODULES * moduleSize;
@@ -190,8 +165,16 @@ async function drawLabelText(
 type ImageWorkerItem = {
   buffer: ArrayBuffer;
   type: string;
+  name: string;
   id: string;
   count: number;
+};
+
+type LoadedImage = ImageWorkerItem & {
+  data: Uint8Array;
+  format: "PNG" | "JPEG";
+  width: number;
+  height: number;
 };
 
 type ImageDimensions = {
@@ -266,83 +249,162 @@ function parseImageDimensions(
   return null;
 }
 
-async function getImageDimensions(
+async function prepareImageForPdf(
   buffer: ArrayBuffer,
   type: string,
-): Promise<ImageDimensions> {
+  name: string,
+): Promise<Pick<LoadedImage, "data" | "format" | "width" | "height">> {
+  const originalData = new Uint8Array(buffer);
+  const parsed = parseImageDimensions(new Uint8Array(buffer), type);
+
   if (typeof createImageBitmap === "function") {
     let bitmap: ImageBitmap | null = null;
     try {
       const blob = new Blob([buffer], { type });
-      bitmap = await createImageBitmap(blob);
+      bitmap = await createImageBitmap(blob, {
+        imageOrientation: "from-image",
+      });
+
+      if (type !== "image/jpeg") {
+        return {
+          data: originalData,
+          format: "PNG",
+          width: bitmap.width,
+          height: bitmap.height,
+        };
+      }
+
+      if (typeof OffscreenCanvas !== "function") {
+        throw new AppError("image_error_normalize", { name });
+      }
+
+      const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+      const context = canvas.getContext("2d");
+      if (!context) throw new AppError("image_error_normalize", { name });
+      context.drawImage(bitmap, 0, 0);
+      const normalized = await canvas.convertToBlob({
+        type: "image/jpeg",
+        quality: 0.92,
+      });
+      if (normalized.size === 0) {
+        throw new AppError("image_error_normalize", { name });
+      }
+
       return {
+        data: new Uint8Array(await normalized.arrayBuffer()),
+        format: "JPEG",
         width: bitmap.width,
         height: bitmap.height,
       };
     } catch (error) {
-      const parsed = parseImageDimensions(new Uint8Array(buffer), type);
-      if (parsed) return parsed;
-      throw error instanceof Error
-        ? error
-        : new Error("Failed to read image dimensions");
+      if (error instanceof AppError) throw error;
+      throw new AppError(
+        "image_error_decode",
+        { name },
+        error instanceof Error ? error.message : String(error),
+      );
     } finally {
       bitmap?.close();
     }
   }
 
-  const parsed = parseImageDimensions(new Uint8Array(buffer), type);
-  if (parsed) return parsed;
-  throw new Error("Unsupported image format");
+  if (type === "image/jpeg") {
+    throw new AppError("image_error_normalize", { name });
+  }
+  if (parsed) {
+    return {
+      data: originalData,
+      format: "PNG",
+      width: parsed.width,
+      height: parsed.height,
+    };
+  }
+
+  throw new AppError("image_error_decode", { name });
+}
+
+function postProgress(percent: number, phase: PdfProgressPhase): void {
+  ctx.postMessage({
+    type: "progress",
+    data: { percent: Math.min(100, Math.max(0, Math.round(percent))), phase },
+  });
 }
 
 ctx.onmessage = async (e) => {
-  const { config, imageItems, appMode, textConfig: unsafeTextConfig } = e.data;
-  const textConfig = normalizeTextConfig(unsafeTextConfig);
-
   try {
+    const payload =
+      typeof e.data === "object" && e.data !== null
+        ? (e.data as Record<string, unknown>)
+        : {};
+    const config = normalizeLayoutConfig(payload.config);
+    const textConfig = normalizeTextConfig(payload.textConfig);
+    const appMode = payload.appMode === "image" ? "image" : "text";
+    const imageItems: ImageWorkerItem[] = Array.isArray(payload.imageItems)
+      ? payload.imageItems.map((unsafeItem) => {
+          const item =
+            typeof unsafeItem === "object" && unsafeItem !== null
+              ? (unsafeItem as Record<string, unknown>)
+              : {};
+          return {
+            buffer:
+              item.buffer instanceof ArrayBuffer
+                ? item.buffer
+                : new ArrayBuffer(0),
+            type: typeof item.type === "string" ? item.type : "",
+            name: typeof item.name === "string" ? item.name : "image",
+            id: typeof item.id === "string" ? item.id : "",
+            count: normalizeImageItemCount(item.count),
+          };
+        })
+      : [];
+
     const nextTick = () =>
       new Promise<void>((resolve) => setTimeout(resolve, 0));
     let qrBatchCount = 0;
     // 1. Calculate Layout
     const layout = calculateLabelLayout(config);
     if (layout.error) {
-      throw new Error(layout.error);
+      throw new AppError(layout.error.toLowerCase() as AppErrorCode);
     }
+    if (appMode === "text") validateTextOutput(config, textConfig);
 
     // 2. Load all images (only if in image mode)
-    const loadedImages =
-      appMode === "image"
-        ? await Promise.all(
-            imageItems.map(async (item: ImageWorkerItem, idx: number) => {
-              // Report progress for loading (0% - 30%)
-              ctx.postMessage({
-                type: "progress",
-                data: Math.round(((idx + 1) / imageItems.length) * 30),
-              });
+    const loadedImages: LoadedImage[] = [];
+    if (appMode === "image") {
+      validateImageFiles(
+        imageItems.map((item) => ({
+          name: item.name,
+          type: item.type,
+          size: item.buffer.byteLength,
+        })),
+      );
+      validateImageLabelCount(imageItems);
 
-              const arrayBuffer = item.buffer;
+      let totalPixels = 0;
+      for (let idx = 0; idx < imageItems.length; idx++) {
+        const item = imageItems[idx];
+        const prepared = await prepareImageForPdf(
+          item.buffer,
+          item.type,
+          item.name,
+        );
+        totalPixels = validateImageDimensions(
+          item.name,
+          prepared.width,
+          prepared.height,
+          totalPixels,
+        );
 
-              let format: "PNG" | "JPEG" = "PNG";
-              if (item.type === "image/jpeg" || item.type === "image/jpg") {
-                format = "JPEG";
-              }
-
-              const uint8Array = new Uint8Array(arrayBuffer);
-              const { width, height } = await getImageDimensions(
-                arrayBuffer,
-                item.type,
-              );
-
-              return {
-                ...item,
-                data: uint8Array,
-                format,
-                width,
-                height,
-              };
-            }),
-          )
-        : [];
+        loadedImages.push({
+          ...item,
+          ...prepared,
+        });
+        postProgress(20 + ((idx + 1) / imageItems.length) * 15, "preparing");
+        await nextTick();
+      }
+    } else {
+      postProgress(20, "preparing");
+    }
 
     // 3. Create PDF
     const pdf = new jsPDF({
@@ -362,6 +424,7 @@ ctx.onmessage = async (e) => {
 
     const slotsPerPage = layout.positions.length;
     const totalPages = Math.ceil(totalCount / slotsPerPage);
+    let completedLabels = 0;
 
     // 5. Draw Content
     for (let pageIdx = 0; pageIdx < totalPages; pageIdx++) {
@@ -375,14 +438,6 @@ ctx.onmessage = async (e) => {
         const pos = layout.positions[localIdx];
         const globalIdx = startSlotIdx + localIdx;
         if (globalIdx >= totalCount) continue;
-
-        // Report progress (30% to 90%)
-        if (globalIdx % 5 === 0) {
-          ctx.postMessage({
-            type: "progress",
-            data: 30 + Math.round((globalIdx / totalCount) * 60),
-          });
-        }
 
         if (appMode === "image") {
           const img = resolveItemAtSlot(globalIdx, loadedImages);
@@ -419,12 +474,8 @@ ctx.onmessage = async (e) => {
               const qrY = pos.y + qrTopMm;
 
               drawQrCode(pdf, qrValue, qrX, qrY, qrDimMm);
-            } catch (qrErr) {
-              const detail =
-                qrErr instanceof Error ? qrErr.message : String(qrErr);
-              throw new Error(`QR code generation failed: ${detail}`, {
-                cause: qrErr,
-              });
+            } catch {
+              throw new AppError("qr_error_capacity");
             }
 
             await drawLabelText(pdf, text, pos, textConfig);
@@ -433,15 +484,31 @@ ctx.onmessage = async (e) => {
             await drawLabelText(pdf, text, pos, textConfig);
           }
         }
+
+        completedLabels += 1;
+        if (completedLabels % 5 === 0 || completedLabels === totalCount) {
+          postProgress(
+            35 + (completedLabels / Math.max(1, totalCount)) * 55,
+            "rendering",
+          );
+        }
       }
     }
 
-    ctx.postMessage({ type: "progress", data: 95 });
+    postProgress(95, "serializing");
 
     // 5. Generate Output
     const output = pdf.output("arraybuffer");
     ctx.postMessage({ type: "complete", data: output }, [output]);
   } catch (error) {
-    ctx.postMessage({ type: "error", data: (error as Error).message });
+    const safeError =
+      error instanceof AppError
+        ? error
+        : new AppError(
+            "pdf_generation_failed",
+            {},
+            error instanceof Error ? error.message : String(error),
+          );
+    ctx.postMessage({ type: "error", data: serializeAppError(safeError) });
   }
 };

@@ -1,20 +1,28 @@
 import { UploadCloud, Grid, File as FileIcon, FileMinus } from "lucide-react";
-import { getPaperSizeInfo, calculateLabelLayout } from "../utils/layoutMath";
+import {
+  getPaperSizeInfo,
+  calculateLabelLayout,
+  TEXT_CONFIG_LIMITS,
+} from "../utils/layoutMath";
 import { motion, Reorder, AnimatePresence } from "framer-motion";
 import { useI18n } from "../utils/i18nContext";
 import { NumberInput } from "./NumberInput";
 import { SmartButton } from "./SmartButton";
 import { ThumbnailItem } from "./ThumbnailItem";
 import { SegmentedControl } from "./SegmentedControl";
-import { useMemo } from "react";
+import { useId, useMemo } from "react";
 import { useStore } from "../store/useStore";
 import { useShallow } from "zustand/shallow";
+import { getTextOutputMetrics } from "../utils/textValidation";
+import type { PdfProgressPhase } from "../utils/pdfProgress";
 
 interface ControlPanelProps {
-  onFilesSelect: (files: File[]) => void;
+  onFilesSelect: (files: File[]) => void | Promise<void>;
   onGeneratePdf: () => void;
+  onCancelPdf?: () => void;
   genStatus?: "idle" | "generating" | "success" | "error";
   genProgress?: number;
+  genPhase?: PdfProgressPhase;
   maxRows?: number;
   maxCols?: number;
 }
@@ -22,8 +30,10 @@ interface ControlPanelProps {
 export function ControlPanel({
   onFilesSelect,
   onGeneratePdf,
+  onCancelPdf,
   genStatus = "idle",
   genProgress = 0,
+  genPhase = "preparing",
   maxRows = 20,
   maxCols = 20,
 }: ControlPanelProps) {
@@ -49,9 +59,20 @@ export function ControlPanel({
     })),
   );
   const { t } = useI18n();
+  const fileInputId = useId();
+  const textPrefixId = useId();
+  const qrSizeId = useId();
+  const textPrefixHintId = useId();
 
   const layout = useMemo(() => calculateLabelLayout(config), [config]);
   const layoutError = layout.error;
+  const textOutputMetrics = useMemo(
+    () => getTextOutputMetrics(config, textConfig),
+    [config, textConfig],
+  );
+  const textOutputError = textOutputMetrics.error
+    ? t(textOutputMetrics.error.code, textOutputMetrics.error.params)
+    : null;
 
   // 局部化逻辑：计算显示的文件名或数量
   const selectedFileName = useMemo(() => {
@@ -60,9 +81,14 @@ export function ControlPanel({
     return t("files_selected", { n: imageItems.length });
   }, [imageItems, t]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      onFilesSelect(Array.from(e.target.files));
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.currentTarget;
+    if (input.files && input.files.length > 0) {
+      try {
+        await onFilesSelect(Array.from(input.files));
+      } finally {
+        input.value = "";
+      }
     }
   };
 
@@ -75,15 +101,15 @@ export function ControlPanel({
   }, [config]);
 
   return (
-    <aside className="w-80 glass-panel border-r-0 flex flex-col z-10 rounded-xl shadow-lg h-full overflow-hidden">
-      <div className="p-6 overflow-y-auto flex-1 space-y-6 scrollbar-hide">
+    <aside className="glass-panel z-10 flex h-auto w-full flex-col overflow-hidden rounded-xl border-r-0 shadow-lg lg:h-full">
+      <div className="flex-1 space-y-6 p-4 scrollbar-hide lg:overflow-y-auto lg:p-6">
         {/* 1. Grid/Layout Settings */}
         <div className="space-y-4 pb-2 border-b border-border-subtle/30">
           <div className="flex items-center justify-between">
             <h2 className="text-xs font-semibold text-text-muted uppercase tracking-wider flex items-center gap-2">
               <Grid className="w-4 h-4" /> {t("layout_group")}
             </h2>
-            <span className="text-[13px] font-medium text-text-muted opacity-80">
+            <span className="text-[13px] font-medium text-text-muted">
               {paperSizeInfo}
             </span>
           </div>
@@ -130,6 +156,7 @@ export function ControlPanel({
 
           {/* Orientation Controls (Merged here) */}
           <SegmentedControl
+            label={t("orientation")}
             layoutId="orientation-active"
             value={config.orientation}
             onChange={(v) => onConfigChange({ orientation: v })}
@@ -149,12 +176,15 @@ export function ControlPanel({
                 <UploadCloud className="w-4 h-4" /> {t("file_group")}
               </h2>
 
-              <div className="relative group cursor-pointer transition-transform active:scale-[0.98]">
+              <div className="relative group cursor-pointer rounded-lg transition-transform active:scale-[0.98] focus-within:ring-2 focus-within:ring-brand-primary focus-within:ring-offset-2">
                 <input
+                  id={fileInputId}
+                  name="label-images"
                   type="file"
                   multiple
                   accept="image/png, image/jpeg, image/jpg"
                   onChange={handleFileChange}
+                  aria-label={t("browse_btn")}
                   className="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer"
                 />
                 <div
@@ -217,18 +247,39 @@ export function ControlPanel({
 
               <div className="space-y-4">
                 <div className="space-y-1.5 flex-1">
-                  <label className="text-sm font-medium text-text-muted ml-0.5">
+                  <label
+                    htmlFor={textPrefixId}
+                    className="text-sm font-medium text-text-muted ml-0.5"
+                  >
                     {t("text_prefix")}
                   </label>
                   <input
+                    id={textPrefixId}
+                    name="text-prefix"
                     type="text"
                     value={textConfig.prefix}
+                    maxLength={TEXT_CONFIG_LIMITS.prefix.maxLength}
+                    aria-describedby={textPrefixHintId}
                     onChange={(e) =>
                       onTextConfigChange({ prefix: e.target.value })
                     }
                     className="w-full input-base focus:input-base-focus px-3 py-1.5 text-sm font-mono font-semibold"
                     placeholder="SN-"
                   />
+                  <div
+                    id={textPrefixHintId}
+                    className="flex justify-between gap-2 text-xs text-text-muted"
+                  >
+                    <span>
+                      {t("estimated_font_size", {
+                        size: textOutputMetrics.fontSizePt.toFixed(1),
+                      })}
+                    </span>
+                    <span>
+                      {textConfig.prefix.length}/
+                      {TEXT_CONFIG_LIMITS.prefix.maxLength}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -262,11 +313,14 @@ export function ControlPanel({
                     />
                   </div>
                   <div className="flex flex-col items-center gap-1.5 pb-0.5">
-                    <label className="text-sm font-medium text-text-muted whitespace-nowrap">
+                    <span className="text-sm font-medium text-text-muted whitespace-nowrap">
                       {t("qr_enable")}
-                    </label>
+                    </span>
                     <button
                       type="button"
+                      role="switch"
+                      aria-checked={textConfig.showQrCode}
+                      aria-label={t("qr_enable")}
                       onClick={() =>
                         onTextConfigChange({
                           showQrCode: !textConfig.showQrCode,
@@ -286,18 +340,10 @@ export function ControlPanel({
                 <AnimatePresence initial={false}>
                   {textConfig.showQrCode && (
                     <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{
-                        height: {
-                          type: "spring",
-                          stiffness: 300,
-                          damping: 30,
-                          restDelta: 0.1,
-                        },
-                        opacity: { duration: 0.2, delay: 0.05 },
-                      }}
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      transition={{ duration: 0.15 }}
                       className="overflow-hidden"
                     >
                       <div className="pt-1.5 pb-1 space-y-2">
@@ -306,11 +352,14 @@ export function ControlPanel({
                             <Grid className="w-3.5 h-3.5" />
                             <span>{t("qr_size")}</span>
                           </div>
-                          <span className="font-mono text-xs opacity-80">
+                          <span className="font-mono text-xs">
                             {Math.round(textConfig.qrSizeRatio * 100)}%
                           </span>
                         </div>
                         <input
+                          id={qrSizeId}
+                          name="qr-size"
+                          aria-label={t("qr_size")}
                           type="range"
                           min="0.1"
                           max="0.6"
@@ -321,12 +370,21 @@ export function ControlPanel({
                               qrSizeRatio: parseFloat(e.target.value),
                             })
                           }
-                          className="w-full h-1.5 bg-text-main/10 rounded-lg appearance-none cursor-pointer accent-brand-primary"
+                          className="h-11 w-full cursor-pointer accent-brand-primary"
                         />
                       </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
+
+                {textOutputError && (
+                  <p
+                    role="alert"
+                    className="text-sm text-red-700 dark:text-red-300"
+                  >
+                    {textOutputError}
+                  </p>
+                )}
               </div>
             </div>
           </>
@@ -337,11 +395,14 @@ export function ControlPanel({
       <div className="p-1 border-t border-glass-border backdrop-blur-sm rounded-b-xl overflow-hidden relative">
         <SmartButton
           onClick={onGeneratePdf}
+          onCancel={onCancelPdf}
           disabled={
-            !!layoutError || (appMode === "image" ? !selectedFileName : false)
+            !!layoutError ||
+            (appMode === "image" ? !selectedFileName : !!textOutputError)
           }
           genStatus={genStatus}
           genProgress={genProgress}
+          genPhase={genPhase}
         />
       </div>
     </aside>

@@ -12,6 +12,7 @@ interface SegmentedControlProps<T extends string> {
   value: T;
   onChange: (value: T) => void;
   layoutId: string;
+  label: string;
   className?: string;
 }
 
@@ -20,10 +21,13 @@ export function SegmentedControl<T extends string>({
   value,
   onChange,
   layoutId,
+  label,
   className = "",
 }: SegmentedControlProps<T>) {
   return (
     <div
+      role="group"
+      aria-label={label}
       className={`bg-text-main/5 p-0.5 rounded-lg flex border border-border-subtle relative isolate ${className}`}
     >
       {options.map((option) => {
@@ -34,8 +38,9 @@ export function SegmentedControl<T extends string>({
           <button
             key={option.value}
             type="button"
+            aria-pressed={isActive}
             onClick={() => onChange(option.value)}
-            className={`flex-1 py-1.5 px-1 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-colors relative z-0 ${
+            className={`relative z-0 flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg px-1 py-1.5 text-sm font-medium transition-colors ${
               isActive
                 ? "text-brand-primary"
                 : "text-text-muted hover:text-text-main"

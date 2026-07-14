@@ -12,7 +12,8 @@ export default defineConfig({
       manifest: {
         name: "LabelPilot",
         short_name: "LabelPilot",
-        description: "A professional label printing tool that works offline.",
+        description: "一款支持离线使用的专业标签排版与 PDF 生成工具。",
+        lang: "zh-CN",
         theme_color: "#4f46e5",
         icons: [
           {
@@ -35,7 +36,12 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,svg,png,ico,txt,woff2}"],
-        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 增加到 3MB 以支持较大的自定义字体文件
+        globIgnores: [
+          "**/html2canvas-*.js",
+          "**/purify.es-*.js",
+          "**/index.es-*.js",
+        ],
+        maximumFileSizeToCacheInBytes: 1024 * 1024,
       },
       devOptions: {
         enabled: false, // 关闭开发模式下的 PWA，消除终端警告
@@ -48,5 +54,6 @@ export default defineConfig({
   },
   test: {
     setupFiles: ["./src/test/setup.ts"],
+    exclude: ["e2e/**", "node_modules/**", "dist/**"],
   },
 });

@@ -11,8 +11,13 @@ import {
 import { Maximize, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
 import { useI18n } from "../utils/i18nContext";
 import { motion, AnimatePresence } from "framer-motion";
-import { mapPctToScale, getThumbBottomPct } from "../utils/zoomMath";
-import { QRCodeSVG } from "qrcode.react";
+import {
+  mapPctToScale,
+  getThumbBottomPct,
+  MIN_SCALE,
+  MAX_SCALE,
+} from "../utils/zoomMath";
+import { QrCodeSvg } from "./QrCodeSvg";
 import { useStore } from "../store/useStore";
 import { useShallow } from "zustand/shallow";
 
@@ -204,7 +209,7 @@ export function PreviewPanel() {
                   <p className="font-medium text-lg">
                     {t("layout_error_title")}
                   </p>
-                  <p className="text-sm opacity-80">
+                  <p className="text-sm">
                     {layout.error
                       ? t(layout.error.toLowerCase() as keyof Translations) ||
                         layout.error
@@ -226,8 +231,6 @@ export function PreviewPanel() {
               <motion.div
                 initial={false}
                 animate={{
-                  width: `${paperWidthMm}mm`,
-                  height: `${paperHeightMm}mm`,
                   scale: scale * baseFitScale,
                   boxShadow: isDragging
                     ? `0 ${20 / scale}px ${50 / scale}px -12px rgba(0,0,0,${0.1 + (1 - scale / 3) * 0.1})`
@@ -240,6 +243,8 @@ export function PreviewPanel() {
                 }
                 className="bg-white absolute top-0 left-0"
                 style={{
+                  width: `${paperWidthMm}mm`,
+                  height: `${paperHeightMm}mm`,
                   transformOrigin: "top left",
                   filter: `brightness(var(--paper-brightness))`,
                 }}
@@ -304,10 +309,9 @@ export function PreviewPanel() {
                               height: `${qrDimMm}mm`,
                             }}
                           >
-                            <QRCodeSVG
+                            <QrCodeSvg
                               value={qrValue}
-                              size={qrDimMm * MM_TO_PX}
-                              level="M"
+                              className="h-full w-full"
                             />
                           </div>
                         )}
@@ -358,9 +362,11 @@ export function PreviewPanel() {
         {!layout.error && totalPages > 1 && (
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 z-30 bg-surface/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-border-subtle shadow-lg">
             <button
+              type="button"
+              aria-label={t("page_prev")}
               disabled={currentPage === 0}
               onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
-              className="p-1 rounded-full hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="flex min-h-11 min-w-11 items-center justify-center rounded-full p-1 transition-colors hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-30"
               title={t("page_prev")}
             >
               <ChevronLeft className="w-5 h-5 text-text-main" />
@@ -368,6 +374,7 @@ export function PreviewPanel() {
 
             <div className="text-sm font-medium text-text-main flex items-center justify-center gap-1.5">
               <input
+                name="page-number"
                 type="text"
                 inputMode="numeric"
                 value={pageInput}
@@ -387,7 +394,7 @@ export function PreviewPanel() {
                     (e.target as HTMLInputElement).blur();
                   }
                 }}
-                className="w-10 text-center input-base focus:input-base-focus px-1 py-0.5 text-sm"
+                className="min-h-11 w-11 text-center input-base focus:input-base-focus px-1 py-0.5 text-sm"
                 aria-label={t("page_of", {
                   current: currentPage + 1,
                   total: totalPages,
@@ -397,11 +404,13 @@ export function PreviewPanel() {
             </div>
 
             <button
+              type="button"
+              aria-label={t("page_next")}
               disabled={currentPage === totalPages - 1}
               onClick={() =>
                 setCurrentPage((p) => Math.min(totalPages - 1, p + 1))
               }
-              className="p-1 rounded-full hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="flex min-h-11 min-w-11 items-center justify-center rounded-full p-1 transition-colors hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-30"
               title={t("page_next")}
             >
               <ChevronRight className="w-5 h-5 text-text-main" />
@@ -413,14 +422,9 @@ export function PreviewPanel() {
         <div className="absolute bottom-4 left-14 flex flex-col items-start gap-1 pointer-events-none z-20 opacity-60">
           <div className="flex items-end h-3">
             <div className="w-[1.5px] h-full bg-text-muted"></div>
-            <motion.div
+            <div
               className="h-[1.5px] bg-text-muted"
-              animate={{ width: `${50 * scale * baseFitScale}mm` }}
-              transition={
-                isDragging
-                  ? { duration: 0 }
-                  : { type: "spring", stiffness: 300, damping: 30 }
-              }
+              style={{ width: `${50 * scale * baseFitScale}mm` }}
             />
             <div className="w-[1.5px] h-full bg-text-muted"></div>
           </div>
@@ -437,26 +441,50 @@ export function PreviewPanel() {
         >
           {/* Reset Button */}
           <motion.button
+            type="button"
+            aria-label={t("zoom_reset")}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => setScale(1)}
-            className="w-8 h-8 flex items-center justify-center hover:bg-surface rounded-lg text-text-muted hover:text-brand-primary transition-all shadow-sm border border-transparent hover:border-border-subtle bg-surface/50"
+            className="flex h-11 w-11 items-center justify-center rounded-lg border border-transparent bg-surface/50 text-text-muted shadow-sm transition-all hover:border-border-subtle hover:bg-surface hover:text-brand-primary"
             title={t("zoom_reset")}
           >
             <Maximize className="w-4 h-4" />
           </motion.button>
 
           <motion.div
+            role="slider"
+            tabIndex={0}
+            aria-label={t("zoom_level")}
+            aria-orientation="vertical"
+            aria-valuemin={Math.round(MIN_SCALE * 100)}
+            aria-valuemax={Math.round(MAX_SCALE * 100)}
+            aria-valuenow={Math.round(scale * 100)}
+            onKeyDown={(event) => {
+              if (event.key === "Home") setScale(MIN_SCALE);
+              else if (event.key === "End") setScale(MAX_SCALE);
+              else if (event.key === "ArrowUp" || event.key === "ArrowRight") {
+                setScale((current) => Math.min(MAX_SCALE, current + 0.1));
+              } else if (
+                event.key === "ArrowDown" ||
+                event.key === "ArrowLeft"
+              ) {
+                setScale((current) => Math.max(MIN_SCALE, current - 0.1));
+              } else {
+                return;
+              }
+              event.preventDefault();
+            }}
             animate={{
               backgroundColor: isDragging
                 ? "var(--color-surface)"
                 : "var(--color-surface)",
-              opacity: isDragging ? 0.95 : 0.7,
+              opacity: 1,
               boxShadow: isDragging
                 ? "0 4px 12px rgba(0,0,0,0.2)"
                 : "0 4px 6px rgba(0,0,0,0.1)",
             }}
-            className="backdrop-blur-glass rounded-lg p-1.5 border border-glass-border flex flex-col items-center h-40 w-8 relative"
+            className="relative flex h-40 w-11 flex-col items-center rounded-lg border border-glass-border p-1.5 backdrop-blur-glass"
           >
             {/* Tooltip (Enhanced popup animation) */}
             <AnimatePresence>
@@ -474,7 +502,7 @@ export function PreviewPanel() {
 
             <div
               ref={sliderTrackRef}
-              className="w-1.5 h-full bg-text-main/10 rounded-lg relative cursor-ns-resize"
+              className="relative flex h-full w-6 cursor-ns-resize justify-center rounded-lg"
               onMouseDown={(e) => {
                 setIsDragging(true);
                 handleSliderChange(e);
@@ -484,6 +512,7 @@ export function PreviewPanel() {
                 handleSliderChange(e);
               }}
             >
+              <div className="pointer-events-none h-full w-1.5 rounded-lg bg-text-main/10" />
               <motion.div
                 className="absolute left-1/2 -translate-x-1/2 w-4 h-4 bg-white border-2 border-brand-primary rounded-lg shadow-md pointer-events-none"
                 animate={{

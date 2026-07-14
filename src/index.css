@@ -1,13 +1,5 @@
 @import "tailwindcss";
-
-/* 字体定义 */
-@font-face {
-  font-family: "MiSansVF";
-  src: url("./assets/fonts/MiSansVF_gb2312.woff2") format("woff2");
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-}
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 @font-face {
   font-family: "MapleMono";
@@ -18,13 +10,16 @@
 }
 
 @theme {
-  --font-sans: "MiSansVF", system-ui, -apple-system, sans-serif;
+  --font-sans:
+    "Segoe UI", "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif;
   --font-mono: "MapleMono", monospace;
 
   /* --- 品牌色控制中心 --- */
   /* 修改这里即可全局改变亮/暗模式下的 UI 品牌色 */
-  --brand-primary-light: #0284c7;
+  --brand-primary-light: #0369a1;
   --brand-primary-dark: #38bdf8;
+  --on-brand-light: #ffffff;
+  --on-brand-dark: #082f49;
 
   /* Logo 专属配色 - 保持经典的靛蓝+点缀黄 */
   --logo-primary: #4f46e5;
@@ -45,11 +40,12 @@
   /* 基础语义变量 - 默认为亮色模式 */
   --color-surface: var(--light-surface);
   --color-text-main: var(--light-text);
-  --color-text-muted: var(--color-zinc-500);
+  --color-text-muted: var(--color-zinc-600);
   --color-border-subtle: var(--light-border);
   --color-glass-surface: var(--light-glass);
   --color-glass-border: color-mix(in srgb, white 50%, transparent);
   --color-brand-primary: var(--brand-primary-light);
+  --color-on-brand: var(--on-brand-light);
   --paper-brightness: 1;
 
   /* 其他品牌辅助色 */
@@ -68,6 +64,7 @@
     --color-glass-surface: var(--dark-glass);
     --color-glass-border: color-mix(in srgb, white 8%, transparent);
     --color-brand-primary: var(--brand-primary-dark);
+    --color-on-brand: var(--on-brand-dark);
     --paper-brightness: 0.9;
   }
 }
@@ -77,11 +74,12 @@
   color-scheme: light;
   --color-surface: var(--light-surface);
   --color-text-main: var(--light-text);
-  --color-text-muted: var(--color-zinc-500);
+  --color-text-muted: var(--color-zinc-600);
   --color-border-subtle: var(--light-border);
   --color-glass-surface: var(--light-glass);
   --color-glass-border: color-mix(in srgb, white 50%, transparent);
   --color-brand-primary: var(--brand-primary-light);
+  --color-on-brand: var(--on-brand-light);
   --paper-brightness: 1;
 }
 
@@ -94,6 +92,7 @@
   --color-glass-surface: var(--dark-glass);
   --color-glass-border: color-mix(in srgb, white 8%, transparent);
   --color-brand-primary: var(--brand-primary-dark);
+  --color-on-brand: var(--on-brand-dark);
   --paper-brightness: 0.9;
 }
 
@@ -117,6 +116,26 @@
   outline: none;
   border-color: var(--color-brand-primary);
   box-shadow: 0 0 0 1px var(--color-brand-primary);
+}
+
+@utility scrollbar-hide {
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@utility safe-area-app {
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+}
+
+@utility min-h-app {
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 /* LabelPilot 字标样式 */
@@ -159,6 +178,19 @@
 }
 
 @layer base {
+  input::placeholder {
+    color: var(--color-text-muted);
+    opacity: 1;
+  }
+
+  button:focus-visible,
+  input:focus-visible,
+  [tabindex]:focus-visible,
+  [role="slider"]:focus-visible {
+    outline: 2px solid var(--color-brand-primary);
+    outline-offset: 2px;
+  }
+
   body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -169,5 +201,19 @@
     background-color: var(--color-surface);
     color: var(--color-text-main);
     font-family: var(--font-sans);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

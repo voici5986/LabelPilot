@@ -53,6 +53,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     document.title =
       translations[language]["window_title"] || translations.zh["window_title"];
+    document.documentElement.lang = language === "zh" ? "zh-CN" : "en";
   }, [language]);
 
   return (

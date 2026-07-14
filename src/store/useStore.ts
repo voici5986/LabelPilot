@@ -6,11 +6,12 @@ import type {
   TextConfig,
 } from "../utils/layoutMath";
 import {
-  A4_WIDTH_MM,
-  A4_HEIGHT_MM,
+  DEFAULT_LAYOUT_CONFIG,
   DEFAULT_TEXT_CONFIG,
+  normalizeLayoutConfig,
   normalizeTextConfig,
 } from "../utils/layoutMath";
+import { normalizeImageItemCount } from "../utils/imageLimits";
 
 export interface AppState {
   // Configs
@@ -32,15 +33,12 @@ export interface AppState {
   updateItemCount: (id: string, count: number) => void;
 }
 
-const DEFAULT_CONFIG: HelperLayoutConfig = {
-  rows: 3,
-  cols: 3,
-  marginMm: 10,
-  spacingMm: 10,
-  orientation: "landscape",
-  pageWidthMm: A4_WIDTH_MM,
-  pageHeightMm: A4_HEIGHT_MM,
-};
+export const PERSIST_STORAGE_KEY = "label-pilot-storage";
+export const PERSIST_STORAGE_VERSION = 1;
+
+export function resetPersistedSettings(): void {
+  localStorage.removeItem(PERSIST_STORAGE_KEY);
+}
 
 function asRecord(value: unknown): Record<string, unknown> {
   return typeof value === "object" && value !== null
@@ -51,7 +49,7 @@ function asRecord(value: unknown): Record<string, unknown> {
 export const useStore = create<AppState>()(
   persist(
     (set) => ({
-      config: DEFAULT_CONFIG,
+      config: DEFAULT_LAYOUT_CONFIG,
       textConfig: DEFAULT_TEXT_CONFIG,
       appMode: "image",
       theme: "system",
@@ -59,15 +57,12 @@ export const useStore = create<AppState>()(
       imageUrlMap: new Map(),
 
       setConfig: (updates) =>
-        set((state) => {
-          const next = { ...state.config, ...updates };
-          const isPortrait = next.orientation === "portrait";
-          const maxR = isPortrait ? 20 : 10;
-          const maxC = isPortrait ? 10 : 20;
-          next.rows = Math.min(Math.max(1, next.rows), maxR);
-          next.cols = Math.min(Math.max(1, next.cols), maxC);
-          return { config: next };
-        }),
+        set((state) => ({
+          config: normalizeLayoutConfig(
+            { ...state.config, ...updates },
+            state.config,
+          ),
+        })),
 
       setTextConfig: (updates) =>
         set((state) => {
@@ -114,12 +109,18 @@ export const useStore = create<AppState>()(
       updateItemCount: (id, count) =>
         set((state) => ({
           imageItems: state.imageItems.map((item) =>
-            item.id === id ? { ...item, count } : item,
+            item.id === id
+              ? {
+                  ...item,
+                  count: normalizeImageItemCount(count),
+                }
+              : item,
           ),
         })),
     }),
     {
-      name: "label-pilot-storage",
+      name: PERSIST_STORAGE_KEY,
+      version: PERSIST_STORAGE_VERSION,
       storage: createJSONStorage(() => localStorage),
       // Only persist configuration, not the actual image files (which can't be JSON serialized)
       partialize: (state) => ({
@@ -128,6 +129,23 @@ export const useStore = create<AppState>()(
         appMode: state.appMode,
         theme: state.theme,
       }),
+      migrate: (persistedState) => {
+        const persisted = asRecord(persistedState);
+        return {
+          config: normalizeLayoutConfig(persisted.config),
+          textConfig: normalizeTextConfig(persisted.textConfig),
+          appMode:
+            persisted.appMode === "image" || persisted.appMode === "text"
+              ? persisted.appMode
+              : "image",
+          theme:
+            persisted.theme === "system" ||
+            persisted.theme === "light" ||
+            persisted.theme === "dark"
+              ? persisted.theme
+              : "system",
+        };
+      },
       merge: (persistedState, currentState) => {
         const persisted = asRecord(persistedState);
         const persistedConfig = asRecord(persisted.config);
@@ -135,10 +153,10 @@ export const useStore = create<AppState>()(
 
         return {
           ...currentState,
-          config: {
-            ...currentState.config,
-            ...persistedConfig,
-          } as HelperLayoutConfig,
+          config: normalizeLayoutConfig(
+            { ...currentState.config, ...persistedConfig },
+            currentState.config,
+          ),
           textConfig: normalizeTextConfig(
             {
               ...currentState.textConfig,

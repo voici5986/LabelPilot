@@ -10,6 +10,7 @@
     "format": "prettier . --write",
     "format:check": "prettier . --check",
     "test": "vitest run",
+    "test:e2e": "pnpm run build && node node_modules/@playwright/test/cli.js test",
     "release": "semantic-release --no-ci",
     "preview": "vite preview",
     "prepare": "husky"
@@ -28,7 +29,6 @@
     "jspdf": "^4.2.1",
     "lucide-react": "^1.24.0",
     "qrcode": "^1.5.4",
-    "qrcode.react": "^4.2.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "workbox-window": "^7.4.1",
@@ -38,6 +38,7 @@
     "@commitlint/cli": "^21.2.1",
     "@commitlint/config-conventional": "^21.2.0",
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.61.1",
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/commit-analyzer": "^13.0.1",
     "@semantic-release/git": "^10.0.1",

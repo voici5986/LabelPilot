@@ -30,10 +30,12 @@ export interface TextConfig {
 }
 
 export const TEXT_CONFIG_LIMITS = {
+  prefix: { maxLength: 64 },
   startNumber: { min: 0, max: 999_999 },
   digits: { min: 1, max: 10 },
   count: { min: 1, max: 500 },
   qrSizeRatio: { min: 0.1, max: 0.6 },
+  qrContentPrefix: { maxLength: 512 },
 } as const;
 
 export const DEFAULT_TEXT_CONFIG: TextConfig = {
@@ -73,7 +75,10 @@ export function normalizeTextConfig(
       : {};
 
   return {
-    prefix: typeof source.prefix === "string" ? source.prefix : fallback.prefix,
+    prefix:
+      typeof source.prefix === "string"
+        ? source.prefix.slice(0, TEXT_CONFIG_LIMITS.prefix.maxLength)
+        : fallback.prefix,
     startNumber: normalizeFiniteNumber(
       source.startNumber,
       fallback.startNumber,
@@ -107,7 +112,10 @@ export function normalizeTextConfig(
     ),
     qrContentPrefix:
       typeof source.qrContentPrefix === "string"
-        ? source.qrContentPrefix
+        ? source.qrContentPrefix.slice(
+            0,
+            TEXT_CONFIG_LIMITS.qrContentPrefix.maxLength,
+          )
         : fallback.qrContentPrefix,
   };
 }
@@ -132,6 +140,81 @@ export const A5_WIDTH_MM = 148;
 export const A5_HEIGHT_MM = 210;
 export const LETTER_WIDTH_MM = 215.9;
 export const LETTER_HEIGHT_MM = 279.4;
+
+export const LAYOUT_CONFIG_LIMITS = {
+  rows: { portrait: 20, landscape: 10 },
+  cols: { portrait: 10, landscape: 20 },
+  marginMm: { min: 0, max: 50 },
+  spacingMm: { min: 0, max: 30 },
+  pageSizeMm: { min: 50, max: 1000 },
+} as const;
+
+export const DEFAULT_LAYOUT_CONFIG: HelperLayoutConfig = {
+  rows: 3,
+  cols: 3,
+  marginMm: 10,
+  spacingMm: 10,
+  orientation: "landscape",
+  pageWidthMm: A4_WIDTH_MM,
+  pageHeightMm: A4_HEIGHT_MM,
+};
+
+/** Normalizes layout data loaded from UI, storage, or worker messages. */
+export function normalizeLayoutConfig(
+  value: unknown,
+  fallback: HelperLayoutConfig = DEFAULT_LAYOUT_CONFIG,
+): HelperLayoutConfig {
+  const source =
+    typeof value === "object" && value !== null
+      ? (value as Record<string, unknown>)
+      : {};
+  const orientation =
+    source.orientation === "portrait" || source.orientation === "landscape"
+      ? source.orientation
+      : fallback.orientation;
+
+  return {
+    rows: normalizeFiniteNumber(
+      source.rows,
+      fallback.rows,
+      1,
+      LAYOUT_CONFIG_LIMITS.rows[orientation],
+      true,
+    ),
+    cols: normalizeFiniteNumber(
+      source.cols,
+      fallback.cols,
+      1,
+      LAYOUT_CONFIG_LIMITS.cols[orientation],
+      true,
+    ),
+    marginMm: normalizeFiniteNumber(
+      source.marginMm,
+      fallback.marginMm,
+      LAYOUT_CONFIG_LIMITS.marginMm.min,
+      LAYOUT_CONFIG_LIMITS.marginMm.max,
+    ),
+    spacingMm: normalizeFiniteNumber(
+      source.spacingMm,
+      fallback.spacingMm,
+      LAYOUT_CONFIG_LIMITS.spacingMm.min,
+      LAYOUT_CONFIG_LIMITS.spacingMm.max,
+    ),
+    orientation,
+    pageWidthMm: normalizeFiniteNumber(
+      source.pageWidthMm,
+      fallback.pageWidthMm ?? A4_WIDTH_MM,
+      LAYOUT_CONFIG_LIMITS.pageSizeMm.min,
+      LAYOUT_CONFIG_LIMITS.pageSizeMm.max,
+    ),
+    pageHeightMm: normalizeFiniteNumber(
+      source.pageHeightMm,
+      fallback.pageHeightMm ?? A4_HEIGHT_MM,
+      LAYOUT_CONFIG_LIMITS.pageSizeMm.min,
+      LAYOUT_CONFIG_LIMITS.pageSizeMm.max,
+    ),
+  };
+}
 
 export type PaperSize = "A4" | "Letter" | "A3" | "A5" | "Custom";
 
@@ -384,10 +467,15 @@ export function getLabelTextFontSizeMm(
 ): number {
   if (text.length === 0) return 0;
 
-  // Courier 字体在 PDF 中的宽高比通常约为 0.6
-  // 这意味着: 字符宽度 = 字号 * 0.6
-  // 例如: 10pt 的 Courier 字符宽度约为 6pt
+  // Courier ASCII glyphs are about 0.6em wide; CJK and other fallback glyphs
+  // are conservatively treated as 1em so the readability guard does not
+  // overestimate the final font size.
   const FONT_ASPECT_RATIO = 0.6;
+  const estimatedWidthUnits = Array.from(text).reduce(
+    (total, character) =>
+      total + (/^[\x20-\x7e]$/u.test(character) ? FONT_ASPECT_RATIO : 1),
+    0,
+  );
 
   const widthFactor = showQrCode ? 0.9 : 0.8;
   const heightFactor = showQrCode ? 0.2 : 0.5;
@@ -395,8 +483,7 @@ export function getLabelTextFontSizeMm(
   // 1. 根据宽度限制计算最大字号
   // 公式: 可用宽度 = 字符数 * (字号 * 宽高比)
   // 字号 = 可用宽度 / (字符数 * 宽高比)
-  const maxByWidth =
-    (pos.width * widthFactor) / (text.length * FONT_ASPECT_RATIO);
+  const maxByWidth = (pos.width * widthFactor) / estimatedWidthUnits;
 
   // 2. 根据高度限制计算最大字号
   // 字号 = 可用高度

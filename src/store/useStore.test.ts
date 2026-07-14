@@ -41,6 +41,51 @@ describe("useStore text configuration", () => {
     });
   });
 
+  it("sanitizes every persisted layout field and writes a schema version", async () => {
+    localStorage.setItem(
+      "label-pilot-storage",
+      JSON.stringify({
+        state: {
+          config: {
+            rows: 999,
+            cols: -2,
+            marginMm: Number.NaN,
+            spacingMm: 999,
+            orientation: "sideways",
+            pageWidthMm: 1,
+            pageHeightMm: Number.POSITIVE_INFINITY,
+          },
+        },
+        version: 1,
+      }),
+    );
+
+    const { useStore, PERSIST_STORAGE_VERSION } = await import("./useStore");
+    expect(useStore.getState().config).toEqual({
+      rows: 10,
+      cols: 1,
+      marginMm: 10,
+      spacingMm: 30,
+      orientation: "landscape",
+      pageWidthMm: 50,
+      pageHeightMm: 297,
+    });
+
+    useStore.getState().setTheme("dark");
+    expect(
+      JSON.parse(localStorage.getItem("label-pilot-storage") ?? "{}").version,
+    ).toBe(PERSIST_STORAGE_VERSION);
+  });
+
+  it("offers a recovery path that removes persisted settings", async () => {
+    const { resetPersistedSettings } = await import("./useStore");
+    localStorage.setItem("label-pilot-storage", "broken");
+
+    resetPersistedSettings();
+
+    expect(localStorage.getItem("label-pilot-storage")).toBeNull();
+  });
+
   it("sanitizes updates before publishing them to subscribers", async () => {
     const { useStore } = await import("./useStore");
 

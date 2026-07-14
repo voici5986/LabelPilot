@@ -2,11 +2,14 @@ import { useRegisterSW } from "virtual:pwa-register/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { RefreshCw, X } from "lucide-react";
 import { useI18n } from "../utils/i18nContext";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export function ReloadPrompt() {
   const { t } = useI18n();
   const updateIntervalRef = useRef<number | null>(null);
+  const registrationRef = useRef<ServiceWorkerRegistration | null>(null);
+  const [updateError, setUpdateError] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
   const {
     offlineReady: offlineReadySW,
     needRefresh: needRefreshSW,
@@ -14,6 +17,7 @@ export function ReloadPrompt() {
   } = useRegisterSW({
     onRegistered(r: ServiceWorkerRegistration | undefined) {
       console.log("SW Registered");
+      registrationRef.current = r ?? null;
       // 自动检查更新逻辑
       if (r) {
         if (updateIntervalRef.current !== null) {
@@ -21,14 +25,18 @@ export function ReloadPrompt() {
         }
         updateIntervalRef.current = window.setInterval(
           () => {
-            r.update();
+            void r.update().catch((error: unknown) => {
+              console.error("SW update check failed", error);
+              setUpdateError(true);
+            });
           },
           60 * 60 * 1000,
         ); // 每小时检查一次
       }
     },
     onRegisterError(error: unknown) {
-      console.log("SW registration error", error);
+      console.error("SW registration error", error);
+      setUpdateError(true);
     },
   });
 
@@ -38,6 +46,24 @@ export function ReloadPrompt() {
   const close = () => {
     setOfflineReady(false);
     setNeedUpdate(false);
+    setUpdateError(false);
+  };
+
+  const applyUpdate = async () => {
+    setIsUpdating(true);
+    setUpdateError(false);
+    try {
+      if (isNeedUpdate) {
+        await updateServiceWorker(true);
+      } else if (registrationRef.current) {
+        await registrationRef.current.update();
+      }
+    } catch (error) {
+      console.error("SW update failed", error);
+      setUpdateError(true);
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   // 使用 offlineReady 状态
@@ -58,8 +84,11 @@ export function ReloadPrompt() {
 
   return (
     <AnimatePresence>
-      {isNeedUpdate && (
+      {(isNeedUpdate || updateError) && (
         <motion.div
+          role={updateError ? "alert" : "status"}
+          aria-live={updateError ? "assertive" : "polite"}
+          aria-atomic="true"
           initial={{ y: 50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 50, opacity: 0 }}
@@ -68,32 +97,41 @@ export function ReloadPrompt() {
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="bg-brand-primary/10 p-2 rounded-lg">
-                <RefreshCw className="w-5 h-5 text-brand-primary animate-spin-slow" />
+                <RefreshCw
+                  className={`h-5 w-5 text-brand-primary ${isUpdating ? "animate-spin" : ""}`}
+                />
               </div>
               <div>
                 <h4 className="text-sm font-semibold text-text-main">
-                  {t("pwa_update_title") || "Update Available"}
+                  {t(
+                    updateError ? "pwa_update_error_title" : "pwa_update_title",
+                  )}
                 </h4>
                 <p className="text-sm text-text-muted mt-0.5">
-                  {t("pwa_update_desc") ||
-                    "A new version is available, click update to refresh."}
+                  {t(updateError ? "pwa_update_error_desc" : "pwa_update_desc")}
                 </p>
               </div>
             </div>
             <button
+              type="button"
+              aria-label={t("close")}
               onClick={close}
-              className="text-text-muted hover:text-text-main p-1 rounded-full hover:bg-text-main/5 transition-colors"
+              className="flex min-h-8 min-w-8 items-center justify-center rounded-full p-1 text-text-muted transition-colors hover:bg-text-main/5 hover:text-text-main"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
 
           <button
-            onClick={() => updateServiceWorker(true)}
-            className="w-full py-1.5 bg-brand-primary text-white text-sm font-semibold rounded-lg hover:bg-brand-primary/90 transition-all shadow-lg shadow-brand-primary/20 flex items-center justify-center gap-2"
+            type="button"
+            onClick={() => void applyUpdate()}
+            disabled={isUpdating}
+            className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-brand-primary py-1.5 text-sm font-semibold text-on-brand shadow-lg shadow-brand-primary/20 transition-all hover:bg-brand-primary/90 disabled:cursor-wait disabled:opacity-70"
           >
             <RefreshCw className="w-3.5 h-3.5" />
-            {t("pwa_update_btn") || "Update Now"}
+            {isUpdating
+              ? t("pwa_updating")
+              : t(updateError ? "pwa_update_retry" : "pwa_update_btn")}
           </button>
         </motion.div>
       )}

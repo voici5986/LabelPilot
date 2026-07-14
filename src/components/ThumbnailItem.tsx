@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { X } from "lucide-react";
 import type { ImageItem } from "../utils/layoutMath";
 import { useStore } from "../store/useStore";
+import { useI18n } from "../utils/i18nContext";
 
 interface ThumbnailItemProps {
   item: ImageItem;
@@ -15,6 +16,7 @@ export function ThumbnailItem({
   onRemove,
 }: ThumbnailItemProps) {
   const imageUrlMap = useStore((state) => state.imageUrlMap);
+  const { t } = useI18n();
   const url = imageUrlMap.get(item.id) || "";
 
   const handleCountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -42,18 +44,22 @@ export function ThumbnailItem({
 
       {/* Remove Button */}
       <button
+        type="button"
+        aria-label={t("remove_image", { name: item.file.name })}
         onClick={(e) => {
           e.stopPropagation();
           onRemove();
         }}
-        className="absolute -top-1.5 -left-1.5 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-red-600 z-20"
+        className="absolute -top-1.5 -left-1.5 z-20 flex min-h-6 min-w-6 items-center justify-center rounded-full bg-red-600 p-1 text-white opacity-0 shadow-sm transition-opacity hover:bg-red-700 focus:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100"
       >
         <X className="w-3 h-3" />
       </button>
 
       {/* Count Input Overlay (Bottom Right) */}
-      <div className="absolute -bottom-1 -right-1 flex items-center bg-brand-primary rounded-md shadow-sm border border-white shadow-brand-primary/20 z-10">
+      <div className="absolute -bottom-1 -right-1 flex items-center bg-brand-primary rounded-md shadow-sm border border-on-brand shadow-brand-primary/20 z-10">
         <input
+          name={`image-count-${item.id}`}
+          aria-label={t("image_quantity", { name: item.file.name })}
           type="number"
           min="1"
           max="999"
@@ -67,7 +73,7 @@ export function ThumbnailItem({
             input.focus();
             input.select();
           }}
-          className="w-6 h-4 bg-transparent text-white text-[14px] font-semibold text-center focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          className="w-8 h-6 bg-transparent text-on-brand text-[14px] font-semibold text-center focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
           onClick={(e) => e.stopPropagation()}
         />
       </div>

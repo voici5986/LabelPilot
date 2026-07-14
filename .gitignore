@@ -9,6 +9,11 @@ lerna-debug.log*
 
 node_modules
 dist
+
+# Browser test artifacts
+test-results
+playwright-report
+blob-report
 dist-ssr
 *.local
 

@@ -1,0 +1,69 @@
+export type AppErrorCode =
+  | "image_error_type"
+  | "image_error_empty"
+  | "image_error_content"
+  | "image_error_decode"
+  | "image_error_normalize"
+  | "image_error_count"
+  | "image_error_file_size"
+  | "image_error_total_size"
+  | "image_error_dimensions"
+  | "image_error_pixel_count"
+  | "image_error_total_pixels"
+  | "image_error_label_count"
+  | "text_error_too_small"
+  | "qr_error_capacity"
+  | "qr_error_too_dense"
+  | "unicode_render_unsupported"
+  | "unicode_render_failed"
+  | "margin_too_large"
+  | "rows_cols_positive"
+  | "margin_spacing_positive"
+  | "label_too_small"
+  | "pdf_generation_failed"
+  | "generation_timeout"
+  | "generation_cancelled";
+
+export interface SerializedAppError {
+  code?: AppErrorCode;
+  message: string;
+  params?: Record<string, string | number>;
+}
+
+export class AppError extends Error {
+  public readonly code: AppErrorCode;
+  public readonly params: Record<string, string | number>;
+
+  constructor(
+    code: AppErrorCode,
+    params: Record<string, string | number> = {},
+    message: string = code,
+  ) {
+    super(message);
+    this.name = "AppError";
+    this.code = code;
+    this.params = params;
+  }
+}
+
+export function serializeAppError(error: unknown): SerializedAppError {
+  if (error instanceof AppError) {
+    return { code: error.code, message: error.message, params: error.params };
+  }
+  return {
+    message: error instanceof Error ? error.message : String(error),
+  };
+}
+
+export function deserializeAppError(value: unknown): Error {
+  if (typeof value === "string") return new Error(value);
+  if (typeof value !== "object" || value === null) {
+    return new Error(String(value));
+  }
+
+  const data = value as Partial<SerializedAppError>;
+  if (data.code) {
+    return new AppError(data.code, data.params, data.message);
+  }
+  return new Error(data.message ?? "PDF worker failed");
+}

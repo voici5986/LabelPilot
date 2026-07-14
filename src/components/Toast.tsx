@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle, XCircle, AlertCircle, X } from "lucide-react";
 import { useEffect } from "react";
+import { useI18n } from "../utils/i18nContext";
 
 export type ToastType = "success" | "error" | "warning";
 
@@ -12,6 +13,7 @@ interface ToastProps {
 }
 
 export function Toast({ message, type, isVisible, onClose }: ToastProps) {
+  const { t } = useI18n();
   // Auto close after 3 seconds
   useEffect(() => {
     if (isVisible) {
@@ -27,16 +29,17 @@ export function Toast({ message, type, isVisible, onClose }: ToastProps) {
       {isVisible && (
         <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
           <motion.div
+            role={type === "error" ? "alert" : "status"}
             initial={{ y: -50, opacity: 0, scale: 0.9 }}
             animate={{ y: 0, opacity: 1, scale: 1 }}
             exit={{ y: -20, opacity: 0, scale: 0.9 }}
             transition={{ type: "spring", stiffness: 300, damping: 25 }}
             className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg border backdrop-blur-glass transition-colors duration-300 ${
               type === "success"
-                ? "bg-glass-surface/90 border-green-500/20 text-green-600 dark:text-green-400"
+                ? "bg-glass-surface/90 border-green-500/20 text-green-700 dark:text-green-300"
                 : type === "error"
-                  ? "bg-glass-surface/90 border-red-500/20 text-red-600 dark:text-red-400"
-                  : "bg-glass-surface/90 border-amber-500/20 text-amber-600 dark:text-amber-400"
+                  ? "bg-glass-surface/90 border-red-500/20 text-red-700 dark:text-red-300"
+                  : "bg-glass-surface/90 border-amber-500/20 text-amber-800 dark:text-amber-300"
             }`}
           >
             {type === "success" ? (
@@ -50,8 +53,10 @@ export function Toast({ message, type, isVisible, onClose }: ToastProps) {
             <span className="text-sm font-medium">{message}</span>
 
             <button
+              type="button"
+              aria-label={t("close")}
               onClick={onClose}
-              className={`p-1 rounded-full text-text-muted hover:text-text-main transition-colors ${
+              className={`flex min-h-8 min-w-8 items-center justify-center rounded-full p-1 text-text-muted transition-colors hover:text-text-main ${
                 type === "success"
                   ? "hover:bg-green-500/10"
                   : type === "error"

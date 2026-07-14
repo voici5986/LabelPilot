@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useId } from "react";
 import { ChevronUp, ChevronDown } from "lucide-react";
 
 interface NumberInputProps {
@@ -22,6 +22,7 @@ export function NumberInput({
   decimalPlaces,
   step: propsStep,
 }: NumberInputProps) {
+  const inputId = useId();
   // Local state to handle string input allowing intermediate states like "3."
   const [localVal, setLocalVal] = useState(String(value));
 
@@ -89,23 +90,30 @@ export function NumberInput({
 
   return (
     <div className="space-y-1.5 flex-1">
-      <label className="text-sm font-medium text-text-muted ml-0.5 tracking-wider">
+      <label
+        htmlFor={inputId}
+        className="text-sm font-medium text-text-muted ml-0.5 tracking-wider"
+      >
         {label}
       </label>
       <div className="relative group">
         <input
+          id={inputId}
+          name={inputId}
           type="text"
           inputMode={isInteger ? "numeric" : "decimal"}
           value={localVal}
           onChange={handleChange}
           onBlur={handleBlur}
           onFocus={(e) => (e.target as HTMLInputElement).select()}
-          className="w-full input-base focus:input-base-focus pl-3 pr-8 py-1.5 text-sm font-mono font-semibold text-text-main"
+          className="h-[50px] w-full input-base focus:input-base-focus py-1.5 pl-3 pr-12 text-sm font-mono font-semibold text-text-main"
         />
-        <div className="absolute right-0 top-0 h-full w-8 flex flex-col border-l border-border-subtle/30 overflow-hidden rounded-r-lg">
+        <div className="absolute right-0 top-0 flex h-full w-11 flex-col overflow-hidden rounded-r-lg border-l border-border-subtle/30">
           <button
             type="button"
             onClick={increment}
+            aria-label={`${label}: +${step}`}
+            aria-controls={inputId}
             className="flex-1 flex items-center justify-center hover:bg-brand-primary/10 text-text-muted hover:text-brand-primary transition-colors group/btn"
           >
             <ChevronUp className="w-3.5 h-3.5 group-hover/btn:scale-110 transition-transform" />
@@ -114,6 +122,8 @@ export function NumberInput({
           <button
             type="button"
             onClick={decrement}
+            aria-label={`${label}: -${step}`}
+            aria-controls={inputId}
             className="flex-1 flex items-center justify-center hover:bg-brand-primary/10 text-text-muted hover:text-brand-primary transition-colors group/btn"
           >
             <ChevronDown className="w-3.5 h-3.5 group-hover/btn:scale-110 transition-transform" />

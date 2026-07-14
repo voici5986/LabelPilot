@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { I18nContext } from "../utils/i18nContext";
+import { resetPersistedSettings } from "../store/useStore";
 
 interface Props {
   children: ReactNode;
@@ -58,10 +59,21 @@ export class ErrorBoundary extends Component<Props, State> {
                   : "抱歉，渲染过程中发生了一个未预料的错误。您可以尝试刷新页面恢复。"}
               </p>
               <button
+                type="button"
                 onClick={() => window.location.reload()}
-                className="w-full py-2.5 bg-brand-primary text-white rounded-lg font-semibold hover:brightness-110 transition-all shadow-sm"
+                className="w-full py-2.5 bg-brand-primary text-on-brand rounded-lg font-semibold hover:brightness-110 transition-all shadow-sm"
               >
                 {t ? t("error_reload") : "刷新页面"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  resetPersistedSettings();
+                  window.location.reload();
+                }}
+                className="w-full rounded-lg border border-border-subtle py-2.5 font-semibold text-text-main transition-colors hover:bg-text-main/5"
+              >
+                {t ? t("error_reset") : "重置设置并刷新"}
               </button>
             </div>
           </div>

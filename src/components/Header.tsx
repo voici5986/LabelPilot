@@ -10,7 +10,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useI18n } from "../utils/i18nContext";
 import type { Translations } from "../utils/i18nContext";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useId } from "react";
 import { LogoIcon } from "./LogoIcon";
 import {
   A4_WIDTH_MM,
@@ -22,6 +22,7 @@ import {
   LETTER_WIDTH_MM,
   LETTER_HEIGHT_MM,
   getPaperSizeInfo,
+  TEXT_CONFIG_LIMITS,
 } from "../utils/layoutMath";
 import { NumberInput } from "./NumberInput";
 import { SegmentedControl } from "./SegmentedControl";
@@ -65,7 +66,11 @@ export function Header() {
   const [deferredPrompt, setDeferredPrompt] = useState<Event | null>(null);
   const [canInstall, setCanInstall] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
+  const settingsTriggerRef = useRef<HTMLButtonElement>(null);
   const presetsRef = useRef<HTMLDivElement>(null);
+  const presetsTriggerRef = useRef<HTMLButtonElement>(null);
+  const qrPrefixId = useId();
+  const qrPrefixHintId = useId();
 
   // Initialize paper size state based on config
   useEffect(() => {
@@ -121,7 +126,8 @@ export function Header() {
     const handleClickOutside = (event: MouseEvent) => {
       if (
         settingsRef.current &&
-        !settingsRef.current.contains(event.target as Node)
+        !settingsRef.current.contains(event.target as Node) &&
+        !settingsTriggerRef.current?.contains(event.target as Node)
       ) {
         setIsSettingsOpen(false);
       }
@@ -137,6 +143,89 @@ export function Header() {
     }
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isSettingsOpen, isPresetsOpen]);
+
+  useEffect(() => {
+    if (!isSettingsOpen) return;
+    const frame = requestAnimationFrame(() => {
+      settingsRef.current
+        ?.querySelector<HTMLElement>(
+          'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        )
+        ?.focus();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [isSettingsOpen]);
+
+  useEffect(() => {
+    if (!isPresetsOpen) return;
+    const frame = requestAnimationFrame(() => {
+      presetsRef.current
+        ?.querySelector<HTMLElement>('[role="menuitemradio"]')
+        ?.focus();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [isPresetsOpen]);
+
+  const handleSettingsKeyDown = (
+    event: React.KeyboardEvent<HTMLDivElement>,
+  ) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      if (isPresetsOpen) {
+        setIsPresetsOpen(false);
+        requestAnimationFrame(() => presetsTriggerRef.current?.focus());
+      } else {
+        setIsSettingsOpen(false);
+        requestAnimationFrame(() => settingsTriggerRef.current?.focus());
+      }
+      return;
+    }
+
+    if (event.key !== "Tab" || !settingsRef.current) return;
+    const focusable = Array.from(
+      settingsRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ),
+    );
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+
+  const handlePresetMenuKeyDown = (
+    event: React.KeyboardEvent<HTMLDivElement>,
+  ) => {
+    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
+      return;
+    }
+    const items = Array.from(
+      event.currentTarget.querySelectorAll<HTMLElement>(
+        '[role="menuitemradio"]',
+      ),
+    );
+    if (items.length === 0) return;
+    event.preventDefault();
+    const current = Math.max(
+      0,
+      items.indexOf(document.activeElement as HTMLElement),
+    );
+    const next =
+      event.key === "Home"
+        ? 0
+        : event.key === "End"
+          ? items.length - 1
+          : event.key === "ArrowDown"
+            ? (current + 1) % items.length
+            : (current - 1 + items.length) % items.length;
+    items[next].focus();
+  };
 
   const ThemeIcon = {
     system: Monitor,
@@ -170,24 +259,25 @@ export function Header() {
     <motion.header
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      className="h-10 glass-panel border-x-0 border-t-0 rounded-none z-30 px-6 flex items-center justify-between shrink-0 shadow-sm"
+      className="glass-panel z-30 flex h-12 shrink-0 items-center justify-between rounded-none border-x-0 border-t-0 px-2 shadow-sm sm:px-6"
     >
       <div className="flex items-center gap-1">
         <LogoIcon size={32} className="shrink-0" />
-        <div className="labelpilot-logotype text-xl">
+        <div className="labelpilot-logotype hidden text-xl sm:flex">
           Label<span className="p-special">P</span>ilot
         </div>
       </div>
       <div className="flex items-center gap-2 relative">
         {canInstall && (
           <motion.button
+            type="button"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             onClick={handleInstallClick}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-primary/10 text-brand-primary rounded-full hover:bg-brand-primary/20 transition-all border border-brand-primary/20 group"
+            className="flex min-h-11 items-center gap-1.5 rounded-full border border-brand-primary/20 bg-brand-primary/10 px-3 py-1.5 text-brand-primary transition-all hover:bg-brand-primary/20 group"
             title={t("install_pwa")}
           >
-            <Download className="w-4 h-4 group-hover:bounce" />
+            <Download className="h-4 w-4 transition-transform group-hover:-translate-y-0.5" />
             <span className="text-sm font-semibold hidden sm:inline">
               {t("install_btn")}
             </span>
@@ -195,8 +285,13 @@ export function Header() {
         )}
 
         <button
+          ref={settingsTriggerRef}
+          type="button"
           onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-          className={`text-text-muted hover:text-brand-primary transition-colors p-2 rounded-full hover:bg-text-main/5 flex items-center gap-1 ${isSettingsOpen ? "text-brand-primary bg-text-main/5" : ""}`}
+          aria-label={t("settings")}
+          aria-expanded={isSettingsOpen}
+          aria-controls="global-settings-panel"
+          className={`flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-full p-2 text-text-muted transition-colors hover:bg-text-main/5 hover:text-brand-primary ${isSettingsOpen ? "text-brand-primary bg-text-main/5" : ""}`}
           title={t("settings")}
         >
           <Settings
@@ -207,11 +302,15 @@ export function Header() {
         <AnimatePresence>
           {isSettingsOpen && (
             <motion.div
+              id="global-settings-panel"
+              role="dialog"
+              aria-label={t("settings")}
               ref={settingsRef}
+              onKeyDown={handleSettingsKeyDown}
               initial={{ opacity: 0, y: 10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 10, scale: 0.95 }}
-              className="absolute right-0 top-12 w-80 shadow-2xl p-4 z-50 border border-border-subtle rounded-xl"
+              className="fixed left-2 right-2 top-12 z-50 rounded-xl border border-border-subtle p-4 shadow-2xl sm:absolute sm:left-auto sm:right-0 sm:w-80"
               style={{
                 backgroundColor: "var(--color-surface)",
                 backdropFilter: "none",
@@ -225,6 +324,7 @@ export function Header() {
                     {t("app_mode")}
                   </label>
                   <SegmentedControl
+                    label={t("app_mode")}
                     layoutId="app-mode-active"
                     value={appMode}
                     onChange={onAppModeChange}
@@ -247,8 +347,9 @@ export function Header() {
                       <div className="relative w-1/2 group" ref={presetsRef}>
                         <div className="flex h-full">
                           <button
+                            type="button"
                             onClick={() => handlePaperSizeChange("A4")}
-                            className={`flex-1 px-2 py-1.5 text-sm font-medium rounded-l-md border transition-all flex items-center justify-center gap-1 ${
+                            className={`flex min-h-11 flex-1 items-center justify-center gap-1 rounded-l-md border px-2 py-1.5 text-sm font-medium transition-all ${
                               ["A4", "A3", "A5", "Letter"].includes(paperSize)
                                 ? "bg-brand-primary/10 border-brand-primary text-brand-primary shadow-sm"
                                 : "border-border-subtle text-text-muted hover:border-brand-primary/50"
@@ -257,8 +358,13 @@ export function Header() {
                             {t(PAPER_SIZE_KEYS[paperSize] || "paper_type_a4")}
                           </button>
                           <button
+                            ref={presetsTriggerRef}
+                            type="button"
                             onClick={() => setIsPresetsOpen(!isPresetsOpen)}
-                            className={`px-1.5 py-1.5 border-y border-r rounded-r-md transition-all flex items-center justify-center ${
+                            aria-label={t("more_presets")}
+                            aria-expanded={isPresetsOpen}
+                            aria-controls="paper-preset-menu"
+                            className={`flex min-h-11 min-w-11 items-center justify-center rounded-r-md border-y border-r px-1.5 py-1.5 transition-all ${
                               ["A4", "A3", "A5", "Letter"].includes(paperSize)
                                 ? "bg-brand-primary/10 border-brand-primary text-brand-primary"
                                 : "border-border-subtle text-text-muted hover:border-brand-primary/50"
@@ -273,6 +379,10 @@ export function Header() {
                         <AnimatePresence>
                           {isPresetsOpen && (
                             <motion.div
+                              id="paper-preset-menu"
+                              role="menu"
+                              aria-label={t("more_presets")}
+                              onKeyDown={handlePresetMenuKeyDown}
                               initial={{ opacity: 0, y: 5 }}
                               animate={{ opacity: 1, y: 0 }}
                               exit={{ opacity: 0, y: 5 }}
@@ -286,9 +396,12 @@ export function Header() {
                               {(["A4", "A3", "A5", "Letter"] as const).map(
                                 (size) => (
                                   <button
+                                    type="button"
+                                    role="menuitemradio"
+                                    aria-checked={paperSize === size}
                                     key={size}
                                     onClick={() => handlePaperSizeChange(size)}
-                                    className={`w-full text-left px-3 py-1.5 text-sm hover:bg-brand-primary/10 transition-colors ${paperSize === size ? "text-brand-primary font-semibold bg-brand-primary/5" : "text-text-main"}`}
+                                    className={`min-h-11 w-full px-3 py-1.5 text-left text-sm transition-colors hover:bg-brand-primary/10 ${paperSize === size ? "text-brand-primary font-semibold bg-brand-primary/5" : "text-text-main"}`}
                                   >
                                     {t(PAPER_SIZE_KEYS[size])}
                                   </button>
@@ -301,8 +414,9 @@ export function Header() {
 
                       {/* Custom Button */}
                       <button
+                        type="button"
                         onClick={() => handlePaperSizeChange("Custom")}
-                        className={`w-1/2 px-3 py-1.5 text-sm font-medium rounded-md border transition-all flex items-center justify-center ${
+                        className={`flex min-h-11 w-1/2 items-center justify-center rounded-md border px-3 py-1.5 text-sm font-medium transition-all ${
                           paperSize === "Custom"
                             ? "bg-brand-primary/10 border-brand-primary text-brand-primary shadow-sm"
                             : "border-border-subtle text-text-muted hover:border-brand-primary/50"
@@ -314,7 +428,7 @@ export function Header() {
                   </div>
 
                   {paperSize === "Custom" && (
-                    <div className="grid grid-cols-2 gap-4 pt-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                    <div className="grid grid-cols-2 gap-4 pt-2">
                       <NumberInput
                         label={t("paper_width")}
                         value={config.pageWidthMm || A4_WIDTH_MM}
@@ -336,18 +450,32 @@ export function Header() {
                 {/* QR Prefix Section (Low Frequency) */}
                 <div className="space-y-3 pt-2 border-t border-border-subtle/50">
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold text-text-muted uppercase tracking-wider block ml-0.5">
+                    <label
+                      htmlFor={qrPrefixId}
+                      className="text-sm font-semibold text-text-muted uppercase tracking-wider block ml-0.5"
+                    >
                       {t("qr_content_prefix")}
                     </label>
                     <input
+                      id={qrPrefixId}
+                      name="qr-content-prefix"
                       type="text"
                       value={textConfig.qrContentPrefix}
+                      maxLength={TEXT_CONFIG_LIMITS.qrContentPrefix.maxLength}
+                      aria-describedby={qrPrefixHintId}
                       onChange={(e) =>
                         onTextConfigChange({ qrContentPrefix: e.target.value })
                       }
                       className="w-full input-base focus:input-base-focus px-3 py-1.5 text-sm font-mono font-semibold"
                       placeholder={t("qr_content_prefix_hint")}
                     />
+                    <p
+                      id={qrPrefixHintId}
+                      className="text-right text-xs text-text-muted"
+                    >
+                      {textConfig.qrContentPrefix.length}/
+                      {TEXT_CONFIG_LIMITS.qrContentPrefix.maxLength}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -356,16 +484,20 @@ export function Header() {
         </AnimatePresence>
 
         <button
+          type="button"
           onClick={toggleLanguage}
-          className="text-text-muted hover:text-brand-primary transition-colors p-2 rounded-full hover:bg-text-main/5 flex items-center gap-1"
+          aria-label={t("language_toggle")}
+          className="flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-full p-2 text-text-muted transition-colors hover:bg-text-main/5 hover:text-brand-primary"
           title="Switch Language"
         >
           <Globe className="w-5 h-5" />
           <span className="text-sm font-semibold uppercase">{language}</span>
         </button>
         <button
+          type="button"
           onClick={toggleTheme}
-          className="text-text-muted hover:text-brand-primary transition-colors p-2 rounded-full hover:bg-text-main/5 relative flex items-center justify-center"
+          aria-label={`${t("theme_toggle")}: ${theme}`}
+          className="relative flex min-h-11 min-w-11 items-center justify-center rounded-full p-2 text-text-muted transition-colors hover:bg-text-main/5 hover:text-brand-primary"
           title={t("theme_toggle") || `Theme: ${theme}`}
         >
           <AnimatePresence mode="wait">
