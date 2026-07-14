@@ -259,7 +259,7 @@ export function Header() {
     <motion.header
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      className="glass-panel z-30 flex h-12 shrink-0 items-center justify-between rounded-none border-x-0 border-t-0 px-2 shadow-sm sm:px-6"
+      className="glass-panel z-30 flex h-10 shrink-0 items-center justify-between rounded-none border-x-0 border-t-0 px-2 shadow-sm sm:px-6"
     >
       <div className="flex items-center gap-1">
         <LogoIcon size={32} className="shrink-0" />
@@ -274,7 +274,7 @@ export function Header() {
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             onClick={handleInstallClick}
-            className="flex min-h-11 items-center gap-1.5 rounded-full border border-brand-primary/20 bg-brand-primary/10 px-3 py-1.5 text-brand-primary transition-all hover:bg-brand-primary/20 group"
+            className="flex items-center gap-1.5 rounded-full border border-brand-primary/20 bg-brand-primary/10 px-3 py-1.5 text-brand-primary transition-all hover:bg-brand-primary/20 group"
             title={t("install_pwa")}
           >
             <Download className="h-4 w-4 transition-transform group-hover:-translate-y-0.5" />
@@ -291,7 +291,7 @@ export function Header() {
           aria-label={t("settings")}
           aria-expanded={isSettingsOpen}
           aria-controls="global-settings-panel"
-          className={`flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-full p-2 text-text-muted transition-colors hover:bg-text-main/5 hover:text-brand-primary ${isSettingsOpen ? "text-brand-primary bg-text-main/5" : ""}`}
+          className={`flex items-center justify-center gap-1 rounded-full p-2 text-text-muted transition-colors hover:bg-text-main/5 hover:text-brand-primary ${isSettingsOpen ? "text-brand-primary bg-text-main/5" : ""}`}
           title={t("settings")}
         >
           <Settings
@@ -349,7 +349,7 @@ export function Header() {
                           <button
                             type="button"
                             onClick={() => handlePaperSizeChange("A4")}
-                            className={`flex min-h-11 flex-1 items-center justify-center gap-1 rounded-l-md border px-2 py-1.5 text-sm font-medium transition-all ${
+                            className={`flex flex-1 items-center justify-center gap-1 rounded-l-md border px-2 py-1.5 text-sm font-medium transition-all ${
                               ["A4", "A3", "A5", "Letter"].includes(paperSize)
                                 ? "bg-brand-primary/10 border-brand-primary text-brand-primary shadow-sm"
                                 : "border-border-subtle text-text-muted hover:border-brand-primary/50"
@@ -364,7 +364,7 @@ export function Header() {
                             aria-label={t("more_presets")}
                             aria-expanded={isPresetsOpen}
                             aria-controls="paper-preset-menu"
-                            className={`flex min-h-11 min-w-11 items-center justify-center rounded-r-md border-y border-r px-1.5 py-1.5 transition-all ${
+                            className={`flex items-center justify-center rounded-r-md border-y border-r px-1.5 py-1.5 transition-all ${
                               ["A4", "A3", "A5", "Letter"].includes(paperSize)
                                 ? "bg-brand-primary/10 border-brand-primary text-brand-primary"
                                 : "border-border-subtle text-text-muted hover:border-brand-primary/50"
@@ -401,7 +401,7 @@ export function Header() {
                                     aria-checked={paperSize === size}
                                     key={size}
                                     onClick={() => handlePaperSizeChange(size)}
-                                    className={`min-h-11 w-full px-3 py-1.5 text-left text-sm transition-colors hover:bg-brand-primary/10 ${paperSize === size ? "text-brand-primary font-semibold bg-brand-primary/5" : "text-text-main"}`}
+                                    className={`w-full px-3 py-1.5 text-left text-sm transition-colors hover:bg-brand-primary/10 ${paperSize === size ? "text-brand-primary font-semibold bg-brand-primary/5" : "text-text-main"}`}
                                   >
                                     {t(PAPER_SIZE_KEYS[size])}
                                   </button>
@@ -416,7 +416,7 @@ export function Header() {
                       <button
                         type="button"
                         onClick={() => handlePaperSizeChange("Custom")}
-                        className={`flex min-h-11 w-1/2 items-center justify-center rounded-md border px-3 py-1.5 text-sm font-medium transition-all ${
+                        className={`flex w-1/2 items-center justify-center rounded-md border px-3 py-1.5 text-sm font-medium transition-all ${
                           paperSize === "Custom"
                             ? "bg-brand-primary/10 border-brand-primary text-brand-primary shadow-sm"
                             : "border-border-subtle text-text-muted hover:border-brand-primary/50"
@@ -487,7 +487,7 @@ export function Header() {
           type="button"
           onClick={toggleLanguage}
           aria-label={t("language_toggle")}
-          className="flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-full p-2 text-text-muted transition-colors hover:bg-text-main/5 hover:text-brand-primary"
+          className="flex items-center justify-center gap-1 rounded-full p-2 text-text-muted transition-colors hover:bg-text-main/5 hover:text-brand-primary"
           title="Switch Language"
         >
           <Globe className="w-5 h-5" />
@@ -497,7 +497,7 @@ export function Header() {
           type="button"
           onClick={toggleTheme}
           aria-label={`${t("theme_toggle")}: ${theme}`}
-          className="relative flex min-h-11 min-w-11 items-center justify-center rounded-full p-2 text-text-muted transition-colors hover:bg-text-main/5 hover:text-brand-primary"
+          className="relative flex items-center justify-center rounded-full p-2 text-text-muted transition-colors hover:bg-text-main/5 hover:text-brand-primary"
           title={t("theme_toggle") || `Theme: ${theme}`}
         >
           <AnimatePresence mode="wait">

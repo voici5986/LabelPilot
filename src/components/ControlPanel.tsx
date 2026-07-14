@@ -370,7 +370,7 @@ export function ControlPanel({
                               qrSizeRatio: parseFloat(e.target.value),
                             })
                           }
-                          className="h-11 w-full cursor-pointer accent-brand-primary"
+                          className="w-full h-1.5 bg-text-main/10 rounded-lg appearance-none cursor-pointer accent-brand-primary"
                         />
                       </div>
                     </motion.div>

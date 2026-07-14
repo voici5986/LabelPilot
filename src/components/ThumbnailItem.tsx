@@ -50,7 +50,7 @@ export function ThumbnailItem({
           e.stopPropagation();
           onRemove();
         }}
-        className="absolute -top-1.5 -left-1.5 z-20 flex min-h-6 min-w-6 items-center justify-center rounded-full bg-red-600 p-1 text-white opacity-0 shadow-sm transition-opacity hover:bg-red-700 focus:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100"
+        className="absolute -top-1.5 -left-1.5 z-20 flex items-center justify-center rounded-full bg-red-600 p-0.5 text-white opacity-0 shadow-sm transition-opacity hover:bg-red-700 focus:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100"
       >
         <X className="w-3 h-3" />
       </button>
@@ -73,7 +73,7 @@ export function ThumbnailItem({
             input.focus();
             input.select();
           }}
-          className="w-8 h-6 bg-transparent text-on-brand text-[14px] font-semibold text-center focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          className="w-6 h-4 bg-transparent text-on-brand text-[14px] font-semibold text-center focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
           onClick={(e) => e.stopPropagation()}
         />
       </div>

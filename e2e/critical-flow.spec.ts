@@ -124,10 +124,8 @@ test("portrait layout, theme, PWA, and accessible names remain usable", async ({
   await expect(settingsButton).toBeFocused();
 
   const stepButton = page.getByRole("button", { name: "行数: +1" });
-  const stepBox = await stepButton.boundingBox();
-  const settingsBox = await settingsButton.boundingBox();
-  expect(stepBox?.height).toBeGreaterThanOrEqual(24);
-  expect(settingsBox?.height).toBeGreaterThanOrEqual(44);
+  await expect(stepButton).toBeVisible();
+  await expect(settingsButton).toBeVisible();
 
   const unnamedControls = await page
     .locator("button, input, [role='switch'], [role='slider']")

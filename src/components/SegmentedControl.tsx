@@ -40,7 +40,7 @@ export function SegmentedControl<T extends string>({
             type="button"
             aria-pressed={isActive}
             onClick={() => onChange(option.value)}
-            className={`relative z-0 flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg px-1 py-1.5 text-sm font-medium transition-colors ${
+            className={`relative z-0 flex flex-1 items-center justify-center gap-2 rounded-lg px-1 py-1.5 text-sm font-medium transition-colors ${
               isActive
                 ? "text-brand-primary"
                 : "text-text-muted hover:text-text-main"

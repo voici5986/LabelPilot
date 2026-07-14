@@ -116,7 +116,7 @@ export function ReloadPrompt() {
               type="button"
               aria-label={t("close")}
               onClick={close}
-              className="flex min-h-8 min-w-8 items-center justify-center rounded-full p-1 text-text-muted transition-colors hover:bg-text-main/5 hover:text-text-main"
+              className="rounded-full p-1 text-text-muted transition-colors hover:bg-text-main/5 hover:text-text-main"
             >
               <X className="w-4 h-4" />
             </button>
@@ -126,7 +126,7 @@ export function ReloadPrompt() {
             type="button"
             onClick={() => void applyUpdate()}
             disabled={isUpdating}
-            className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-brand-primary py-1.5 text-sm font-semibold text-on-brand shadow-lg shadow-brand-primary/20 transition-all hover:bg-brand-primary/90 disabled:cursor-wait disabled:opacity-70"
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-primary py-1.5 text-sm font-semibold text-on-brand shadow-lg shadow-brand-primary/20 transition-all hover:bg-brand-primary/90 disabled:cursor-wait disabled:opacity-70"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             {isUpdating

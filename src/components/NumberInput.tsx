@@ -106,9 +106,9 @@ export function NumberInput({
           onChange={handleChange}
           onBlur={handleBlur}
           onFocus={(e) => (e.target as HTMLInputElement).select()}
-          className="h-[50px] w-full input-base focus:input-base-focus py-1.5 pl-3 pr-12 text-sm font-mono font-semibold text-text-main"
+          className="w-full input-base focus:input-base-focus pl-3 pr-8 py-1.5 text-sm font-mono font-semibold text-text-main"
         />
-        <div className="absolute right-0 top-0 flex h-full w-11 flex-col overflow-hidden rounded-r-lg border-l border-border-subtle/30">
+        <div className="absolute right-0 top-0 flex h-full w-8 flex-col overflow-hidden rounded-r-lg border-l border-border-subtle/30">
           <button
             type="button"
             onClick={increment}

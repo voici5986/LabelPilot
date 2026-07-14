@@ -366,7 +366,7 @@ export function PreviewPanel() {
               aria-label={t("page_prev")}
               disabled={currentPage === 0}
               onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
-              className="flex min-h-11 min-w-11 items-center justify-center rounded-full p-1 transition-colors hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-30"
+              className="rounded-full p-1 transition-colors hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-30"
               title={t("page_prev")}
             >
               <ChevronLeft className="w-5 h-5 text-text-main" />
@@ -394,7 +394,7 @@ export function PreviewPanel() {
                     (e.target as HTMLInputElement).blur();
                   }
                 }}
-                className="min-h-11 w-11 text-center input-base focus:input-base-focus px-1 py-0.5 text-sm"
+                className="w-10 text-center input-base focus:input-base-focus px-1 py-0.5 text-sm"
                 aria-label={t("page_of", {
                   current: currentPage + 1,
                   total: totalPages,
@@ -410,7 +410,7 @@ export function PreviewPanel() {
               onClick={() =>
                 setCurrentPage((p) => Math.min(totalPages - 1, p + 1))
               }
-              className="flex min-h-11 min-w-11 items-center justify-center rounded-full p-1 transition-colors hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-30"
+              className="rounded-full p-1 transition-colors hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-30"
               title={t("page_next")}
             >
               <ChevronRight className="w-5 h-5 text-text-main" />
@@ -446,7 +446,7 @@ export function PreviewPanel() {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => setScale(1)}
-            className="flex h-11 w-11 items-center justify-center rounded-lg border border-transparent bg-surface/50 text-text-muted shadow-sm transition-all hover:border-border-subtle hover:bg-surface hover:text-brand-primary"
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-transparent bg-surface/50 text-text-muted shadow-sm transition-all hover:border-border-subtle hover:bg-surface hover:text-brand-primary"
             title={t("zoom_reset")}
           >
             <Maximize className="w-4 h-4" />
@@ -484,7 +484,7 @@ export function PreviewPanel() {
                 ? "0 4px 12px rgba(0,0,0,0.2)"
                 : "0 4px 6px rgba(0,0,0,0.1)",
             }}
-            className="relative flex h-40 w-11 flex-col items-center rounded-lg border border-glass-border p-1.5 backdrop-blur-glass"
+            className="relative flex h-40 w-8 flex-col items-center rounded-lg border border-glass-border p-1.5 backdrop-blur-glass"
           >
             {/* Tooltip (Enhanced popup animation) */}
             <AnimatePresence>
@@ -502,7 +502,7 @@ export function PreviewPanel() {
 
             <div
               ref={sliderTrackRef}
-              className="relative flex h-full w-6 cursor-ns-resize justify-center rounded-lg"
+              className="relative h-full w-1.5 cursor-ns-resize rounded-lg bg-text-main/10"
               onMouseDown={(e) => {
                 setIsDragging(true);
                 handleSliderChange(e);
@@ -512,7 +512,6 @@ export function PreviewPanel() {
                 handleSliderChange(e);
               }}
             >
-              <div className="pointer-events-none h-full w-1.5 rounded-lg bg-text-main/10" />
               <motion.div
                 className="absolute left-1/2 -translate-x-1/2 w-4 h-4 bg-white border-2 border-brand-primary rounded-lg shadow-md pointer-events-none"
                 animate={{

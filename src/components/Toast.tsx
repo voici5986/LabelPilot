@@ -56,7 +56,7 @@ export function Toast({ message, type, isVisible, onClose }: ToastProps) {
               type="button"
               aria-label={t("close")}
               onClick={onClose}
-              className={`flex min-h-8 min-w-8 items-center justify-center rounded-full p-1 text-text-muted transition-colors hover:text-text-main ${
+              className={`rounded-full p-1 text-text-muted transition-colors hover:text-text-main ${
                 type === "success"
                   ? "hover:bg-green-500/10"
                   : type === "error"
