@@ -72,7 +72,7 @@ export const translations = {
     layout_error_title: "Layout Error",
     margin_too_large: "Margin is too large",
     rows_cols_positive: "Rows/Cols must be positive",
-    margin_spacing_positive: "Margin/Spacing must be positive",
+    margin_spacing_positive: "Margin/Spacing cannot be negative",
     label_too_small: "Label size is too small or negative",
     error_title: "Something went wrong",
     error_desc:
@@ -105,6 +105,8 @@ export const translations = {
     unicode_render_failed: "Unicode text could not be rendered into the PDF.",
     pdf_generation_failed:
       "The PDF renderer encountered an error. Check the inputs and try again.",
+    pdf_worker_protocol_error:
+      "The PDF renderer returned an invalid message. Please try again.",
     remove_image: "Remove {name}",
     image_quantity: "Quantity for {name}",
     zoom_level: "Zoom level",
@@ -180,7 +182,7 @@ export const translations = {
     layout_error_title: "布局错误",
     margin_too_large: "边距过大，超出纸张范围",
     rows_cols_positive: "行数/列数必须大于 0",
-    margin_spacing_positive: "边距/间距必须为正数",
+    margin_spacing_positive: "边距/间距不能为负数",
     label_too_small: "计算出的标签尺寸过小或为负数",
     error_title: "应用运行遇到问题",
     error_desc:
@@ -209,6 +211,7 @@ export const translations = {
     unicode_render_unsupported: "当前浏览器无法将 Unicode 文本写入 PDF。",
     unicode_render_failed: "无法将 Unicode 文本渲染到 PDF。",
     pdf_generation_failed: "PDF 渲染发生错误，请检查输入后重试。",
+    pdf_worker_protocol_error: "PDF 渲染器返回了无效消息，请重试。",
     remove_image: "移除 {name}",
     image_quantity: "{name} 的数量",
     zoom_level: "缩放级别",

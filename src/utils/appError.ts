@@ -21,6 +21,7 @@ export type AppErrorCode =
   | "margin_spacing_positive"
   | "label_too_small"
   | "pdf_generation_failed"
+  | "pdf_worker_protocol_error"
   | "generation_timeout"
   | "generation_cancelled";
 

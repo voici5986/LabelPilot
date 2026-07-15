@@ -21,8 +21,8 @@
   --on-brand-light: #ffffff;
   --on-brand-dark: #082f49;
 
-  /* Logo 专属配色 - 保持经典的靛蓝+点缀黄 */
-  --logo-primary: #4f46e5;
+  /* Logo 与应用主色共用语义 token */
+  --logo-primary: var(--color-brand-primary);
   --logo-accent: #ffd166;
   /* ---------------------- */
 
@@ -30,27 +30,22 @@
   --light-surface: var(--color-zinc-50);
   --light-text: var(--color-zinc-800);
   --light-border: var(--color-zinc-200);
-  --light-glass: color-mix(in srgb, white 80%, transparent);
 
   --dark-surface: var(--color-zinc-900);
   --dark-text: var(--color-zinc-200);
   --dark-border: var(--color-zinc-800);
-  --dark-glass: color-mix(in srgb, var(--color-zinc-800) 80%, transparent);
 
   /* 基础语义变量 - 默认为亮色模式 */
   --color-surface: var(--light-surface);
   --color-text-main: var(--light-text);
   --color-text-muted: var(--color-zinc-600);
   --color-border-subtle: var(--light-border);
-  --color-glass-surface: var(--light-glass);
-  --color-glass-border: color-mix(in srgb, white 50%, transparent);
   --color-brand-primary: var(--brand-primary-light);
   --color-on-brand: var(--on-brand-light);
   --paper-brightness: 1;
 
   /* 其他品牌辅助色 */
   --color-brand-secondary: var(--color-blue-500);
-  --blur-glass: 12px;
 }
 
 /* 1. 自动跟随系统的暗色模式 */
@@ -61,8 +56,6 @@
     --color-text-main: var(--dark-text);
     --color-text-muted: var(--color-zinc-400);
     --color-border-subtle: var(--dark-border);
-    --color-glass-surface: var(--dark-glass);
-    --color-glass-border: color-mix(in srgb, white 8%, transparent);
     --color-brand-primary: var(--brand-primary-dark);
     --color-on-brand: var(--on-brand-dark);
     --paper-brightness: 0.9;
@@ -76,8 +69,6 @@
   --color-text-main: var(--light-text);
   --color-text-muted: var(--color-zinc-600);
   --color-border-subtle: var(--light-border);
-  --color-glass-surface: var(--light-glass);
-  --color-glass-border: color-mix(in srgb, white 50%, transparent);
   --color-brand-primary: var(--brand-primary-light);
   --color-on-brand: var(--on-brand-light);
   --paper-brightness: 1;
@@ -89,27 +80,23 @@
   --color-text-main: var(--dark-text);
   --color-text-muted: var(--color-zinc-400);
   --color-border-subtle: var(--dark-border);
-  --color-glass-surface: var(--dark-glass);
-  --color-glass-border: color-mix(in srgb, white 8%, transparent);
   --color-brand-primary: var(--brand-primary-dark);
   --color-on-brand: var(--on-brand-dark);
   --paper-brightness: 0.9;
 }
 
 @utility glass-panel {
-  background-color: var(--color-glass-surface);
-  backdrop-filter: blur(var(--blur-glass));
-  border: 1px solid var(--color-glass-border);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
 }
 
 @utility input-base {
-  background-color: color-mix(in srgb, var(--color-surface) 50%, transparent);
+  background-color: var(--color-surface);
   border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-lg);
-  transition-property: all;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 200ms;
-  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-md);
+  transition-property: border-color, background-color;
+  transition-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
+  transition-duration: 150ms;
 }
 
 @utility input-base-focus {

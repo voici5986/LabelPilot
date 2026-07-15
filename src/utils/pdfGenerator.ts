@@ -5,24 +5,20 @@ import {
   readValidatedImageFile,
   validateImageFiles,
   validateImageLabelCount,
-  type SupportedImageMimeType,
 } from "./imageLimits";
 import { validateTextOutput } from "./textValidation";
 import type { PdfProgressUpdate } from "./pdfProgress";
+import {
+  isPdfWorkerResponse,
+  type PdfWorkerGenerateRequest,
+  type PdfWorkerImageItem,
+} from "./pdfWorkerProtocol";
 
 export const DEFAULT_PDF_TIMEOUT_MS = 120_000;
 
 export interface GeneratePdfOptions {
   signal?: AbortSignal;
   timeoutMs?: number;
-}
-
-interface BufferedImageItem {
-  id: string;
-  count: number;
-  name: string;
-  type: SupportedImageMimeType;
-  buffer: ArrayBuffer;
 }
 
 function throwIfAborted(signal?: AbortSignal): void {
@@ -54,7 +50,7 @@ export async function generatePDF(
   }
 
   // Read sequentially to avoid a burst of simultaneous file allocations.
-  const itemsWithBuffers: BufferedImageItem[] = [];
+  const itemsWithBuffers: PdfWorkerImageItem[] = [];
   if (appMode === "image") {
     for (let index = 0; index < imageItems.length; index++) {
       const item = imageItems[index];
@@ -121,25 +117,22 @@ export async function generatePDF(
       Math.max(1, timeoutMs),
     );
 
-    worker.onmessage = (e) => {
+    worker.onmessage = (event: MessageEvent<unknown>) => {
       if (settled) return;
-      const { type, data } = e.data;
+      if (!isPdfWorkerResponse(event.data)) {
+        rejectOnce(new AppError("pdf_worker_protocol_error"));
+        return;
+      }
+      const message = event.data;
 
-      if (type === "progress") {
-        if (
-          typeof data === "object" &&
-          data !== null &&
-          typeof data.percent === "number" &&
-          typeof data.phase === "string"
-        ) {
-          onProgress?.(data as PdfProgressUpdate);
-        }
-      } else if (type === "complete") {
+      if (message.type === "progress") {
+        onProgress?.(message.data);
+      } else if (message.type === "complete") {
         let url: string | null = null;
         let link: HTMLAnchorElement | null = null;
 
         try {
-          const blob = new Blob([data], { type: "application/pdf" });
+          const blob = new Blob([message.data], { type: "application/pdf" });
           url = URL.createObjectURL(blob);
           link = document.createElement("a");
           const dateStr = `label_${formatDateForFilename(new Date())}`;
@@ -156,8 +149,8 @@ export async function generatePDF(
           link?.remove();
           if (url) URL.revokeObjectURL(url);
         }
-      } else if (type === "error") {
-        rejectOnce(deserializeAppError(data));
+      } else {
+        rejectOnce(deserializeAppError(message.data));
       }
     };
 
@@ -167,10 +160,11 @@ export async function generatePDF(
 
     try {
       // Send data to worker using Transferable Objects (zero-copy).
-      worker.postMessage(
-        { config, imageItems: itemsWithBuffers, appMode, textConfig },
-        buffers,
-      );
+      const request: PdfWorkerGenerateRequest = {
+        type: "generate",
+        data: { config, imageItems: itemsWithBuffers, appMode, textConfig },
+      };
+      worker.postMessage(request, buffers);
     } catch (error) {
       rejectOnce(error);
     }

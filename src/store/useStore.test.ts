@@ -70,11 +70,75 @@ describe("useStore text configuration", () => {
       pageWidthMm: 50,
       pageHeightMm: 297,
     });
+    expect(useStore.getState().paperSizeMode).toBe("Custom");
 
     useStore.getState().setTheme("dark");
     expect(
       JSON.parse(localStorage.getItem("label-pilot-storage") ?? "{}").version,
     ).toBe(PERSIST_STORAGE_VERSION);
+  });
+
+  it("migrates legacy dimensions into an explicit paper mode", async () => {
+    localStorage.setItem(
+      "label-pilot-storage",
+      JSON.stringify({
+        state: {
+          config: {
+            rows: 3,
+            cols: 3,
+            marginMm: 10,
+            spacingMm: 10,
+            orientation: "landscape",
+            pageWidthMm: 297,
+            pageHeightMm: 420,
+          },
+        },
+        version: 1,
+      }),
+    );
+
+    const { useStore } = await import("./useStore");
+
+    expect(useStore.getState().paperSizeMode).toBe("A3");
+  });
+
+  it("repairs persisted preset dimensions from the explicit mode", async () => {
+    localStorage.setItem(
+      "label-pilot-storage",
+      JSON.stringify({
+        state: {
+          config: { pageWidthMm: 210, pageHeightMm: 297 },
+          paperSizeMode: "A5",
+        },
+        version: 2,
+      }),
+    );
+
+    const { useStore } = await import("./useStore");
+
+    expect(useStore.getState()).toMatchObject({
+      paperSizeMode: "A5",
+      config: { pageWidthMm: 148, pageHeightMm: 210 },
+    });
+  });
+
+  it("keeps custom mode across layout updates and hydration", async () => {
+    const { useStore } = await import("./useStore");
+
+    useStore.getState().setPaperSizeMode("Custom");
+    useStore.getState().setConfig({ orientation: "portrait" });
+
+    expect(useStore.getState().paperSizeMode).toBe("Custom");
+
+    vi.resetModules();
+    const { useStore: rehydratedStore } = await import("./useStore");
+    expect(rehydratedStore.getState().paperSizeMode).toBe("Custom");
+
+    rehydratedStore.getState().setPaperSizeMode("A5");
+    expect(rehydratedStore.getState()).toMatchObject({
+      paperSizeMode: "A5",
+      config: { pageWidthMm: 148, pageHeightMm: 210 },
+    });
   });
 
   it("offers a recovery path that removes persisted settings", async () => {

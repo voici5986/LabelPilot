@@ -13,6 +13,9 @@ async function expectValidPdf(
   artifactPath: string,
   minimumPages = 1,
 ): Promise<Buffer> {
+  expect(download.suggestedFilename()).toMatch(
+    /^label_\d{6}_\d{6}_\d{3}\.pdf$/,
+  );
   const stream = await download.createReadStream();
   const chunks: Buffer[] = [];
   for await (const chunk of stream) chunks.push(Buffer.from(chunk));
@@ -84,7 +87,11 @@ async function switchToTextMode(page: Page): Promise<void> {
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
-    localStorage.clear();
+    const initializedKey = "label_pilot_e2e_initialized";
+    if (sessionStorage.getItem(initializedKey) !== "true") {
+      localStorage.clear();
+      sessionStorage.setItem(initializedKey, "true");
+    }
     localStorage.setItem("label_printer_lang", "zh");
   });
 });
@@ -165,6 +172,36 @@ test("portrait layout, theme, PWA, and accessible names remain usable", async ({
     parseFloat(getComputedStyle(element).transitionDuration),
   );
   expect(transitionDuration).toBeLessThanOrEqual(0.001);
+});
+
+test("custom paper mode survives layout updates and reloads", async ({
+  page,
+}) => {
+  await page.goto("/");
+
+  const settingsButton = page.getByRole("button", { name: "全局设置" });
+  await settingsButton.click();
+  await page.getByRole("button", { name: "自定义尺寸", exact: true }).click();
+  await expect(
+    page.getByRole("textbox", { name: "纸张宽度 (mm)" }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByText(/^自定义尺寸,/)).toBeVisible();
+
+  await page
+    .getByRole("group", { name: "纸张方向" })
+    .getByRole("button", { name: "纵向" })
+    .click();
+  await settingsButton.click();
+  await expect(
+    page.getByRole("textbox", { name: "纸张宽度 (mm)" }),
+  ).toBeVisible();
+
+  await page.reload();
+  await settingsButton.click();
+  await expect(
+    page.getByRole("textbox", { name: "纸张宽度 (mm)" }),
+  ).toBeVisible();
 });
 
 test("real worker generates image PDF and rejects unsupported input", async ({

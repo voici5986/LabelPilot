@@ -145,4 +145,20 @@ describe("generatePDF", () => {
     );
     expect(MockWorker.instance.terminate).toHaveBeenCalledOnce();
   });
+
+  it("rejects and terminates on an invalid worker response", async () => {
+    const result = generatePDF(config, [], "text", textConfig);
+    const rejection = expect(result).rejects.toMatchObject({
+      code: "pdf_worker_protocol_error",
+    });
+
+    MockWorker.instance.onmessage?.(
+      new MessageEvent("message", {
+        data: { type: "unknown", data: null },
+      }),
+    );
+
+    await rejection;
+    expect(MockWorker.instance.terminate).toHaveBeenCalledOnce();
+  });
 });

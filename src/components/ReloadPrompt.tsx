@@ -92,7 +92,7 @@ export function ReloadPrompt() {
           initial={{ y: 50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 50, opacity: 0 }}
-          className="fixed bottom-6 right-6 z-[1000] p-4 rounded-xl shadow-2xl bg-white dark:bg-gray-900 border border-brand-primary/20 flex flex-col gap-3 min-w-[300px]"
+          className="fixed bottom-6 right-6 z-[1000] flex min-w-[300px] flex-col gap-3 rounded-lg border border-brand-primary/20 bg-white p-4 shadow-lg dark:bg-gray-900"
         >
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -126,7 +126,7 @@ export function ReloadPrompt() {
             type="button"
             onClick={() => void applyUpdate()}
             disabled={isUpdating}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-primary py-1.5 text-sm font-semibold text-on-brand shadow-lg shadow-brand-primary/20 transition-all hover:bg-brand-primary/90 disabled:cursor-wait disabled:opacity-70"
+            className="flex w-full items-center justify-center gap-2 rounded-md bg-brand-primary py-1.5 text-sm font-semibold text-on-brand transition-colors hover:bg-brand-primary/90 disabled:cursor-wait disabled:opacity-70"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             {isUpdating

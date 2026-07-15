@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useMemo, useState } from "react";
 import {
   calculateLabelLayout,
   resolvePageDimensions,
@@ -6,20 +6,16 @@ import {
   formatLabelText,
   getLabelTextFontSizeMm,
   getTextLayoutBoxes,
-  MM_TO_PX,
 } from "../utils/layoutMath";
-import { Maximize, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { useI18n } from "../utils/i18nContext";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  mapPctToScale,
-  getThumbBottomPct,
-  MIN_SCALE,
-  MAX_SCALE,
-} from "../utils/zoomMath";
+import { motion } from "framer-motion";
 import { QrCodeSvg } from "./QrCodeSvg";
 import { useStore } from "../store/useStore";
 import { useShallow } from "zustand/shallow";
+import { usePreviewViewport } from "../hooks/usePreviewViewport";
+import { PageNavigator } from "./PageNavigator";
+import { ZoomControl } from "./ZoomControl";
 
 import type { Translations } from "../utils/i18nContext";
 
@@ -35,60 +31,8 @@ export function PreviewPanel() {
   );
   const { t } = useI18n();
   const [scale, setScale] = useState(1);
-  const [baseFitScale, setBaseFitScale] = useState(0.8);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  // Zoom control states
-  const [isDragging, setIsDragging] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
-  const [isPanning, setIsPanning] = useState(false);
-  const [panStart, setPanStart] = useState({
-    x: 0,
-    y: 0,
-    scrollLeft: 0,
-    scrollTop: 0,
-  });
-  const sliderTrackRef = useRef<HTMLDivElement>(null);
-
-  // 计算自动缩放比例 (保持在本地，因为依赖 DOM ref)
-  useEffect(() => {
-    const updateFitScale = () => {
-      if (!containerRef.current) return;
-      const TOP_GAP = 10;
-      const BOTTOM_GAP = 10;
-      const HORIZONTAL_GAP = 20;
-
-      const containerW = containerRef.current.clientWidth - HORIZONTAL_GAP;
-      const containerH =
-        containerRef.current.clientHeight - (TOP_GAP + BOTTOM_GAP);
-
-      const { pageWidth, pageHeight } = resolvePageDimensions(config);
-      const paperW = pageWidth * MM_TO_PX;
-      const paperH = pageHeight * MM_TO_PX;
-
-      setBaseFitScale(Math.min(containerW / paperW, containerH / paperH));
-    };
-
-    updateFitScale();
-
-    const node = containerRef.current;
-    let ro: ResizeObserver | null = null;
-
-    if (node && "ResizeObserver" in window) {
-      ro = new ResizeObserver(() => updateFitScale());
-      ro.observe(node);
-    } else {
-      window.addEventListener("resize", updateFitScale);
-    }
-
-    return () => {
-      if (ro) {
-        ro.disconnect();
-      } else {
-        window.removeEventListener("resize", updateFitScale);
-      }
-    };
-  }, [config]);
+  const { containerRef, baseFitScale, isPanning, handleMouseDown } =
+    usePreviewViewport(config);
 
   const layout = useMemo(() => calculateLabelLayout(config), [config]);
 
@@ -102,92 +46,18 @@ export function PreviewPanel() {
 
   const slotsPerPage = Math.max(1, layout.positions.length);
   const totalPages = Math.max(1, Math.ceil(totalCount / slotsPerPage));
-  const [currentPage, setCurrentPage] = useState(0);
-  const [pageInput, setPageInput] = useState(String(currentPage + 1));
-
-  // Reset current page if total pages change
-  useEffect(() => {
-    if (currentPage >= totalPages) {
-      setCurrentPage(Math.max(0, totalPages - 1));
-    }
-  }, [totalPages, currentPage]);
-
-  useEffect(() => {
-    setPageInput(String(currentPage + 1));
-  }, [currentPage]);
+  const [pageIndex, setPageIndex] = useState(0);
+  const currentPage = Math.min(pageIndex, totalPages - 1);
 
   const { pageWidth: paperWidthMm, pageHeight: paperHeightMm } =
     resolvePageDimensions(config);
 
-  const handleSliderChange = (
-    e: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent,
-  ) => {
-    if (!sliderTrackRef.current) return;
-    const rect = sliderTrackRef.current.getBoundingClientRect();
-    const clientY =
-      "touches" in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
-    const pct = 1 - (clientY - rect.top) / rect.height;
-    setScale(mapPctToScale(pct));
-  };
-
-  useEffect(() => {
-    if (!isDragging) return;
-    const onMove = (e: MouseEvent | TouchEvent) => handleSliderChange(e);
-    const onUp = () => setIsDragging(false);
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-    window.addEventListener("touchmove", onMove);
-    window.addEventListener("touchend", onUp);
-    return () => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-      window.removeEventListener("touchmove", onMove);
-      window.removeEventListener("touchend", onUp);
-    };
-  }, [isDragging]);
-
-  // Panning (Drag-to-scroll) Handlers
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (!containerRef.current || e.button !== 0) return; // Only left click
-    e.preventDefault(); // Stop native drag and drop behavior
-    setIsPanning(true);
-    setPanStart({
-      x: e.clientX,
-      y: e.clientY,
-      scrollLeft: containerRef.current.scrollLeft,
-      scrollTop: containerRef.current.scrollTop,
-    });
-  };
-
-  useEffect(() => {
-    if (!isPanning || !containerRef.current) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!containerRef.current) return;
-      const dx = e.clientX - panStart.x;
-      const dy = e.clientY - panStart.y;
-      containerRef.current.scrollLeft = panStart.scrollLeft - dx;
-      containerRef.current.scrollTop = panStart.scrollTop - dy;
-    };
-
-    const handleMouseUp = () => {
-      setIsPanning(false);
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [isPanning, panStart]);
-
   return (
-    <section className="flex-1 flex flex-col h-full overflow-hidden">
-      <div className="flex-1 glass-panel rounded-xl flex flex-col relative overflow-hidden shadow-inner font-sans">
+    <section className="flex h-full flex-1 flex-col overflow-hidden">
+      <div className="relative flex flex-1 flex-col overflow-hidden rounded-lg border border-border-subtle bg-surface font-sans">
         {/* Background Pattern */}
         <div
-          className="absolute inset-0 opacity-10 pointer-events-none dark:opacity-5"
+          className="pointer-events-none absolute inset-0 opacity-[0.06] dark:opacity-[0.04]"
           style={{
             backgroundImage:
               "radial-gradient(var(--color-text-main) 1px, transparent 1px)",
@@ -202,8 +72,8 @@ export function PreviewPanel() {
           className={`flex-1 overflow-auto text-center p-2 scrollbar-thin scrollbar-thumb-text-main/20 select-none ${isPanning ? "cursor-grabbing" : "cursor-grab"}`}
         >
           {layout.error ? (
-            <div className="w-full h-full flex items-center justify-center p-8">
-              <div className="bg-surface/80 backdrop-blur-md p-6 rounded-xl border border-red-200/50 dark:border-red-800/50 shadow-xl flex flex-col items-center gap-3 text-red-600 dark:text-red-400">
+            <div className="flex h-full w-full items-center justify-center p-8">
+              <div className="flex flex-col items-center gap-3 rounded-lg border border-red-200/50 bg-surface p-6 text-red-700 dark:border-red-800/50 dark:text-red-300">
                 <AlertCircle className="w-10 h-10" />
                 <div className="text-center">
                   <p className="font-medium text-lg">
@@ -232,16 +102,12 @@ export function PreviewPanel() {
                 initial={false}
                 animate={{
                   scale: scale * baseFitScale,
-                  boxShadow: isDragging
-                    ? `0 ${20 / scale}px ${50 / scale}px -12px rgba(0,0,0,${0.1 + (1 - scale / 3) * 0.1})`
-                    : "0 20px 50px -12px rgba(0,0,0,0.15)",
                 }}
-                transition={
-                  isDragging
-                    ? { duration: 0 }
-                    : { type: "spring", stiffness: 300, damping: 30 }
-                }
-                className="bg-white absolute top-0 left-0"
+                transition={{
+                  duration: 0.18,
+                  ease: [0.25, 1, 0.5, 1],
+                }}
+                className="absolute left-0 top-0 bg-white shadow-[0_12px_32px_-16px_rgba(0,0,0,0.35)]"
                 style={{
                   width: `${paperWidthMm}mm`,
                   height: `${paperHeightMm}mm`,
@@ -358,64 +224,12 @@ export function PreviewPanel() {
           )}
         </div>
 
-        {/* Page Navigation Controls */}
         {!layout.error && totalPages > 1 && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 z-30 bg-surface/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-border-subtle shadow-lg">
-            <button
-              type="button"
-              aria-label={t("page_prev")}
-              disabled={currentPage === 0}
-              onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
-              className="rounded-full p-1 transition-colors hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-30"
-              title={t("page_prev")}
-            >
-              <ChevronLeft className="w-5 h-5 text-text-main" />
-            </button>
-
-            <div className="text-sm font-medium text-text-main flex items-center justify-center gap-1.5">
-              <input
-                name="page-number"
-                type="text"
-                inputMode="numeric"
-                value={pageInput}
-                onChange={(e) =>
-                  setPageInput(e.target.value.replace(/[^\d]/g, ""))
-                }
-                onBlur={() => {
-                  const parsed = parseInt(pageInput || "1", 10);
-                  const next = Math.min(
-                    totalPages,
-                    Math.max(1, isNaN(parsed) ? 1 : parsed),
-                  );
-                  setCurrentPage(next - 1);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    (e.target as HTMLInputElement).blur();
-                  }
-                }}
-                className="w-10 text-center input-base focus:input-base-focus px-1 py-0.5 text-sm"
-                aria-label={t("page_of", {
-                  current: currentPage + 1,
-                  total: totalPages,
-                })}
-              />
-              <span>/ {totalPages}</span>
-            </div>
-
-            <button
-              type="button"
-              aria-label={t("page_next")}
-              disabled={currentPage === totalPages - 1}
-              onClick={() =>
-                setCurrentPage((p) => Math.min(totalPages - 1, p + 1))
-              }
-              className="rounded-full p-1 transition-colors hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-30"
-              title={t("page_next")}
-            >
-              <ChevronRight className="w-5 h-5 text-text-main" />
-            </button>
-          </div>
+          <PageNavigator
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setPageIndex}
+          />
         )}
 
         {/* Relative Ruler */}
@@ -433,100 +247,7 @@ export function PreviewPanel() {
           </span>
         </div>
 
-        {/* Vertical Zoom Controls */}
-        <div
-          className="absolute bottom-2 left-2 flex flex-col items-center gap-1 z-20"
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
-        >
-          {/* Reset Button */}
-          <motion.button
-            type="button"
-            aria-label={t("zoom_reset")}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setScale(1)}
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-transparent bg-surface/50 text-text-muted shadow-sm transition-all hover:border-border-subtle hover:bg-surface hover:text-brand-primary"
-            title={t("zoom_reset")}
-          >
-            <Maximize className="w-4 h-4" />
-          </motion.button>
-
-          <motion.div
-            role="slider"
-            tabIndex={0}
-            aria-label={t("zoom_level")}
-            aria-orientation="vertical"
-            aria-valuemin={Math.round(MIN_SCALE * 100)}
-            aria-valuemax={Math.round(MAX_SCALE * 100)}
-            aria-valuenow={Math.round(scale * 100)}
-            onKeyDown={(event) => {
-              if (event.key === "Home") setScale(MIN_SCALE);
-              else if (event.key === "End") setScale(MAX_SCALE);
-              else if (event.key === "ArrowUp" || event.key === "ArrowRight") {
-                setScale((current) => Math.min(MAX_SCALE, current + 0.1));
-              } else if (
-                event.key === "ArrowDown" ||
-                event.key === "ArrowLeft"
-              ) {
-                setScale((current) => Math.max(MIN_SCALE, current - 0.1));
-              } else {
-                return;
-              }
-              event.preventDefault();
-            }}
-            animate={{
-              backgroundColor: isDragging
-                ? "var(--color-surface)"
-                : "var(--color-surface)",
-              opacity: 1,
-              boxShadow: isDragging
-                ? "0 4px 12px rgba(0,0,0,0.2)"
-                : "0 4px 6px rgba(0,0,0,0.1)",
-            }}
-            className="relative flex h-40 w-8 flex-col items-center rounded-lg border border-glass-border p-1.5 backdrop-blur-glass"
-          >
-            {/* Tooltip (Enhanced popup animation) */}
-            <AnimatePresence>
-              {(isHovered || isDragging) && (
-                <motion.div
-                  initial={{ opacity: 0, x: -5, scale: 0.8 }}
-                  animate={{ opacity: 1, x: 0, scale: 1 }}
-                  exit={{ opacity: 0, x: -5, scale: 0.8 }}
-                  className="absolute left-12 top-1/2 -translate-y-1/2 bg-zinc-800 text-white text-[14px] px-2 py-1 rounded shadow-xl whitespace-nowrap pointer-events-none font-semibold z-30"
-                >
-                  {Math.round(scale * 100)}%
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            <div
-              ref={sliderTrackRef}
-              className="relative h-full w-1.5 cursor-ns-resize rounded-lg bg-text-main/10"
-              onMouseDown={(e) => {
-                setIsDragging(true);
-                handleSliderChange(e);
-              }}
-              onTouchStart={(e) => {
-                setIsDragging(true);
-                handleSliderChange(e);
-              }}
-            >
-              <motion.div
-                className="absolute left-1/2 -translate-x-1/2 w-4 h-4 bg-white border-2 border-brand-primary rounded-lg shadow-md pointer-events-none"
-                animate={{
-                  bottom: `${getThumbBottomPct(scale)}%`,
-                }}
-                transition={
-                  isDragging
-                    ? { duration: 0 }
-                    : { type: "spring", stiffness: 300, damping: 30 }
-                }
-                style={{ marginBottom: "-8px" }}
-              />
-            </div>
-          </motion.div>
-        </div>
+        <ZoomControl scale={scale} setScale={setScale} />
       </div>
     </section>
   );

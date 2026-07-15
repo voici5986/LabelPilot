@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useId } from "react";
+import React, { useId, useState } from "react";
 import { ChevronUp, ChevronDown } from "lucide-react";
 
 interface NumberInputProps {
@@ -23,14 +23,9 @@ export function NumberInput({
   step: propsStep,
 }: NumberInputProps) {
   const inputId = useId();
-  // Local state to handle string input allowing intermediate states like "3."
-  const [localVal, setLocalVal] = useState(String(value));
-
-  // Sync from parent prop to local state
-  useEffect(() => {
-    const next = String(value);
-    setLocalVal((prev) => (prev === next ? prev : next));
-  }, [value]);
+  // A draft exists only while the user is editing an intermediate value such as "3.".
+  const [draft, setDraft] = useState<string | null>(null);
+  const displayValue = draft ?? String(value);
 
   const normalizeValue = (candidate: number) => {
     if (!Number.isFinite(candidate)) return min;
@@ -49,7 +44,7 @@ export function NumberInput({
     const nextVal = e.target.value;
 
     if (nextVal === "") {
-      setLocalVal("");
+      setDraft("");
       return;
     }
 
@@ -65,14 +60,14 @@ export function NumberInput({
     if (!Number.isFinite(num)) return;
 
     const normalized = normalizeValue(num);
-    setLocalVal(normalized === num ? nextVal : String(normalized));
+    setDraft(normalized === num ? nextVal : String(normalized));
     onChange(normalized);
   };
 
   const handleBlur = () => {
-    const num = normalizeValue(parseFloat(localVal));
+    const num = normalizeValue(parseFloat(displayValue));
 
-    setLocalVal(String(num));
+    setDraft(null);
     onChange(num);
   };
 
@@ -81,10 +76,12 @@ export function NumberInput({
     (isInteger ? 1 : decimalPlaces ? Math.pow(10, -decimalPlaces) : 1);
 
   const increment = () => {
+    setDraft(null);
     onChange(normalizeValue(value + step));
   };
 
   const decrement = () => {
+    setDraft(null);
     onChange(normalizeValue(value - step));
   };
 
@@ -102,10 +99,13 @@ export function NumberInput({
           name={inputId}
           type="text"
           inputMode={isInteger ? "numeric" : "decimal"}
-          value={localVal}
+          value={displayValue}
           onChange={handleChange}
           onBlur={handleBlur}
-          onFocus={(e) => (e.target as HTMLInputElement).select()}
+          onFocus={(e) => {
+            setDraft(String(value));
+            e.currentTarget.select();
+          }}
           className="w-full input-base focus:input-base-focus pl-3 pr-8 py-1.5 text-sm font-mono font-semibold text-text-main"
         />
         <div className="absolute right-0 top-0 flex h-full w-8 flex-col overflow-hidden rounded-r-lg border-l border-border-subtle/30">

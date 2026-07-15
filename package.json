@@ -2,7 +2,12 @@
   "name": "labelpilot",
   "private": true,
   "version": "1.4.3",
+  "license": "MIT",
   "type": "module",
+  "engines": {
+    "node": ">=24.0.0",
+    "pnpm": ">=10.33.3"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

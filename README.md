@@ -33,11 +33,11 @@ A modern, offline-capable web application for batch generating label PDF documen
 
 ## 🛠️ Tech Stack
 
-- **Framework**: React 19.2.5
-- **Build Tool**: Vite 8.0
+- **Framework**: React 19
+- **Build Tool**: Vite 8
 - **Multithreading**: Web Workers (ES Module)
 - **PDF Engine**: jsPDF
-- **Styling**: Tailwind CSS 4.2, Framer Motion
+- **Styling**: Tailwind CSS 4, Framer Motion
 - **PWA**: vite-plugin-pwa
 
 ## 🚀 Getting Started
@@ -79,4 +79,4 @@ The output will be in the `dist/` directory.
 
 ## 📄 License
 
-MIT License.
+[MIT License](./LICENSE).

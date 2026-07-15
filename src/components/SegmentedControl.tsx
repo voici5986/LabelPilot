@@ -49,7 +49,7 @@ export function SegmentedControl<T extends string>({
             {isActive && (
               <motion.div
                 layoutId={layoutId}
-                className="absolute inset-0 bg-surface shadow-sm rounded-lg -z-10"
+                className="absolute inset-0 -z-10 rounded-md border border-border-subtle bg-surface"
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
               />
             )}

@@ -21,7 +21,6 @@ export default defineConfig([
       globals: globals.browser,
     },
     rules: {
-      "react-hooks/set-state-in-effect": "off", // 暂时关闭该检查以通过 Lint
       "react-refresh/only-export-components": "warn",
       "@typescript-eslint/no-explicit-any": "warn",
       "no-async-promise-executor": "error",

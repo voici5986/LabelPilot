@@ -254,7 +254,7 @@ export function normalizePaperDimensions(
 /**
  * Returns a human-readable label for the given paper dimensions.
  */
-export function getPaperSizeLabel(width: number, height: number): string {
+export function getPaperSizeLabel(width: number, height: number): PaperSize {
   const w = Math.round(width * 10) / 10;
   const h = Math.round(height * 10) / 10;
 
@@ -275,7 +275,7 @@ export function getPaperSizeInfo(
     "orientation" | "pageWidthMm" | "pageHeightMm"
   >,
 ): {
-  label: string;
+  label: PaperSize;
   baseWidthMm: number;
   baseHeightMm: number;
   pageWidthMm: number;

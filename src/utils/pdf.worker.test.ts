@@ -84,9 +84,14 @@ const setupWorker = async () => {
   (globalThis as unknown as { self: WorkerSelf }).self = { postMessage };
   await import("./pdf.worker");
   const workerSelf = (globalThis as unknown as { self: WorkerSelf }).self;
+  const rawOnmessage = workerSelf.onmessage as (e: { data: unknown }) => void;
   return {
     postMessage,
-    onmessage: workerSelf.onmessage as (e: { data: unknown }) => void,
+    rawOnmessage,
+    onmessage: (event: { data: unknown }) =>
+      rawOnmessage({
+        data: { type: "generate", data: event.data },
+      }),
   };
 };
 
@@ -230,7 +235,7 @@ describe("pdf.worker", () => {
     );
   });
 
-  it("normalizes malformed image counts before PDF loops", async () => {
+  it("rejects non-finite image counts before PDF loops", async () => {
     (
       globalThis as unknown as { createImageBitmap?: unknown }
     ).createImageBitmap = vi.fn(async () => ({
@@ -259,11 +264,11 @@ describe("pdf.worker", () => {
     await flushAsync();
     await flushAsync();
 
-    expect(mockJsPdfInstance.addImage).toHaveBeenCalledTimes(1);
-    expect(postMessage).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "complete" }),
-      expect.any(Array),
-    );
+    expect(mockJsPdfInstance.addImage).not.toHaveBeenCalled();
+    expect(postMessage).toHaveBeenCalledWith({
+      type: "error",
+      data: expect.objectContaining({ code: "pdf_worker_protocol_error" }),
+    });
   });
 
   it("normalizes invalid layout values from worker messages", async () => {
@@ -503,6 +508,18 @@ describe("pdf.worker", () => {
     expect(postMessage).toHaveBeenCalledWith({
       type: "progress",
       data: { percent: 95, phase: "serializing" },
+    });
+  });
+
+  it("rejects messages outside the worker protocol", async () => {
+    const { postMessage, rawOnmessage } = await setupWorker();
+
+    rawOnmessage({ data: { type: "unknown", data: null } });
+    await flushAsync();
+
+    expect(postMessage).toHaveBeenCalledWith({
+      type: "error",
+      data: expect.objectContaining({ code: "pdf_worker_protocol_error" }),
     });
   });
 });

@@ -1,20 +1,18 @@
-import { UploadCloud, Grid, File as FileIcon, FileMinus } from "lucide-react";
-import {
-  getPaperSizeInfo,
-  calculateLabelLayout,
-  TEXT_CONFIG_LIMITS,
-} from "../utils/layoutMath";
-import { motion, Reorder, AnimatePresence } from "framer-motion";
-import { useI18n } from "../utils/i18nContext";
-import { NumberInput } from "./NumberInput";
-import { SmartButton } from "./SmartButton";
-import { ThumbnailItem } from "./ThumbnailItem";
-import { SegmentedControl } from "./SegmentedControl";
 import { useId, useMemo } from "react";
-import { useStore } from "../store/useStore";
+import type { ChangeEvent } from "react";
+import { Reorder } from "framer-motion";
+import { File as FileIcon, FileMinus, Grid, UploadCloud } from "lucide-react";
 import { useShallow } from "zustand/shallow";
-import { getTextOutputMetrics } from "../utils/textValidation";
+import { useStore } from "../store/useStore";
+import { useI18n } from "../utils/i18nContext";
+import { calculateLabelLayout, getPaperSizeInfo } from "../utils/layoutMath";
 import type { PdfProgressPhase } from "../utils/pdfProgress";
+import { getTextOutputMetrics } from "../utils/textValidation";
+import { NumberInput } from "./NumberInput";
+import { SegmentedControl } from "./SegmentedControl";
+import { SmartButton } from "./SmartButton";
+import { TextModeFields } from "./TextModeFields";
+import { ThumbnailItem } from "./ThumbnailItem";
 
 interface ControlPanelProps {
   onFilesSelect: (files: File[]) => void | Promise<void>;
@@ -46,6 +44,7 @@ export function ControlPanel({
     appMode,
     textConfig,
     onTextConfigChange,
+    paperSizeMode,
   } = useStore(
     useShallow((state) => ({
       config: state.config,
@@ -56,16 +55,13 @@ export function ControlPanel({
       appMode: state.appMode,
       textConfig: state.textConfig,
       onTextConfigChange: state.setTextConfig,
+      paperSizeMode: state.paperSizeMode,
     })),
   );
   const { t } = useI18n();
   const fileInputId = useId();
-  const textPrefixId = useId();
-  const qrSizeId = useId();
-  const textPrefixHintId = useId();
 
   const layout = useMemo(() => calculateLabelLayout(config), [config]);
-  const layoutError = layout.error;
   const textOutputMetrics = useMemo(
     () => getTextOutputMetrics(config, textConfig),
     [config, textConfig],
@@ -74,42 +70,41 @@ export function ControlPanel({
     ? t(textOutputMetrics.error.code, textOutputMetrics.error.params)
     : null;
 
-  // 局部化逻辑：计算显示的文件名或数量
   const selectedFileName = useMemo(() => {
     if (imageItems.length === 0) return "";
     if (imageItems.length === 1) return imageItems[0].file.name;
     return t("files_selected", { n: imageItems.length });
   }, [imageItems, t]);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const input = e.currentTarget;
-    if (input.files && input.files.length > 0) {
-      try {
-        await onFilesSelect(Array.from(input.files));
-      } finally {
-        input.value = "";
-      }
+  const paperSizeInfo = useMemo(() => {
+    const info = getPaperSizeInfo(config);
+    const width = Math.round(info.pageWidthMm * 10) / 10;
+    const height = Math.round(info.pageHeightMm * 10) / 10;
+    const label =
+      paperSizeMode === "Custom" ? t("paper_type_custom") : paperSizeMode;
+    return `${label}, ${width}×${height}mm`;
+  }, [config, paperSizeMode, t]);
+
+  const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const input = event.currentTarget;
+    if (!input.files?.length) return;
+
+    try {
+      await onFilesSelect(Array.from(input.files));
+    } finally {
+      input.value = "";
     }
   };
 
-  // Calculate current paper size info
-  const paperSizeInfo = useMemo(() => {
-    const info = getPaperSizeInfo(config);
-    const w = Math.round(info.pageWidthMm * 10) / 10;
-    const h = Math.round(info.pageHeightMm * 10) / 10;
-    return `${info.label}, ${w}×${h}mm`;
-  }, [config]);
-
   return (
-    <aside className="glass-panel z-10 flex h-auto w-full flex-col overflow-hidden rounded-xl border-r-0 shadow-lg lg:h-full">
-      <div className="flex-1 space-y-6 p-4 scrollbar-hide lg:overflow-y-auto lg:p-6">
-        {/* 1. Grid/Layout Settings */}
-        <div className="space-y-4 pb-2 border-b border-border-subtle/30">
+    <aside className="z-10 flex h-auto w-full flex-col overflow-hidden rounded-lg border border-border-subtle bg-surface lg:h-full">
+      <div className="flex-1 space-y-5 p-4 scrollbar-hide lg:overflow-y-auto lg:p-5">
+        <div className="space-y-4 border-b border-border-subtle/60 pb-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-xs font-semibold text-text-muted uppercase tracking-wider flex items-center gap-2">
-              <Grid className="w-4 h-4" /> {t("layout_group")}
+            <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-text-muted">
+              <Grid className="h-4 w-4" /> {t("layout_group")}
             </h2>
-            <span className="text-[13px] font-medium text-text-muted">
+            <span className="text-xs font-medium text-text-muted">
               {paperSizeInfo}
             </span>
           </div>
@@ -118,7 +113,7 @@ export function ControlPanel({
             <NumberInput
               label={t("rows")}
               value={config.rows}
-              onChange={(v) => onConfigChange({ rows: v })}
+              onChange={(value) => onConfigChange({ rows: value })}
               min={1}
               max={maxRows}
               isInteger
@@ -126,7 +121,7 @@ export function ControlPanel({
             <NumberInput
               label={t("cols")}
               value={config.cols}
-              onChange={(v) => onConfigChange({ cols: v })}
+              onChange={(value) => onConfigChange({ cols: value })}
               min={1}
               max={maxCols}
               isInteger
@@ -137,7 +132,7 @@ export function ControlPanel({
             <NumberInput
               label={`${t("margin")} (mm)`}
               value={config.marginMm}
-              onChange={(v) => onConfigChange({ marginMm: v })}
+              onChange={(value) => onConfigChange({ marginMm: value })}
               min={0}
               max={50}
               decimalPlaces={1}
@@ -146,7 +141,7 @@ export function ControlPanel({
             <NumberInput
               label={`${t("spacing")} (mm)`}
               value={config.spacingMm}
-              onChange={(v) => onConfigChange({ spacingMm: v })}
+              onChange={(value) => onConfigChange({ spacingMm: value })}
               min={0}
               max={30}
               decimalPlaces={1}
@@ -154,12 +149,11 @@ export function ControlPanel({
             />
           </div>
 
-          {/* Orientation Controls (Merged here) */}
           <SegmentedControl
             label={t("orientation")}
             layoutId="orientation-active"
             value={config.orientation}
-            onChange={(v) => onConfigChange({ orientation: v })}
+            onChange={(orientation) => onConfigChange({ orientation })}
             options={[
               { label: t("portrait"), value: "portrait", icon: FileIcon },
               { label: t("landscape"), value: "landscape", icon: FileMinus },
@@ -170,38 +164,37 @@ export function ControlPanel({
 
         {appMode === "image" ? (
           <>
-            {/* File Selection */}
             <div className="space-y-3">
-              <h2 className="text-xs font-semibold text-text-muted uppercase tracking-wider flex items-center gap-2">
-                <UploadCloud className="w-4 h-4" /> {t("file_group")}
+              <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-text-muted">
+                <UploadCloud className="h-4 w-4" /> {t("file_group")}
               </h2>
 
-              <div className="relative group cursor-pointer rounded-lg transition-transform active:scale-[0.98] focus-within:ring-2 focus-within:ring-brand-primary focus-within:ring-offset-2">
+              <div className="group relative cursor-pointer rounded-md focus-within:ring-2 focus-within:ring-brand-primary focus-within:ring-offset-2">
                 <input
                   id={fileInputId}
                   name="label-images"
                   type="file"
                   multiple
                   accept="image/png, image/jpeg, image/jpg"
-                  onChange={handleFileChange}
+                  onChange={(event) => void handleFileChange(event)}
                   aria-label={t("browse_btn")}
-                  className="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer"
+                  className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
                 />
                 <div
-                  className={`absolute inset-0 bg-brand-primary/5 rounded-lg border-2 border-dashed transition-colors ${selectedFileName ? "border-brand-primary bg-brand-primary/10" : "border-brand-primary/20 group-hover:border-brand-primary/40"}`}
-                ></div>
-                <div className="relative flex flex-row items-center gap-3 py-3 px-4 pointer-events-none">
-                  <div className="bg-surface p-2 rounded-full shadow-sm flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+                  className={`absolute inset-0 rounded-md border border-dashed transition-colors ${selectedFileName ? "border-brand-primary bg-brand-primary/10" : "border-brand-primary/30 bg-brand-primary/5 group-hover:border-brand-primary/60"}`}
+                />
+                <div className="pointer-events-none relative flex items-center gap-3 px-4 py-3">
+                  <div className="shrink-0 rounded-md bg-text-main/5 p-2">
                     <UploadCloud
-                      className={`w-6 h-6 ${selectedFileName ? "text-brand-primary" : "text-brand-primary/40"}`}
+                      className={`h-6 w-6 ${selectedFileName ? "text-brand-primary" : "text-brand-primary/50"}`}
                     />
                   </div>
-                  <div className="flex-1 min-w-0 flex flex-col items-center">
-                    <p className="text-sm font-semibold text-text-main truncate w-full text-center">
+                  <div className="flex min-w-0 flex-1 flex-col">
+                    <p className="w-full truncate text-sm font-semibold text-text-main">
                       {selectedFileName || t("browse_btn")}
                     </p>
                     {!selectedFileName && (
-                      <p className="text-[12px] text-text-muted text-center">
+                      <p className="text-xs text-text-muted">
                         {t("browse_hint")}
                       </p>
                     )}
@@ -210,8 +203,7 @@ export function ControlPanel({
               </div>
             </div>
 
-            {/* Image List */}
-            <div className="flex-1 min-h-0">
+            <div className="min-h-0 flex-1">
               <Reorder.Group
                 axis="y"
                 values={imageItems}
@@ -219,18 +211,19 @@ export function ControlPanel({
                 className="space-y-2"
               >
                 {imageItems.map((item) => (
-                  <Reorder.Item key={item.id} value={item} dragListener={true}>
+                  <Reorder.Item key={item.id} value={item} dragListener>
                     <ThumbnailItem
                       item={item}
                       onCountChange={(count) =>
                         onItemCountChange(item.id, count)
                       }
-                      onRemove={() => {
-                        const newItems = imageItems.filter(
-                          (i) => i.id !== item.id,
-                        );
-                        onReorder(newItems);
-                      }}
+                      onRemove={() =>
+                        onReorder(
+                          imageItems.filter(
+                            (candidate) => candidate.id !== item.id,
+                          ),
+                        )
+                      }
                     />
                   </Reorder.Item>
                 ))}
@@ -238,166 +231,21 @@ export function ControlPanel({
             </div>
           </>
         ) : (
-          <>
-            {/* Text Numbering Config */}
-            <div className="space-y-4">
-              <h2 className="text-xs font-semibold text-text-muted uppercase tracking-wider flex items-center gap-2">
-                <Grid className="w-4 h-4" /> {t("text_config_group")}
-              </h2>
-
-              <div className="space-y-4">
-                <div className="space-y-1.5 flex-1">
-                  <label
-                    htmlFor={textPrefixId}
-                    className="text-sm font-medium text-text-muted ml-0.5"
-                  >
-                    {t("text_prefix")}
-                  </label>
-                  <input
-                    id={textPrefixId}
-                    name="text-prefix"
-                    type="text"
-                    value={textConfig.prefix}
-                    maxLength={TEXT_CONFIG_LIMITS.prefix.maxLength}
-                    aria-describedby={textPrefixHintId}
-                    onChange={(e) =>
-                      onTextConfigChange({ prefix: e.target.value })
-                    }
-                    className="w-full input-base focus:input-base-focus px-3 py-1.5 text-sm font-mono font-semibold"
-                    placeholder="SN-"
-                  />
-                  <div
-                    id={textPrefixHintId}
-                    className="flex justify-between gap-2 text-xs text-text-muted"
-                  >
-                    <span>
-                      {t("estimated_font_size", {
-                        size: textOutputMetrics.fontSizePt.toFixed(1),
-                      })}
-                    </span>
-                    <span>
-                      {textConfig.prefix.length}/
-                      {TEXT_CONFIG_LIMITS.prefix.maxLength}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <NumberInput
-                    label={t("text_start_number")}
-                    value={textConfig.startNumber}
-                    onChange={(val) => onTextConfigChange({ startNumber: val })}
-                    min={0}
-                    max={999999}
-                    isInteger
-                  />
-                  <NumberInput
-                    label={t("text_digits")}
-                    value={textConfig.digits}
-                    onChange={(val) => onTextConfigChange({ digits: val })}
-                    min={1}
-                    max={10}
-                    isInteger
-                  />
-                </div>
-
-                <div className="flex items-end gap-4">
-                  <div className="flex-1">
-                    <NumberInput
-                      label={t("text_count")}
-                      value={textConfig.count}
-                      onChange={(val) => onTextConfigChange({ count: val })}
-                      min={1}
-                      max={500}
-                      isInteger
-                    />
-                  </div>
-                  <div className="flex flex-col items-center gap-1.5 pb-0.5">
-                    <span className="text-sm font-medium text-text-muted whitespace-nowrap">
-                      {t("qr_enable")}
-                    </span>
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={textConfig.showQrCode}
-                      aria-label={t("qr_enable")}
-                      onClick={() =>
-                        onTextConfigChange({
-                          showQrCode: !textConfig.showQrCode,
-                        })
-                      }
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary/20 ${textConfig.showQrCode ? "bg-brand-primary" : "bg-text-main/10"}`}
-                      title={t("qr_enable")}
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${textConfig.showQrCode ? "translate-x-6" : "translate-x-1"}`}
-                      />
-                    </button>
-                  </div>
-                </div>
-
-                {/* QR Code Size Slider - NO border, integrated flow */}
-                <AnimatePresence initial={false}>
-                  {textConfig.showQrCode && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -4 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -4 }}
-                      transition={{ duration: 0.15 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="pt-1.5 pb-1 space-y-2">
-                        <div className="flex items-center justify-between text-sm font-medium text-text-muted">
-                          <div className="flex items-center gap-2">
-                            <Grid className="w-3.5 h-3.5" />
-                            <span>{t("qr_size")}</span>
-                          </div>
-                          <span className="font-mono text-xs">
-                            {Math.round(textConfig.qrSizeRatio * 100)}%
-                          </span>
-                        </div>
-                        <input
-                          id={qrSizeId}
-                          name="qr-size"
-                          aria-label={t("qr_size")}
-                          type="range"
-                          min="0.1"
-                          max="0.6"
-                          step="0.05"
-                          value={textConfig.qrSizeRatio}
-                          onChange={(e) =>
-                            onTextConfigChange({
-                              qrSizeRatio: parseFloat(e.target.value),
-                            })
-                          }
-                          className="w-full h-1.5 bg-text-main/10 rounded-lg appearance-none cursor-pointer accent-brand-primary"
-                        />
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {textOutputError && (
-                  <p
-                    role="alert"
-                    className="text-sm text-red-700 dark:text-red-300"
-                  >
-                    {textOutputError}
-                  </p>
-                )}
-              </div>
-            </div>
-          </>
+          <TextModeFields
+            textConfig={textConfig}
+            metrics={textOutputMetrics}
+            error={textOutputError}
+            onChange={onTextConfigChange}
+          />
         )}
       </div>
 
-      {/* Action Button */}
-      <div className="p-1 border-t border-glass-border backdrop-blur-sm rounded-b-xl overflow-hidden relative">
+      <div className="relative overflow-hidden border-t border-border-subtle p-1">
         <SmartButton
           onClick={onGeneratePdf}
           onCancel={onCancelPdf}
           disabled={
-            !!layoutError ||
+            !!layout.error ||
             (appMode === "image" ? !selectedFileName : !!textOutputError)
           }
           genStatus={genStatus}

@@ -34,12 +34,12 @@ export function Toast({ message, type, isVisible, onClose }: ToastProps) {
             animate={{ y: 0, opacity: 1, scale: 1 }}
             exit={{ y: -20, opacity: 0, scale: 0.9 }}
             transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg border backdrop-blur-glass transition-colors duration-300 ${
+            className={`pointer-events-auto flex items-center gap-3 rounded-md border bg-surface px-4 py-3 shadow-md transition-colors duration-200 ${
               type === "success"
-                ? "bg-glass-surface/90 border-green-500/20 text-green-700 dark:text-green-300"
+                ? "border-green-500/20 text-green-700 dark:text-green-300"
                 : type === "error"
-                  ? "bg-glass-surface/90 border-red-500/20 text-red-700 dark:text-red-300"
-                  : "bg-glass-surface/90 border-amber-500/20 text-amber-800 dark:text-amber-300"
+                  ? "border-red-500/20 text-red-700 dark:text-red-300"
+                  : "border-amber-500/20 text-amber-800 dark:text-amber-300"
             }`}
           >
             {type === "success" ? (

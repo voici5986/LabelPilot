@@ -21,6 +21,11 @@ import {
 import { createQrMatrix, QR_QUIET_ZONE_MODULES } from "./qrCode";
 import { validateTextOutput } from "./textValidation";
 import type { PdfProgressPhase } from "./pdfProgress";
+import {
+  isPdfWorkerGenerateRequest,
+  type PdfWorkerImageItem,
+  type PdfWorkerResponse,
+} from "./pdfWorkerProtocol";
 
 /**
  * PDF Generation Worker
@@ -162,13 +167,7 @@ async function drawLabelText(
   );
 }
 
-type ImageWorkerItem = {
-  buffer: ArrayBuffer;
-  type: string;
-  name: string;
-  id: string;
-  count: number;
-};
+type ImageWorkerItem = PdfWorkerImageItem;
 
 type LoadedImage = ImageWorkerItem & {
   data: Uint8Array;
@@ -324,39 +323,26 @@ async function prepareImageForPdf(
 }
 
 function postProgress(percent: number, phase: PdfProgressPhase): void {
-  ctx.postMessage({
+  const message: PdfWorkerResponse = {
     type: "progress",
     data: { percent: Math.min(100, Math.max(0, Math.round(percent))), phase },
-  });
+  };
+  ctx.postMessage(message);
 }
 
-ctx.onmessage = async (e) => {
+ctx.onmessage = async (event: MessageEvent<unknown>) => {
   try {
-    const payload =
-      typeof e.data === "object" && e.data !== null
-        ? (e.data as Record<string, unknown>)
-        : {};
+    if (!isPdfWorkerGenerateRequest(event.data)) {
+      throw new AppError("pdf_worker_protocol_error");
+    }
+    const payload = event.data.data;
     const config = normalizeLayoutConfig(payload.config);
     const textConfig = normalizeTextConfig(payload.textConfig);
-    const appMode = payload.appMode === "image" ? "image" : "text";
-    const imageItems: ImageWorkerItem[] = Array.isArray(payload.imageItems)
-      ? payload.imageItems.map((unsafeItem) => {
-          const item =
-            typeof unsafeItem === "object" && unsafeItem !== null
-              ? (unsafeItem as Record<string, unknown>)
-              : {};
-          return {
-            buffer:
-              item.buffer instanceof ArrayBuffer
-                ? item.buffer
-                : new ArrayBuffer(0),
-            type: typeof item.type === "string" ? item.type : "",
-            name: typeof item.name === "string" ? item.name : "image",
-            id: typeof item.id === "string" ? item.id : "",
-            count: normalizeImageItemCount(item.count),
-          };
-        })
-      : [];
+    const appMode = payload.appMode;
+    const imageItems: ImageWorkerItem[] = payload.imageItems.map((item) => ({
+      ...item,
+      count: normalizeImageItemCount(item.count),
+    }));
 
     const nextTick = () =>
       new Promise<void>((resolve) => setTimeout(resolve, 0));
@@ -499,7 +485,8 @@ ctx.onmessage = async (e) => {
 
     // 5. Generate Output
     const output = pdf.output("arraybuffer");
-    ctx.postMessage({ type: "complete", data: output }, [output]);
+    const message: PdfWorkerResponse = { type: "complete", data: output };
+    ctx.postMessage(message, [output]);
   } catch (error) {
     const safeError =
       error instanceof AppError
@@ -509,6 +496,10 @@ ctx.onmessage = async (e) => {
             {},
             error instanceof Error ? error.message : String(error),
           );
-    ctx.postMessage({ type: "error", data: serializeAppError(safeError) });
+    const message: PdfWorkerResponse = {
+      type: "error",
+      data: serializeAppError(safeError),
+    };
+    ctx.postMessage(message);
   }
 };

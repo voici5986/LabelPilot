@@ -61,7 +61,7 @@ export class ErrorBoundary extends Component<Props, State> {
               <button
                 type="button"
                 onClick={() => window.location.reload()}
-                className="w-full py-2.5 bg-brand-primary text-on-brand rounded-lg font-semibold hover:brightness-110 transition-all shadow-sm"
+                className="w-full rounded-md bg-brand-primary py-2.5 font-semibold text-on-brand transition-[filter] hover:brightness-110"
               >
                 {t ? t("error_reload") : "刷新页面"}
               </button>

@@ -33,11 +33,11 @@
 
 ## 🛠️ 技术栈
 
-- **框架**: React 19.2.5
-- **构建工具**: Vite 8.0
+- **框架**: React 19
+- **构建工具**: Vite 8
 - **并行计算**: Web Workers (ES Module)
 - **PDF 引擎**: jsPDF
-- **样式与动画**: Tailwind CSS 4.2, Framer Motion
+- **样式与动画**: Tailwind CSS 4, Framer Motion
 - **PWA**: vite-plugin-pwa
 
 ## 🚀 快速开始
@@ -79,4 +79,4 @@ pnpm build
 
 ## 📄 许可证
 
-MIT License.
+[MIT License](./LICENSE)。

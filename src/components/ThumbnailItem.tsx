@@ -28,7 +28,7 @@ export function ThumbnailItem({
     <motion.div
       initial={{ opacity: 0, scale: 0.8 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="flex-shrink-0 w-20 h-20 rounded-lg border border-border-subtle bg-surface shadow-sm relative group transition-all hover:border-brand-primary"
+      className="group relative h-20 w-20 flex-shrink-0 rounded-md border border-border-subtle bg-surface transition-colors hover:border-brand-primary"
       title={item.file.name}
     >
       {url && (
@@ -50,13 +50,13 @@ export function ThumbnailItem({
           e.stopPropagation();
           onRemove();
         }}
-        className="absolute -top-1.5 -left-1.5 z-20 flex items-center justify-center rounded-full bg-red-600 p-0.5 text-white opacity-0 shadow-sm transition-opacity hover:bg-red-700 focus:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100"
+        className="absolute -left-1.5 -top-1.5 z-20 flex items-center justify-center rounded-full bg-red-600 p-0.5 text-white opacity-0 transition-opacity hover:bg-red-700 focus:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100"
       >
         <X className="w-3 h-3" />
       </button>
 
       {/* Count Input Overlay (Bottom Right) */}
-      <div className="absolute -bottom-1 -right-1 flex items-center bg-brand-primary rounded-md shadow-sm border border-on-brand shadow-brand-primary/20 z-10">
+      <div className="absolute -bottom-1 -right-1 z-10 flex items-center rounded-md border border-on-brand bg-brand-primary">
         <input
           name={`image-count-${item.id}`}
           aria-label={t("image_quantity", { name: item.file.name })}

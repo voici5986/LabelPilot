@@ -5,6 +5,7 @@ import { translations } from "./translations";
 import type { Language } from "./translations";
 import { I18nContext } from "./i18nContext";
 import type { Translations } from "./i18nContext";
+import { interpolateTranslation } from "./i18nFormat";
 
 const STORAGE_KEY = "label_printer_lang";
 
@@ -41,13 +42,8 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     key: keyof Translations,
     variables?: Record<string, string | number>,
   ) => {
-    let str = translations[language][key] || translations.zh[key] || key;
-    if (variables) {
-      Object.entries(variables).forEach(([k, v]) => {
-        str = str.replace(`{${k}}`, String(v));
-      });
-    }
-    return str;
+    const template = translations[language][key] || translations.zh[key] || key;
+    return interpolateTranslation(template, variables);
   };
 
   useEffect(() => {
