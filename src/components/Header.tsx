@@ -14,11 +14,12 @@ export function Header() {
     })),
   );
   const { t, language, setLanguage } = useI18n();
-  const [deferredPrompt, setDeferredPrompt] = useState<Event | null>(null);
+  const [deferredPrompt, setDeferredPrompt] =
+    useState<BeforeInstallPromptEvent | null>(null);
   const [canInstall, setCanInstall] = useState(false);
 
   useEffect(() => {
-    const handleBeforeInstallPrompt = (event: Event) => {
+    const handleBeforeInstallPrompt = (event: BeforeInstallPromptEvent) => {
       event.preventDefault();
       setDeferredPrompt(event);
       setCanInstall(true);
@@ -34,9 +35,7 @@ export function Header() {
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
-    // @ts-expect-error prompt() is not standardized yet.
-    deferredPrompt.prompt();
-    // @ts-expect-error userChoice is not standardized yet.
+    await deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === "accepted") setCanInstall(false);
     setDeferredPrompt(null);

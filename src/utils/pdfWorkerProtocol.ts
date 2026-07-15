@@ -1,4 +1,4 @@
-import type { SerializedAppError } from "./appError";
+import { isAppErrorCode, type SerializedAppError } from "./appError";
 import type { SupportedImageMimeType } from "./imageLimits";
 import type { HelperLayoutConfig, TextConfig } from "./layoutMath";
 import type { PdfProgressUpdate } from "./pdfProgress";
@@ -82,7 +82,7 @@ function isProgressUpdate(value: unknown): value is PdfProgressUpdate {
 
 function isSerializedError(value: unknown): value is SerializedAppError {
   if (!isRecord(value) || typeof value.message !== "string") return false;
-  if (value.code !== undefined && typeof value.code !== "string") return false;
+  if (value.code !== undefined && !isAppErrorCode(value.code)) return false;
   if (value.params === undefined) return true;
   if (!isRecord(value.params)) return false;
   return Object.values(value.params).every(

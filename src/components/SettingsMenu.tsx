@@ -96,6 +96,7 @@ export function SettingsMenu() {
   }, [isPresetsOpen]);
 
   const paperSize = paperSizeMode;
+  const selectedPreset = paperSize === "Custom" ? "A4" : paperSize;
 
   const handlePaperSizeChange = (size: PaperSize) => {
     onPaperSizeModeChange(size);
@@ -214,14 +215,14 @@ export function SettingsMenu() {
                     <div className="flex h-full">
                       <button
                         type="button"
-                        onClick={() => handlePaperSizeChange("A4")}
+                        onClick={() => handlePaperSizeChange(selectedPreset)}
                         className={`flex flex-1 items-center justify-center gap-1 rounded-l-md border px-2 py-1.5 text-sm font-medium transition-colors ${
                           ["A4", "A3", "A5", "Letter"].includes(paperSize)
                             ? "border-brand-primary bg-brand-primary/10 text-brand-primary"
                             : "border-border-subtle text-text-muted hover:border-brand-primary/50"
                         }`}
                       >
-                        {t(PAPER_SIZE_KEYS[paperSize])}
+                        {t(PAPER_SIZE_KEYS[selectedPreset])}
                       </button>
                       <button
                         ref={presetsTriggerRef}

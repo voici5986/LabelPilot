@@ -46,8 +46,16 @@ export function PreviewPanel() {
 
   const slotsPerPage = Math.max(1, layout.positions.length);
   const totalPages = Math.max(1, Math.ceil(totalCount / slotsPerPage));
-  const [pageIndex, setPageIndex] = useState(0);
-  const currentPage = Math.min(pageIndex, totalPages - 1);
+  const [pagination, setPagination] = useState({ pageIndex: 0, totalPages });
+  if (pagination.totalPages !== totalPages) {
+    setPagination({
+      pageIndex: Math.min(pagination.pageIndex, totalPages - 1),
+      totalPages,
+    });
+  }
+  const currentPage = Math.min(pagination.pageIndex, totalPages - 1);
+  const setPageIndex = (pageIndex: number) =>
+    setPagination({ pageIndex, totalPages });
 
   const { pageWidth: paperWidthMm, pageHeight: paperHeightMm } =
     resolvePageDimensions(config);

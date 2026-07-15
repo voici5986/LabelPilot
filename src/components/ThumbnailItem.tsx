@@ -1,5 +1,7 @@
 import { motion } from "framer-motion";
 import { X } from "lucide-react";
+import type { ChangeEvent } from "react";
+import { normalizeImageItemCount } from "../utils/imageLimits";
 import type { ImageItem } from "../utils/layoutMath";
 import { useStore } from "../store/useStore";
 import { useI18n } from "../utils/i18nContext";
@@ -19,9 +21,8 @@ export function ThumbnailItem({
   const { t } = useI18n();
   const url = imageUrlMap.get(item.id) || "";
 
-  const handleCountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = parseInt(e.target.value) || 1;
-    onCountChange(Math.max(1, Math.min(999, val)));
+  const handleCountChange = (event: ChangeEvent<HTMLInputElement>) => {
+    onCountChange(normalizeImageItemCount(Number(event.currentTarget.value)));
   };
 
   return (

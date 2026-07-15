@@ -5,6 +5,7 @@ interface Option<T> {
   label: string;
   value: T;
   icon?: LucideIcon;
+  iconClassName?: string;
 }
 
 interface SegmentedControlProps<T extends string> {
@@ -55,7 +56,7 @@ export function SegmentedControl<T extends string>({
             )}
             {Icon && (
               <Icon
-                className={`w-4 h-4 ${isActive ? "text-brand-primary" : "text-text-muted"} ${option.value === "landscape" ? "transform rotate-90" : ""}`}
+                className={`h-4 w-4 ${isActive ? "text-brand-primary" : "text-text-muted"} ${option.iconClassName ?? ""}`}
               />
             )}
             {option.label}

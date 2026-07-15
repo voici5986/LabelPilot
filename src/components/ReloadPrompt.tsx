@@ -16,7 +16,7 @@ export function ReloadPrompt() {
     updateServiceWorker,
   } = useRegisterSW({
     onRegistered(r: ServiceWorkerRegistration | undefined) {
-      console.log("SW Registered");
+      if (import.meta.env.DEV) console.log("SW Registered");
       registrationRef.current = r ?? null;
       // 自动检查更新逻辑
       if (r) {
@@ -68,7 +68,7 @@ export function ReloadPrompt() {
 
   // 使用 offlineReady 状态
   useEffect(() => {
-    if (offlineReady) {
+    if (offlineReady && import.meta.env.DEV) {
       console.log("App is ready to work offline");
     }
   }, [offlineReady]);

@@ -31,8 +31,11 @@ async function expectValidPdf(
   await download.saveAs(artifactPath);
   const renderPage = await page.context().newPage();
   await renderPage.goto(pathToFileURL(artifactPath).href);
-  await renderPage.waitForTimeout(500);
-  expect((await renderPage.screenshot()).byteLength).toBeGreaterThan(8_000);
+  await expect
+    .poll(async () => (await renderPage.screenshot()).byteLength, {
+      timeout: 10_000,
+    })
+    .toBeGreaterThan(8_000);
   await renderPage.close();
   return pdf;
 }

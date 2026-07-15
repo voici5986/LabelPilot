@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle, XCircle, AlertCircle, X } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useI18n } from "../utils/i18nContext";
 
 export type ToastType = "success" | "error" | "warning";
@@ -14,15 +14,21 @@ interface ToastProps {
 
 export function Toast({ message, type, isVisible, onClose }: ToastProps) {
   const { t } = useI18n();
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
   // Auto close after 3 seconds
   useEffect(() => {
     if (isVisible) {
       const timer = setTimeout(() => {
-        onClose();
+        onCloseRef.current();
       }, 3000);
       return () => clearTimeout(timer);
     }
-  }, [isVisible, onClose]);
+  }, [isVisible, message]);
 
   return (
     <AnimatePresence>

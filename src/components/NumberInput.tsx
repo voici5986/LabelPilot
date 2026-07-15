@@ -65,10 +65,10 @@ export function NumberInput({
   };
 
   const handleBlur = () => {
-    const num = normalizeValue(parseFloat(displayValue));
-
     setDraft(null);
-    onChange(num);
+    const parsed = parseFloat(displayValue);
+    if (!Number.isFinite(parsed)) return;
+    onChange(normalizeValue(parsed));
   };
 
   const step =

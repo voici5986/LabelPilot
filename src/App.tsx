@@ -110,7 +110,6 @@ function App() {
         { signal: controller.signal },
       );
       setGenStatus("success");
-      setGenProgress(100);
       // Auto reset after 2.5s
       if (resetTimerRef.current !== null) {
         window.clearTimeout(resetTimerRef.current);
@@ -181,14 +180,12 @@ function App() {
         </div>
       </main>
 
-      {toast.visible && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          isVisible={toast.visible}
-          onClose={() => setToast((prev) => ({ ...prev, visible: false }))}
-        />
-      )}
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        isVisible={toast.visible}
+        onClose={() => setToast((prev) => ({ ...prev, visible: false }))}
+      />
 
       <ReloadPrompt />
     </div>

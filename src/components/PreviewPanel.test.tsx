@@ -1,7 +1,13 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { I18nProvider } from "../utils/i18n";
 import { PreviewPanel } from "./PreviewPanel";
 import { useStore } from "../store/useStore";
@@ -88,5 +94,23 @@ describe("PreviewPanel", () => {
 
     expect(document.querySelector("svg")).not.toBeNull();
     expect(screen.getByText("SN-001")).not.toBeNull();
+  });
+
+  it("keeps the stored page index clamped when page count shrinks", () => {
+    render(
+      <I18nProvider>
+        <PreviewPanel />
+      </I18nProvider>,
+    );
+
+    const pageInput = screen.getByRole("textbox", { name: "第 1 / 10 页" });
+    fireEvent.change(pageInput, { target: { value: "10" } });
+    fireEvent.blur(pageInput);
+
+    act(() => useStore.getState().setTextConfig({ count: 2 }));
+    expect(pageInput).toHaveProperty("value", "2");
+
+    act(() => useStore.getState().setTextConfig({ count: 10 }));
+    expect(pageInput).toHaveProperty("value", "2");
   });
 });

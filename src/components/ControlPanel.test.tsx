@@ -26,6 +26,7 @@ const defaultTextConfig = {
   qrSizeRatio: 0.35,
   qrContentPrefix: "",
 };
+const originalSetConfig = useStore.getState().setConfig;
 
 function renderControlPanel() {
   return render(
@@ -43,6 +44,7 @@ function resetStore() {
     theme: "system",
     imageItems: [],
     imageUrlMap: new Map(),
+    setConfig: originalSetConfig,
   });
 }
 
@@ -92,6 +94,26 @@ describe("ControlPanel", () => {
     });
 
     expect(useStore.getState().imageItems[0].count).toBe(7);
+  });
+
+  it("uses the landscape row limit before updating the store", () => {
+    const setConfig = vi.fn();
+    useStore.setState({ setConfig });
+    render(
+      <I18nProvider>
+        <ControlPanel
+          onFilesSelect={vi.fn()}
+          onGeneratePdf={vi.fn()}
+          maxRows={20}
+        />
+      </I18nProvider>,
+    );
+
+    fireEvent.change(screen.getByLabelText("行数"), {
+      target: { value: "20" },
+    });
+
+    expect(setConfig).toHaveBeenCalledWith({ rows: 10 });
   });
 
   it("updates text mode fields and QR toggle state", () => {

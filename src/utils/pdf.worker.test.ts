@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import jsPDF from "jspdf";
 import type { HelperLayoutConfig, TextConfig } from "./layoutMath";
 
 const mockJsPdfInstance = {
@@ -104,11 +105,12 @@ beforeEach(() => {
   mockJsPdfInstance.getStringUnitWidth.mockClear();
   mockJsPdfInstance.text.mockClear();
   mockJsPdfInstance.setFillColor.mockClear();
-  mockJsPdfInstance.rect.mockClear();
+  mockJsPdfInstance.rect.mockReset();
   mockJsPdfInstance.addPage.mockClear();
   mockJsPdfInstance.output.mockClear();
   fillTextMock.mockClear();
   drawImageMock.mockClear();
+  vi.mocked(jsPDF).mockClear();
 });
 
 describe("pdf.worker", () => {
@@ -392,6 +394,36 @@ describe("pdf.worker", () => {
       expect.objectContaining({ type: "complete" }),
       expect.any(Array),
     );
+    expect(jsPDF).toHaveBeenCalledWith(
+      expect.objectContaining({ compress: true }),
+    );
+  });
+
+  it("does not misclassify PDF drawing failures as QR capacity errors", async () => {
+    mockJsPdfInstance.rect.mockImplementationOnce(() => {
+      throw new Error("rect drawing failed");
+    });
+    const { postMessage, onmessage } = await setupWorker();
+
+    onmessage({
+      data: {
+        config: createBaseConfig(),
+        imageItems: [],
+        appMode: "text",
+        textConfig: createTextConfig({ showQrCode: true }),
+      },
+    });
+
+    await flushAsync();
+    await flushAsync();
+
+    expect(postMessage).toHaveBeenCalledWith({
+      type: "error",
+      data: expect.objectContaining({
+        code: "pdf_generation_failed",
+        message: "rect drawing failed",
+      }),
+    });
   });
 
   it("caps oversized QR prefixes at the worker boundary", async () => {

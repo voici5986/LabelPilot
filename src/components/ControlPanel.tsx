@@ -5,7 +5,11 @@ import { File as FileIcon, FileMinus, Grid, UploadCloud } from "lucide-react";
 import { useShallow } from "zustand/shallow";
 import { useStore } from "../store/useStore";
 import { useI18n } from "../utils/i18nContext";
-import { calculateLabelLayout, getPaperSizeInfo } from "../utils/layoutMath";
+import {
+  calculateLabelLayout,
+  getPaperSizeInfo,
+  LAYOUT_CONFIG_LIMITS,
+} from "../utils/layoutMath";
 import type { PdfProgressPhase } from "../utils/pdfProgress";
 import { getTextOutputMetrics } from "../utils/textValidation";
 import { NumberInput } from "./NumberInput";
@@ -32,8 +36,8 @@ export function ControlPanel({
   genStatus = "idle",
   genProgress = 0,
   genPhase = "preparing",
-  maxRows = 20,
-  maxCols = 20,
+  maxRows,
+  maxCols,
 }: ControlPanelProps) {
   const {
     config,
@@ -60,6 +64,16 @@ export function ControlPanel({
   );
   const { t } = useI18n();
   const fileInputId = useId();
+  const orientationMaxRows = LAYOUT_CONFIG_LIMITS.rows[config.orientation];
+  const orientationMaxCols = LAYOUT_CONFIG_LIMITS.cols[config.orientation];
+  const effectiveMaxRows = Math.max(
+    1,
+    Math.min(maxRows ?? orientationMaxRows, orientationMaxRows),
+  );
+  const effectiveMaxCols = Math.max(
+    1,
+    Math.min(maxCols ?? orientationMaxCols, orientationMaxCols),
+  );
 
   const layout = useMemo(() => calculateLabelLayout(config), [config]);
   const textOutputMetrics = useMemo(
@@ -115,7 +129,7 @@ export function ControlPanel({
               value={config.rows}
               onChange={(value) => onConfigChange({ rows: value })}
               min={1}
-              max={maxRows}
+              max={effectiveMaxRows}
               isInteger
             />
             <NumberInput
@@ -123,7 +137,7 @@ export function ControlPanel({
               value={config.cols}
               onChange={(value) => onConfigChange({ cols: value })}
               min={1}
-              max={maxCols}
+              max={effectiveMaxCols}
               isInteger
             />
           </div>
@@ -156,7 +170,12 @@ export function ControlPanel({
             onChange={(orientation) => onConfigChange({ orientation })}
             options={[
               { label: t("portrait"), value: "portrait", icon: FileIcon },
-              { label: t("landscape"), value: "landscape", icon: FileMinus },
+              {
+                label: t("landscape"),
+                value: "landscape",
+                icon: FileMinus,
+                iconClassName: "rotate-90",
+              },
             ]}
             className="mt-2"
           />

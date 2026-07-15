@@ -92,7 +92,16 @@ function drawQrCode(
   y: number,
   sizeMm: number,
 ): void {
-  const matrix = createQrMatrix(value);
+  let matrix: ReturnType<typeof createQrMatrix>;
+  try {
+    matrix = createQrMatrix(value);
+  } catch (error) {
+    throw new AppError(
+      "qr_error_capacity",
+      {},
+      error instanceof Error ? error.message : String(error),
+    );
+  }
   const fullSize = matrix.size + QR_QUIET_ZONE_MODULES * 2;
   const moduleSize = sizeMm / fullSize;
   const offset = QR_QUIET_ZONE_MODULES * moduleSize;
@@ -254,7 +263,6 @@ async function prepareImageForPdf(
   name: string,
 ): Promise<Pick<LoadedImage, "data" | "format" | "width" | "height">> {
   const originalData = new Uint8Array(buffer);
-  const parsed = parseImageDimensions(new Uint8Array(buffer), type);
 
   if (typeof createImageBitmap === "function") {
     let bitmap: ImageBitmap | null = null;
@@ -310,6 +318,7 @@ async function prepareImageForPdf(
   if (type === "image/jpeg") {
     throw new AppError("image_error_normalize", { name });
   }
+  const parsed = parseImageDimensions(originalData, type);
   if (parsed) {
     return {
       data: originalData,
@@ -397,6 +406,7 @@ ctx.onmessage = async (event: MessageEvent<unknown>) => {
       orientation: config.orientation,
       unit: "mm",
       format: [layout.pageWidth, layout.pageHeight],
+      compress: true,
     });
 
     // 4. Calculate total labels
@@ -447,22 +457,18 @@ ctx.onmessage = async (event: MessageEvent<unknown>) => {
             // 二维码内容
             const qrValue = `${textConfig.qrContentPrefix}${text}`;
 
-            try {
-              qrBatchCount += 1;
+            qrBatchCount += 1;
 
-              // Shared layout metrics with preview
-              const { qrDimMm, qrTopMm, qrLeftMm } = getTextLayoutBoxes(
-                pos,
-                true,
-                textConfig.qrSizeRatio,
-              );
-              const qrX = pos.x + qrLeftMm;
-              const qrY = pos.y + qrTopMm;
+            // Shared layout metrics with preview
+            const { qrDimMm, qrTopMm, qrLeftMm } = getTextLayoutBoxes(
+              pos,
+              true,
+              textConfig.qrSizeRatio,
+            );
+            const qrX = pos.x + qrLeftMm;
+            const qrY = pos.y + qrTopMm;
 
-              drawQrCode(pdf, qrValue, qrX, qrY, qrDimMm);
-            } catch {
-              throw new AppError("qr_error_capacity");
-            }
+            drawQrCode(pdf, qrValue, qrX, qrY, qrDimMm);
 
             await drawLabelText(pdf, text, pos, textConfig);
             if (qrBatchCount % 50 === 0) await nextTick();
