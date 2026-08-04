@@ -58,14 +58,13 @@
   --color-brand-primary: var(--brand-primary-light);
   --color-on-brand: var(--on-brand-light);
   --paper-brightness: 1;
-
-  /* 其他品牌辅助色 */
-  --color-brand-secondary: var(--color-blue-500);
 }
 
-/* 1. 自动跟随系统的暗色模式 */
+/* 1. 自动跟随系统的暗色模式
+   runtime 的 data-theme 恒由 App 写入（system 也映射为 dark/light），
+   此块仅作为 React 挂载前的首帧兜底，与 [data-theme] 规则职责分离、不重复生效 */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme]) {
     color-scheme: dark;
     --color-background: var(--dark-background);
     --color-surface: var(--dark-surface);
