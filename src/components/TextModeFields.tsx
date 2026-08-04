@@ -26,7 +26,7 @@ export function TextModeFields({
 
   return (
     <div className="space-y-4">
-      <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-text-muted">
+      <h2 className="group-title flex items-center gap-2">
         <Grid className="h-4 w-4" /> {t("text_config_group")}
       </h2>
 

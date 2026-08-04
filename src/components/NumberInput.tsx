@@ -75,6 +75,11 @@ export function NumberInput({
     propsStep ??
     (isInteger ? 1 : decimalPlaces ? Math.pow(10, -decimalPlaces) : 1);
 
+  // 到达 min / max 边界时禁用对应步进按钮，避免"看起来可点但数值不变"。
+  const EPSILON = 1e-9;
+  const canIncrement = normalizeValue(value + step) > value + EPSILON;
+  const canDecrement = normalizeValue(value - step) < value - EPSILON;
+
   const increment = () => {
     setDraft(null);
     onChange(normalizeValue(value + step));
@@ -84,6 +89,18 @@ export function NumberInput({
     setDraft(null);
     onChange(normalizeValue(value - step));
   };
+
+  const stepperClass = (enabled: boolean) =>
+    `flex flex-1 items-center justify-center transition-colors group/btn ${
+      enabled
+        ? "text-text-muted hover:bg-brand-primary/10 hover:text-brand-primary"
+        : "cursor-not-allowed text-text-muted/40"
+    }`;
+
+  const chevronClass = (enabled: boolean) =>
+    `w-3.5 h-3.5 transition-transform ${
+      enabled ? "group-hover/btn:scale-110" : ""
+    }`;
 
   return (
     <div className="space-y-1.5 flex-1">
@@ -108,25 +125,27 @@ export function NumberInput({
           }}
           className="w-full input-base focus:input-base-focus pl-3 pr-8 py-1.5 text-sm font-mono font-semibold text-text-main"
         />
-        <div className="absolute right-0 top-0 flex h-full w-8 flex-col overflow-hidden rounded-r-lg border-l border-border-subtle/30">
+        <div className="absolute right-0 top-0 flex h-full w-8 flex-col overflow-hidden rounded-r-md border-l border-border-subtle/30">
           <button
             type="button"
             onClick={increment}
+            disabled={!canIncrement}
             aria-label={`${label}: +${step}`}
             aria-controls={inputId}
-            className="flex-1 flex items-center justify-center hover:bg-brand-primary/10 text-text-muted hover:text-brand-primary transition-colors group/btn"
+            className={stepperClass(canIncrement)}
           >
-            <ChevronUp className="w-3.5 h-3.5 group-hover/btn:scale-110 transition-transform" />
+            <ChevronUp className={chevronClass(canIncrement)} />
           </button>
           <div className="h-[1px] w-full bg-border-subtle/30" />
           <button
             type="button"
             onClick={decrement}
+            disabled={!canDecrement}
             aria-label={`${label}: -${step}`}
             aria-controls={inputId}
-            className="flex-1 flex items-center justify-center hover:bg-brand-primary/10 text-text-muted hover:text-brand-primary transition-colors group/btn"
+            className={stepperClass(canDecrement)}
           >
-            <ChevronDown className="w-3.5 h-3.5 group-hover/btn:scale-110 transition-transform" />
+            <ChevronDown className={chevronClass(canDecrement)} />
           </button>
         </div>
       </div>

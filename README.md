@@ -69,7 +69,7 @@ The output will be in the `dist/` directory.
 
 ## 💡 Usage Guide
 
-1. **Select Mode**: Switch between **Image** and **Text** mode in the header.
+1. **Select Mode**: Switch between **Image** and **Text** mode at the top of the left panel.
 2. **Configure Layout**: Use the left sidebar to adjust rows, columns, spacing, and orientation.
 3. **Add Content**:
    - In **Image Mode**: Upload JPG/PNG files and set quantities.

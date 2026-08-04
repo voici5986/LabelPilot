@@ -9,9 +9,18 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: "MiSans";
+  src: url("./assets/fonts/MiSansVF_gb2312.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme {
   --font-sans:
-    "Segoe UI", "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif;
+    "MiSans", "Segoe UI", "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC",
+    sans-serif;
   --font-mono: "MapleMono", monospace;
 
   /* --- 品牌色控制中心 --- */
@@ -27,16 +36,22 @@
   /* ---------------------- */
 
   /* 主题原始值定义 */
+  --light-background: var(--color-zinc-100);
   --light-surface: var(--color-zinc-50);
+  --light-elevated: #ffffff;
   --light-text: var(--color-zinc-800);
   --light-border: var(--color-zinc-200);
 
+  --dark-background: var(--color-zinc-950);
   --dark-surface: var(--color-zinc-900);
+  --dark-elevated: var(--color-zinc-800);
   --dark-text: var(--color-zinc-200);
   --dark-border: var(--color-zinc-800);
 
   /* 基础语义变量 - 默认为亮色模式 */
+  --color-background: var(--light-background);
   --color-surface: var(--light-surface);
+  --color-elevated: var(--light-elevated);
   --color-text-main: var(--light-text);
   --color-text-muted: var(--color-zinc-600);
   --color-border-subtle: var(--light-border);
@@ -52,7 +67,9 @@
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
+    --color-background: var(--dark-background);
     --color-surface: var(--dark-surface);
+    --color-elevated: var(--dark-elevated);
     --color-text-main: var(--dark-text);
     --color-text-muted: var(--color-zinc-400);
     --color-border-subtle: var(--dark-border);
@@ -65,7 +82,9 @@
 /* 2. 手动模式强制覆盖 (放在后面确保优先级) */
 :root[data-theme="light"] {
   color-scheme: light;
+  --color-background: var(--light-background);
   --color-surface: var(--light-surface);
+  --color-elevated: var(--light-elevated);
   --color-text-main: var(--light-text);
   --color-text-muted: var(--color-zinc-600);
   --color-border-subtle: var(--light-border);
@@ -76,7 +95,9 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
+  --color-background: var(--dark-background);
   --color-surface: var(--dark-surface);
+  --color-elevated: var(--dark-elevated);
   --color-text-main: var(--dark-text);
   --color-text-muted: var(--color-zinc-400);
   --color-border-subtle: var(--dark-border);
@@ -85,9 +106,25 @@
   --paper-brightness: 0.9;
 }
 
-@utility glass-panel {
-  background-color: var(--color-surface);
+@utility elevated-panel {
+  background-color: var(--color-elevated);
   border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 4px 16px -6px rgb(0 0 0 / 0.12);
+}
+
+@utility group-title {
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+
+  /* 中文无大小写，保留轻微字距即可，避免过宽 */
+  &:lang(zh) {
+    letter-spacing: 0.02em;
+  }
 }
 
 @utility input-base {
@@ -185,7 +222,7 @@
       color, background-color, border-color, text-decoration-color, fill, stroke;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     transition-duration: 300ms;
-    background-color: var(--color-surface);
+    background-color: var(--color-background);
     color: var(--color-text-main);
     font-family: var(--font-sans);
   }

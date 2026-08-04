@@ -33,7 +33,7 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         this.props.fallback || (
           <div className="min-h-screen flex items-center justify-center p-6 bg-background">
-            <div className="glass-panel p-8 max-w-md w-full text-center space-y-4">
+            <div className="elevated-panel p-8 max-w-md w-full text-center space-y-4">
               <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -71,7 +71,7 @@ export class ErrorBoundary extends Component<Props, State> {
                   resetPersistedSettings();
                   window.location.reload();
                 }}
-                className="w-full rounded-lg border border-border-subtle py-2.5 font-semibold text-text-main transition-colors hover:bg-text-main/5"
+                className="w-full rounded-md border border-border-subtle py-2.5 font-semibold text-text-main transition-colors hover:bg-text-main/5"
               >
                 {t ? t("error_reset") : "重置设置并刷新"}
               </button>

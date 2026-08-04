@@ -42,7 +42,8 @@ export default defineConfig({
           "**/purify.es-*.js",
           "**/index.es-*.js",
         ],
-        maximumFileSizeToCacheInBytes: 1024 * 1024,
+        // MiSansVF 可变字体（gb2312 子集）约 2.55 MB，提高预缓存上限以纳入
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
       },
       devOptions: {
         enabled: false, // 关闭开发模式下的 PWA，消除终端警告

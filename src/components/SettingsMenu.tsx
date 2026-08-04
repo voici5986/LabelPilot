@@ -13,7 +13,6 @@ import {
 } from "../utils/layoutMath";
 import type { PaperSize } from "../utils/layoutMath";
 import { NumberInput } from "./NumberInput";
-import { SegmentedControl } from "./SegmentedControl";
 
 const PAPER_SIZE_KEYS: Record<PaperSize, keyof Translations> = {
   A4: "paper_type_a4",
@@ -27,8 +26,6 @@ export function SettingsMenu() {
   const {
     config,
     onConfigChange,
-    appMode,
-    onAppModeChange,
     textConfig,
     onTextConfigChange,
     paperSizeMode,
@@ -37,8 +34,6 @@ export function SettingsMenu() {
     useShallow((state) => ({
       config: state.config,
       onConfigChange: state.setConfig,
-      appMode: state.appMode,
-      onAppModeChange: state.setAppMode,
       textConfig: state.textConfig,
       onTextConfigChange: state.setTextConfig,
       paperSizeMode: state.paperSizeMode,
@@ -185,30 +180,12 @@ export function SettingsMenu() {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 4 }}
-            transition={{ duration: 0.18 }}
-            className="fixed left-2 right-2 top-12 z-50 rounded-lg border border-border-subtle bg-surface p-4 shadow-lg sm:absolute sm:left-auto sm:right-0 sm:w-80"
+            transition={{ duration: 0.18, ease: "easeOut" }}
+            className="fixed left-2 right-2 top-12 z-50 rounded-lg border border-border-subtle bg-elevated p-4 shadow-lg sm:absolute sm:left-auto sm:right-0 sm:w-80"
           >
             <div className="space-y-4">
               <div className="space-y-3">
-                <span className="text-sm font-semibold uppercase tracking-wider text-text-muted">
-                  {t("app_mode")}
-                </span>
-                <SegmentedControl
-                  label={t("app_mode")}
-                  layoutId="app-mode-active"
-                  value={appMode}
-                  onChange={onAppModeChange}
-                  options={[
-                    { label: t("mode_image"), value: "image" },
-                    { label: t("mode_text"), value: "text" },
-                  ]}
-                />
-              </div>
-
-              <div className="space-y-3">
-                <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">
-                  {t("paper_size")}
-                </span>
+                <span className="group-title">{t("paper_size")}</span>
 
                 <div className="flex gap-2">
                   <div className="group relative w-1/2" ref={presetsRef}>
@@ -253,8 +230,8 @@ export function SettingsMenu() {
                           initial={{ opacity: 0, y: 4 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: 2 }}
-                          transition={{ duration: 0.14 }}
-                          className="absolute left-0 right-0 top-full z-[100] mt-1 overflow-hidden rounded-md border border-border-subtle bg-surface py-1 shadow-md"
+                          transition={{ duration: 0.14, ease: "easeOut" }}
+                          className="absolute left-0 right-0 top-full z-[100] mt-1 overflow-hidden rounded-md border border-border-subtle bg-elevated py-1 shadow-md"
                         >
                           {(["A4", "A3", "A5", "Letter"] as const).map(
                             (size) => (
@@ -315,7 +292,7 @@ export function SettingsMenu() {
               <div className="space-y-2 border-t border-border-subtle/50 pt-3">
                 <label
                   htmlFor={qrPrefixId}
-                  className="ml-0.5 block text-sm font-semibold uppercase tracking-wider text-text-muted"
+                  className="ml-0.5 block text-sm font-medium tracking-wider text-text-muted"
                 >
                   {t("qr_content_prefix")}
                 </label>

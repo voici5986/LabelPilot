@@ -36,11 +36,11 @@ export function Toast({ message, type, isVisible, onClose }: ToastProps) {
         <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
           <motion.div
             role={type === "error" ? "alert" : "status"}
-            initial={{ y: -50, opacity: 0, scale: 0.9 }}
-            animate={{ y: 0, opacity: 1, scale: 1 }}
-            exit={{ y: -20, opacity: 0, scale: 0.9 }}
-            transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            className={`pointer-events-auto flex items-center gap-3 rounded-md border bg-surface px-4 py-3 shadow-md transition-colors duration-200 ${
+            initial={{ y: -12, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -8, opacity: 0 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+            className={`pointer-events-auto flex items-center gap-3 rounded-md border bg-elevated px-4 py-3 shadow-md transition-colors duration-200 ${
               type === "success"
                 ? "border-green-500/20 text-green-700 dark:text-green-300"
                 : type === "error"

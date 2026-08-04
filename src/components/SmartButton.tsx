@@ -64,7 +64,7 @@ export function SmartButton({
         transition={{ duration: 0.2 }}
         onClick={genStatus === "generating" ? onCancel : onClick}
         disabled={genStatus === "idle" ? disabled : genStatus !== "generating"}
-        className={`w-full py-3 px-4 rounded-lg font-bold text-sm flex items-center justify-center gap-2 relative overflow-hidden group transition-all duration-200
+        className={`w-full py-3 px-4 rounded-lg font-bold text-sm flex items-center justify-center gap-2 relative overflow-hidden group transition-[background-color,color,box-shadow] duration-200
                 ${
                   genStatus === "success"
                     ? "bg-green-700 text-white shadow-sm"
@@ -83,7 +83,7 @@ export function SmartButton({
             className="absolute inset-0 bg-brand-primary/10 origin-left"
             initial={{ scaleX: 0 }}
             animate={{ scaleX: genProgress / 100 }}
-            transition={{ type: "spring", bounce: 0, duration: 0.5 }}
+            transition={{ duration: 0.2, ease: "linear" }}
           />
         )}
 
@@ -104,9 +104,9 @@ export function SmartButton({
           ) : genStatus === "success" ? (
             <motion.div
               key="success"
-              initial={{ opacity: 0, scale: 0.5 }}
+              initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.5 }}
+              exit={{ opacity: 0, scale: 0.95 }}
               className="flex items-center gap-2 relative z-10"
             >
               <CheckCircle className="w-5 h-5" />
@@ -115,9 +115,9 @@ export function SmartButton({
           ) : genStatus === "error" ? (
             <motion.div
               key="error"
-              initial={{ opacity: 0, scale: 0.5 }}
+              initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.5 }}
+              exit={{ opacity: 0, scale: 0.95 }}
               className="flex items-center gap-2 relative z-10"
             >
               <AlertCircle className="w-5 h-5" />

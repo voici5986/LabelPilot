@@ -41,7 +41,7 @@ export function SegmentedControl<T extends string>({
             type="button"
             aria-pressed={isActive}
             onClick={() => onChange(option.value)}
-            className={`relative z-0 flex flex-1 items-center justify-center gap-2 rounded-lg px-1 py-1.5 text-sm font-medium transition-colors ${
+            className={`relative z-0 flex flex-1 items-center justify-center gap-2 rounded-md px-1 py-1.5 text-sm font-medium transition-colors ${
               isActive
                 ? "text-brand-primary"
                 : "text-text-muted hover:text-text-main"
@@ -50,8 +50,8 @@ export function SegmentedControl<T extends string>({
             {isActive && (
               <motion.div
                 layoutId={layoutId}
-                className="absolute inset-0 -z-10 rounded-md border border-border-subtle bg-surface"
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                className="absolute inset-0 -z-10 rounded-md border border-border-subtle bg-elevated"
+                transition={{ duration: 0.15, ease: "easeOut" }}
               />
             )}
             {Icon && (

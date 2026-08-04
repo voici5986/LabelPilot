@@ -46,6 +46,7 @@ export function ControlPanel({
     onReorder,
     onItemCountChange,
     appMode,
+    onAppModeChange,
     textConfig,
     onTextConfigChange,
     paperSizeMode,
@@ -57,6 +58,7 @@ export function ControlPanel({
       onReorder: state.setImageItems,
       onItemCountChange: state.updateItemCount,
       appMode: state.appMode,
+      onAppModeChange: state.setAppMode,
       textConfig: state.textConfig,
       onTextConfigChange: state.setTextConfig,
       paperSizeMode: state.paperSizeMode,
@@ -113,9 +115,23 @@ export function ControlPanel({
   return (
     <aside className="z-10 flex h-auto w-full flex-col overflow-hidden rounded-lg border border-border-subtle bg-surface lg:h-full">
       <div className="flex-1 space-y-5 p-4 scrollbar-hide lg:overflow-y-auto lg:p-5">
+        <div className="space-y-3 border-b border-border-subtle/60 pb-4">
+          <h2 className="group-title">{t("app_mode")}</h2>
+          <SegmentedControl
+            label={t("app_mode")}
+            layoutId="app-mode-active"
+            value={appMode}
+            onChange={onAppModeChange}
+            options={[
+              { label: t("mode_image"), value: "image" },
+              { label: t("mode_text"), value: "text" },
+            ]}
+          />
+        </div>
+
         <div className="space-y-4 border-b border-border-subtle/60 pb-4">
           <div className="flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-text-muted">
+            <h2 className="group-title flex items-center gap-2">
               <Grid className="h-4 w-4" /> {t("layout_group")}
             </h2>
             <span className="text-xs font-medium text-text-muted">
@@ -184,7 +200,7 @@ export function ControlPanel({
         {appMode === "image" ? (
           <>
             <div className="space-y-3">
-              <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-text-muted">
+              <h2 className="group-title flex items-center gap-2">
                 <UploadCloud className="h-4 w-4" /> {t("file_group")}
               </h2>
 

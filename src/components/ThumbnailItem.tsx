@@ -27,8 +27,9 @@ export function ThumbnailItem({
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.8 }}
+      initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.15, ease: "easeOut" }}
       className="group relative h-20 w-20 flex-shrink-0 rounded-md border border-border-subtle bg-surface transition-colors hover:border-brand-primary"
       title={item.file.name}
     >

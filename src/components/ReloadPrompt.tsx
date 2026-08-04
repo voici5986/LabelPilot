@@ -89,10 +89,11 @@ export function ReloadPrompt() {
           role={updateError ? "alert" : "status"}
           aria-live={updateError ? "assertive" : "polite"}
           aria-atomic="true"
-          initial={{ y: 50, opacity: 0 }}
+          initial={{ y: 16, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          exit={{ y: 50, opacity: 0 }}
-          className="fixed bottom-6 right-6 z-[1000] flex min-w-[300px] flex-col gap-3 rounded-lg border border-brand-primary/20 bg-white p-4 shadow-lg dark:bg-gray-900"
+          exit={{ y: 16, opacity: 0 }}
+          transition={{ duration: 0.18, ease: "easeOut" }}
+          className="fixed bottom-4 left-4 right-4 z-[1000] flex flex-col gap-3 rounded-lg border border-brand-primary/20 bg-elevated p-4 shadow-lg sm:bottom-6 sm:left-auto sm:right-6 sm:w-auto sm:min-w-[300px]"
         >
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-3">

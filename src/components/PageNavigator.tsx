@@ -33,7 +33,7 @@ export function PageNavigator({
         current: currentPage + 1,
         total: totalPages,
       })}
-      className="absolute bottom-4 left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-md border border-border-subtle bg-surface px-3 py-1.5"
+      className="absolute bottom-4 left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-md border border-border-subtle bg-elevated px-3 py-1.5"
     >
       <button
         type="button"
