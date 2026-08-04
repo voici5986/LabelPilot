@@ -1,3 +1,18 @@
+# [1.1.0](https://github.com/voici5986/label-react/compare/v1.0.0...v1.1.0) (2026-08-04)
+
+### Bug Fixes
+
+- **core,pdf,input:** 修复致命bug并统一配置校验与渲染逻辑 ([cdc5dc5](https://github.com/voici5986/label-react/commit/cdc5dc53735a4240226900687d222bca3779d1e9))
+- **core:** 统一错误代码定义并提升二维码绘制健壮性 ([fbaa921](https://github.com/voici5986/label-react/commit/fbaa921004296e15ae613539091dc26079f33d33))
+- **pdfGenerator:** 修复PDF生成的资源清理与错误处理逻辑 ([398a847](https://github.com/voici5986/label-react/commit/398a847cbb692102574273d9d3eb32899322263c))
+
+### Features
+
+- 完成多项功能迭代与样式优化 ([b3a77ae](https://github.com/voici5986/label-react/commit/b3a77ae207ac4a7e678c2f1d62ec979cf9182814))
+- 新增核心组件与工具，完善项目配置与流程 ([170e433](https://github.com/voici5986/label-react/commit/170e433e6dbe5fb286f1f281d1abc59fc6f4a5da))
+- add Husky pre-commit and commit-msg hooks, and update dependencies ([71c57d8](https://github.com/voici5986/label-react/commit/71c57d84b0883389580188ff8f83ba84ae6bed0e))
+- **release:** 新增 LabelPilot 严格校验与正式版本发布脚本 ([56da4aa](https://github.com/voici5986/label-react/commit/56da4aa2abe4d50e3a1e3172d7819fe45ba6753b))
+
 # 1.0.0 (2026-02-24)
 
 ### Bug Fixes
