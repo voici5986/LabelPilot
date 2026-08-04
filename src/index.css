@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
+/* Tailwind v4 默认将 hover variant 编译进 @media (hover: hover)；
+   移动端关键控件另外使用 active: 提供触摸按压反馈。 */
+
 @font-face {
   font-family: "MapleMono";
   src: url("./assets/fonts/MapleMono-Subset.woff2") format("woff2");
@@ -112,6 +115,18 @@
   box-shadow: 0 4px 16px -6px rgb(0 0 0 / 0.12);
 }
 
+/* 移动端命中区扩展：可见尺寸保持克制，触控区扩展到 44px */
+@utility hit-target {
+  position: relative;
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: -6px;
+    border-radius: inherit;
+  }
+}
+
 @utility group-title {
   font-size: 0.75rem;
   line-height: 1rem;
@@ -149,10 +164,10 @@
   }
 }
 
+/* 顶部与侧边安全区由根容器承担；底部安全区由底部操作栏与编辑面板各自独立处理，避免双重叠加 */
 @utility safe-area-app {
   padding-top: env(safe-area-inset-top, 0px);
   padding-right: env(safe-area-inset-right, 0px);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
   padding-left: env(safe-area-inset-left, 0px);
 }
 

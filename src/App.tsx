@@ -3,6 +3,8 @@ import { Header } from "./components/Header";
 import { ControlPanel } from "./components/ControlPanel";
 import { PreviewPanel } from "./components/PreviewPanel";
 import { ReloadPrompt } from "./components/ReloadPrompt";
+import { MobileActionBar } from "./components/MobileActionBar";
+import { EditSheet } from "./components/EditSheet";
 import { useStore } from "./store/useStore";
 import { useShallow } from "zustand/shallow";
 import { generatePDF } from "./utils/pdfGenerator";
@@ -15,6 +17,8 @@ import {
   validateImageFiles,
 } from "./utils/imageLimits";
 import type { PdfProgressPhase } from "./utils/pdfProgress";
+import type { GenerationStatus } from "./utils/generation";
+import { useGenerationReadiness } from "./hooks/useGenerationReadiness";
 
 function App() {
   const { t } = useI18n();
@@ -41,13 +45,38 @@ function App() {
     visible: false,
   });
 
-  const [genStatus, setGenStatus] = useState<
-    "idle" | "generating" | "success" | "error"
-  >("idle");
+  const [genStatus, setGenStatus] = useState<GenerationStatus>("idle");
   const [genProgress, setGenProgress] = useState(0);
   const [genPhase, setGenPhase] = useState<PdfProgressPhase>("preparing");
   const resetTimerRef = useRef<number | null>(null);
   const generationControllerRef = useRef<AbortController | null>(null);
+
+  // 移动端编辑面板状态（<lg 生效）
+  const [editOpen, setEditOpen] = useState(false);
+  const [editFull, setEditFull] = useState(false);
+
+  // 桌面布局不保留移动端 Sheet 状态，避免缩回移动端时重新出现旧面板。
+  useEffect(() => {
+    const desktopMedia = window.matchMedia("(min-width: 1024px)");
+    const resetMobileSheetForDesktop = () => {
+      if (!desktopMedia.matches) return;
+      setEditOpen(false);
+      setEditFull(false);
+    };
+
+    resetMobileSheetForDesktop();
+    desktopMedia.addEventListener("change", resetMobileSheetForDesktop);
+    return () =>
+      desktopMedia.removeEventListener("change", resetMobileSheetForDesktop);
+  }, []);
+
+  // 生成就绪度：与桌面 ControlPanel 共用同一判定来源
+  const { canGenerate: mobileCanGenerate } = useGenerationReadiness(
+    config,
+    appMode,
+    imageItems,
+    textConfig,
+  );
 
   // Theme Side Effect
   useEffect(() => {
@@ -160,11 +189,12 @@ function App() {
   }, []);
 
   return (
-    <div className="safe-area-app min-h-app flex flex-col overflow-y-auto bg-background text-text-main selection:bg-brand-primary/20 lg:h-dvh lg:overflow-hidden">
+    <div className="safe-area-app flex h-dvh flex-col overflow-hidden bg-background text-text-main selection:bg-brand-primary/20">
       <Header />
 
-      <main className="flex flex-1 flex-col gap-3 overflow-visible p-2 lg:min-h-0 lg:flex-row lg:overflow-hidden lg:p-3">
-        <div className="flex w-full shrink-0 flex-col gap-3 scrollbar-hide lg:h-full lg:w-80">
+      <main className="flex flex-1 min-h-0 flex-col gap-3 p-2 lg:flex-row lg:overflow-hidden lg:p-3">
+        {/* 桌面控制面板（<lg 隐藏，由 EditSheet 承担） */}
+        <div className="hidden shrink-0 flex-col gap-3 scrollbar-hide lg:flex lg:h-full lg:w-80">
           <ControlPanel
             onFilesSelect={handleFilesSelect}
             onGeneratePdf={handleGeneratePdf}
@@ -175,10 +205,29 @@ function App() {
           />
         </div>
 
-        <div className="min-h-[65dvh] min-w-0 flex-1 lg:min-h-0">
-          <PreviewPanel />
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
+          <div className="min-h-0 flex-1">
+            <PreviewPanel />
+          </div>
+          <MobileActionBar
+            onOpenEdit={() => setEditOpen(true)}
+            onGenerate={handleGeneratePdf}
+            onCancel={handleCancelPdf}
+            disabled={!mobileCanGenerate}
+            genStatus={genStatus}
+            genProgress={genProgress}
+            genPhase={genPhase}
+          />
         </div>
       </main>
+
+      <EditSheet
+        open={editOpen}
+        full={editFull}
+        onClose={() => setEditOpen(false)}
+        onToggleFull={() => setEditFull((full) => !full)}
+        onFilesSelect={handleFilesSelect}
+      />
 
       <Toast
         message={toast.message}

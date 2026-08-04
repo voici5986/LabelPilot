@@ -31,7 +31,7 @@ export function PreviewPanel() {
   );
   const { t } = useI18n();
   const [scale, setScale] = useState(1);
-  const { containerRef, baseFitScale, isPanning, handleMouseDown } =
+  const { containerRef, baseFitScale, isPanning, handlePointerDown } =
     usePreviewViewport(config);
 
   const layout = useMemo(() => calculateLabelLayout(config), [config]);
@@ -76,8 +76,8 @@ export function PreviewPanel() {
         {/* Scrollable Area */}
         <div
           ref={containerRef}
-          onMouseDown={handleMouseDown}
-          className={`flex-1 overflow-auto text-center p-2 scrollbar-thin scrollbar-thumb-text-main/20 select-none ${isPanning ? "cursor-grabbing" : "cursor-grab"}`}
+          onPointerDown={handlePointerDown}
+          className={`flex-1 touch-none overflow-auto text-center p-2 scrollbar-thin scrollbar-thumb-text-main/20 select-none ${isPanning ? "cursor-grabbing" : "cursor-grab"}`}
         >
           {layout.error ? (
             <div className="flex h-full w-full items-center justify-center p-8">

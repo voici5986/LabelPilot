@@ -1,5 +1,5 @@
 import React, { useId, useState } from "react";
-import { ChevronUp, ChevronDown } from "lucide-react";
+import { ChevronUp, ChevronDown, Minus, Plus } from "lucide-react";
 
 interface NumberInputProps {
   label: string;
@@ -91,7 +91,7 @@ export function NumberInput({
   };
 
   const stepperClass = (enabled: boolean) =>
-    `flex flex-1 items-center justify-center transition-colors group/btn ${
+    `group/btn flex w-10 shrink-0 items-center justify-center transition-colors active:bg-brand-primary/10 lg:w-auto lg:flex-1 ${
       enabled
         ? "text-text-muted hover:bg-brand-primary/10 hover:text-brand-primary"
         : "cursor-not-allowed text-text-muted/40"
@@ -123,29 +123,35 @@ export function NumberInput({
             setDraft(String(value));
             e.currentTarget.select();
           }}
-          className="w-full input-base focus:input-base-focus pl-3 pr-8 py-1.5 text-sm font-mono font-semibold text-text-main"
+          className="input-base focus:input-base-focus h-10 w-full py-1.5 pl-3 pr-20 font-mono text-sm font-semibold text-text-main lg:h-auto lg:pr-8"
         />
-        <div className="absolute right-0 top-0 flex h-full w-8 flex-col overflow-hidden rounded-r-md border-l border-border-subtle/30">
+        <div className="absolute right-0 top-0 flex h-full w-20 flex-row overflow-hidden rounded-r-md border-l border-border-subtle/30 lg:w-8 lg:flex-col">
           <button
             type="button"
             onClick={increment}
             disabled={!canIncrement}
             aria-label={`${label}: +${step}`}
             aria-controls={inputId}
-            className={stepperClass(canIncrement)}
+            className={`${stepperClass(canIncrement)} order-2 lg:order-none`}
           >
-            <ChevronUp className={chevronClass(canIncrement)} />
+            <Plus className="h-4 w-4 lg:hidden" />
+            <ChevronUp
+              className={`${chevronClass(canIncrement)} hidden lg:block`}
+            />
           </button>
-          <div className="h-[1px] w-full bg-border-subtle/30" />
+          <div className="order-1 h-full w-[1px] shrink-0 bg-border-subtle/30 lg:order-none lg:h-[1px] lg:w-full" />
           <button
             type="button"
             onClick={decrement}
             disabled={!canDecrement}
             aria-label={`${label}: -${step}`}
             aria-controls={inputId}
-            className={stepperClass(canDecrement)}
+            className={`${stepperClass(canDecrement)} order-0 lg:order-none`}
           >
-            <ChevronDown className={chevronClass(canDecrement)} />
+            <Minus className="h-4 w-4 lg:hidden" />
+            <ChevronDown
+              className={`${chevronClass(canDecrement)} hidden lg:block`}
+            />
           </button>
         </div>
       </div>

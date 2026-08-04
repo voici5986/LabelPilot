@@ -3,12 +3,13 @@ import { Download, CheckCircle, AlertCircle, X } from "lucide-react";
 import { useI18n } from "../utils/i18nContext";
 import type { Translations } from "../utils/i18nContext";
 import type { PdfProgressPhase } from "../utils/pdfProgress";
+import type { GenerationStatus } from "../utils/generation";
 
 interface SmartButtonProps {
   onClick: () => void;
   onCancel?: () => void;
   disabled: boolean;
-  genStatus: "idle" | "generating" | "success" | "error";
+  genStatus: GenerationStatus;
   genProgress: number;
   genPhase: PdfProgressPhase;
 }

@@ -40,7 +40,7 @@ export function PageNavigator({
         aria-label={t("page_prev")}
         disabled={currentPage === 0}
         onClick={() => onPageChange(Math.max(0, currentPage - 1))}
-        className="rounded p-1 transition-colors hover:bg-text-main/5 disabled:cursor-not-allowed disabled:opacity-30"
+        className="hit-target flex h-9 w-9 items-center justify-center rounded transition-colors hover:bg-text-main/5 disabled:cursor-not-allowed disabled:opacity-30"
         title={t("page_prev")}
       >
         <ChevronLeft className="h-5 w-5 text-text-main" />
@@ -73,7 +73,7 @@ export function PageNavigator({
         aria-label={t("page_next")}
         disabled={currentPage === totalPages - 1}
         onClick={() => onPageChange(Math.min(totalPages - 1, currentPage + 1))}
-        className="rounded p-1 transition-colors hover:bg-text-main/5 disabled:cursor-not-allowed disabled:opacity-30"
+        className="hit-target flex h-9 w-9 items-center justify-center rounded transition-colors hover:bg-text-main/5 disabled:cursor-not-allowed disabled:opacity-30"
         title={t("page_next")}
       >
         <ChevronRight className="h-5 w-5 text-text-main" />

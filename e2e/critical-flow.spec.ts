@@ -6,6 +6,7 @@ import {
   type TestInfo,
 } from "@playwright/test";
 import { pathToFileURL } from "node:url";
+import { resetForE2e } from "./helpers";
 
 async function expectValidPdf(
   download: Download,
@@ -89,14 +90,7 @@ async function switchToTextMode(page: Page): Promise<void> {
 }
 
 test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => {
-    const initializedKey = "label_pilot_e2e_initialized";
-    if (sessionStorage.getItem(initializedKey) !== "true") {
-      localStorage.clear();
-      sessionStorage.setItem(initializedKey, "true");
-    }
-    localStorage.setItem("label_printer_lang", "zh");
-  });
+  await resetForE2e(page);
 });
 
 test("portrait layout, theme, PWA, and accessible names remain usable", async ({
@@ -121,9 +115,21 @@ test("portrait layout, theme, PWA, and accessible names remain usable", async ({
   await page.emulateMedia({ colorScheme: "light" });
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
 
-  await expect(page.getByLabel("点击上传标签图片")).toBeVisible();
+  // 移动端：上传框与排版字段位于合并编辑面板中，需打开后可见（作用域限定）
+  const editButton = page.getByRole("button", { name: "编辑" });
+  await editButton.click();
+  const editDialog = page.getByRole("dialog", { name: "编辑" });
+  await expect(editDialog).toBeVisible();
+  await expect(editDialog.getByLabel("点击上传标签图片")).toBeVisible();
   await expect(page.getByText("请旋转屏幕")).toHaveCount(0);
-  await expect(page.getByRole("group", { name: "纸张方向" })).toBeVisible();
+  await expect(
+    editDialog.getByRole("group", { name: "纸张方向" }),
+  ).toBeVisible();
+  const stepButton = editDialog.getByRole("button", { name: "行数: +1" });
+  await expect(stepButton).toBeVisible();
+  // 关闭编辑面板回到预览
+  await editDialog.getByRole("button", { name: "查看预览" }).click();
+  await expect(editDialog).toHaveCount(0);
   await expect(page.getByRole("slider", { name: "缩放级别" })).toBeVisible();
 
   const settingsButton = page.getByRole("button", { name: "全局设置" });
@@ -132,10 +138,6 @@ test("portrait layout, theme, PWA, and accessible names remain usable", async ({
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog", { name: "全局设置" })).toHaveCount(0);
   await expect(settingsButton).toBeFocused();
-
-  const stepButton = page.getByRole("button", { name: "行数: +1" });
-  await expect(stepButton).toBeVisible();
-  await expect(settingsButton).toBeVisible();
 
   const unnamedControls = await page
     .locator("button, input, [role='switch'], [role='slider']")

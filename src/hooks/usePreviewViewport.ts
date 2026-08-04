@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { MouseEvent as ReactMouseEvent } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import type { HelperLayoutConfig } from "../utils/layoutMath";
 import { resolvePageDimensions } from "../utils/layoutMath";
 
@@ -44,9 +44,11 @@ export function usePreviewViewport(config: HelperLayoutConfig) {
     return () => window.removeEventListener("resize", updateFitScale);
   }, [config]);
 
-  const handleMouseDown = useCallback(
-    (event: ReactMouseEvent<HTMLDivElement>) => {
-      if (!containerRef.current || event.button !== 0) return;
+  // Pointer Events 统一 mouse / touch / pen 的画布平移（配合 touch-action: none）
+  const handlePointerDown = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      if (!containerRef.current) return;
+      if (event.pointerType === "mouse" && event.button !== 0) return;
       event.preventDefault();
       panStartRef.current = {
         x: event.clientX,
@@ -62,25 +64,27 @@ export function usePreviewViewport(config: HelperLayoutConfig) {
   useEffect(() => {
     if (!isPanning) return;
 
-    const handleMouseMove = (event: MouseEvent) => {
+    const handlePointerMove = (event: PointerEvent) => {
       const start = panStartRef.current;
       const container = containerRef.current;
       if (!start || !container) return;
       container.scrollLeft = start.scrollLeft - (event.clientX - start.x);
       container.scrollTop = start.scrollTop - (event.clientY - start.y);
     };
-    const handleMouseUp = () => {
+    const handlePointerEnd = () => {
       panStartRef.current = null;
       setIsPanning(false);
     };
 
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerEnd);
+    window.addEventListener("pointercancel", handlePointerEnd);
     return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerEnd);
+      window.removeEventListener("pointercancel", handlePointerEnd);
     };
   }, [isPanning]);
 
-  return { containerRef, baseFitScale, isPanning, handleMouseDown };
+  return { containerRef, baseFitScale, isPanning, handlePointerDown };
 }

@@ -13,7 +13,33 @@ export default defineConfig({
     screenshot: "only-on-failure",
     channel: process.env.CI ? "chromium" : "chrome",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    {
+      name: "chromium",
+      use: { ...devices["Desktop Chrome"] },
+      testIgnore: /mobile-flow/,
+    },
+    {
+      name: "mobile-pixel-7",
+      use: { ...devices["Pixel 7"] },
+      testMatch: /mobile-flow/,
+    },
+    {
+      name: "mobile-iphone-14",
+      use: { ...devices["iPhone 14"], defaultBrowserType: "chromium" },
+      testMatch: /mobile-flow/,
+    },
+    {
+      name: "mobile-375",
+      use: { ...devices["Pixel 5"], viewport: { width: 375, height: 812 } },
+      testMatch: /mobile-flow/,
+    },
+    {
+      name: "mobile-360",
+      use: { ...devices["Pixel 5"], viewport: { width: 360, height: 740 } },
+      testMatch: /mobile-flow/,
+    },
+  ],
   webServer: process.env.PLAYWRIGHT_EXTERNAL_SERVER
     ? undefined
     : {

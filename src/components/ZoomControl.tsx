@@ -66,7 +66,7 @@ export function ZoomControl({ scale, setScale }: ZoomControlProps) {
         type="button"
         aria-label={t("zoom_reset")}
         onClick={() => setScale(1)}
-        className="flex h-8 w-8 items-center justify-center rounded-md border border-border-subtle bg-elevated text-text-muted transition-colors hover:text-brand-primary"
+        className="hit-target flex h-8 w-8 items-center justify-center rounded-md border border-border-subtle bg-elevated text-text-muted transition-colors hover:text-brand-primary"
         title={t("zoom_reset")}
       >
         <Maximize className="h-4 w-4" />
@@ -92,7 +92,7 @@ export function ZoomControl({ scale, setScale }: ZoomControlProps) {
           }
           event.preventDefault();
         }}
-        className="relative flex h-40 w-8 flex-col items-center rounded-md border border-border-subtle bg-elevated p-1.5"
+        className="relative flex h-40 w-10 flex-col items-center rounded-md border border-border-subtle bg-elevated p-1.5"
       >
         {(isHovered || isDragging) && (
           <div className="pointer-events-none absolute left-10 top-1/2 z-30 -translate-y-1/2 whitespace-nowrap rounded bg-zinc-800 px-2 py-1 text-sm font-semibold text-white">
