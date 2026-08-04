@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/voici5986/label-react/compare/v1.1.0...v1.2.0) (2026-08-04)
+
+### Features
+
+- **mobile:** 新增移动端编辑面板与操作栏支持 ([ce1856d](https://github.com/voici5986/label-react/commit/ce1856d1034dfbfd4cf8ad5d3d392f484ae4de9f))
+- **ui:** 添加可变字体支持并优化界面组件 ([b05c586](https://github.com/voici5986/label-react/commit/b05c586e3642ac31e1e33633e7d060abacd18310))
+
 # [1.1.0](https://github.com/voici5986/label-react/compare/v1.0.0...v1.1.0) (2026-08-04)
 
 ### Bug Fixes
