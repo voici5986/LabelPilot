@@ -31,9 +31,9 @@ dist
 *.sln
 *.sw?
 
-代码审查报告.md
 .trae/
-UI视觉审查报告.md
-mobile-layout-prototype.html
-屏幕1比1校准实装设计方案.md
-calibration-prototype.html
+
+# 审查记录 / 设计文档 / 交互原型（归档目录，不入主仓库）
+docs/reviews/
+docs/design/
+docs/prototypes/
