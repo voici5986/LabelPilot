@@ -1,3 +1,9 @@
+# [1.3.0](https://github.com/voici5986/label-react/compare/v1.2.0...v1.3.0) (2026-08-05)
+
+### Features
+
+- **preview:** 添加屏幕1:1校准功能 ([e76e740](https://github.com/voici5986/label-react/commit/e76e740e0688ba00bcb2f76de5a2f79a60d551e8))
+
 # [1.2.0](https://github.com/voici5986/label-react/compare/v1.1.0...v1.2.0) (2026-08-04)
 
 ### Features
