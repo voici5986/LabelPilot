@@ -24,8 +24,9 @@ A modern, offline-capable web application for batch generating label PDF documen
 - **🌍 Internationalization**: Built-in support for **English** and **Chinese**, with instant language switching.
 - **🌓 Adaptive Dark Mode**: Full dark mode support that follows your system preferences or can be manually toggled ('System', 'Light', 'Dark'). Powered by Tailwind CSS 4.
 - **👁️ Real-time Preview**: What you see is what you get with a virtual A4 canvas.
+- **📏 Screen 1:1 Actual Size**: Calibrate once by measuring an on-screen ruler line, then view the paper at its true physical size on desktop. The calibration is stored locally and survives reloads.
 - **📲 PWA Ready**: Supports offline use and can be installed as a standalone app.
-- **📱 Mobile Optimized**: Includes orientation guards to ensure a better experience on mobile devices.
+- **📱 Mobile Optimized**: A preview-first workspace with a collapsible edit sheet for comfortable touch workflows.
 
 ## 🚀 One-Click Deploy with Vercel
 
@@ -76,6 +77,7 @@ The output will be in the `dist/` directory.
    - In **Text Mode**: Set prefix, start number, digits, and total count. Toggle **QR Code** for instant scannable labels.
 4. **Check Preview**: Verify the layout on the right preview panel.
 5. **Generate**: Click "Generate PDF" to download the final file.
+6. **Check Actual Size (desktop)**: Click the "1:1" button next to the zoom slider. On first use, measure the on-screen ruler line (keep browser zoom at 100%, Ctrl+0), enter the value you read, and save. The preview then shows the paper at true physical size; re-calibrate after changing monitors or system display scaling.
 
 ## 📄 License
 
