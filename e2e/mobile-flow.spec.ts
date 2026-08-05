@@ -130,3 +130,27 @@ test("edit sheet switches to auto-number mode fields", async ({ page }) => {
   // 排版设置仍可用
   await expect(dialog.getByRole("group", { name: "纸张方向" })).toBeVisible();
 });
+
+test("calibration entry points stay hidden on mobile, slider still usable", async ({
+  page,
+}) => {
+  await page.goto("/");
+
+  // 1:1 按钮（仅桌面断点显示）
+  await expect(page.getByRole("button", { name: "1:1 实际尺寸" })).toHaveCount(
+    0,
+  );
+
+  // 设置中的校准条目与校准对话框均不可见
+  await page.getByRole("button", { name: "全局设置" }).click();
+  await expect(page.getByRole("button", { name: /屏幕 1:1 校准/ })).toHaveCount(
+    0,
+  );
+  await expect(page.getByRole("dialog", { name: "屏幕 1:1 校准" })).toHaveCount(
+    0,
+  );
+  await page.keyboard.press("Escape");
+
+  // 缩放滑杆仍可用
+  await expect(page.getByRole("slider", { name: "缩放级别" })).toBeVisible();
+});

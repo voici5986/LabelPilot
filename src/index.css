@@ -127,6 +127,39 @@
   }
 }
 
+/* 1:1 校准对话框的刻度尺（刻度由 CalibrationDialog 生成） */
+.cal-ruler {
+  position: relative;
+}
+.cal-ruler .tick {
+  position: absolute;
+  bottom: 0;
+  width: 1px;
+  background: #18181b;
+}
+.cal-ruler .tick.major {
+  height: 18px;
+}
+.cal-ruler .tick.mid {
+  height: 11px;
+}
+.cal-ruler .tick.minor {
+  height: 5px;
+  opacity: 0.45;
+}
+.cal-ruler .num {
+  position: absolute;
+  bottom: 22px;
+  transform: translateX(-50%);
+  font-size: 10px;
+  font-family: Consolas, monospace;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+.cal-ruler .num.first {
+  transform: none;
+}
+
 @utility group-title {
   font-size: 0.75rem;
   line-height: 1rem;

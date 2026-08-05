@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
 import { Header } from "./components/Header";
 import { ControlPanel } from "./components/ControlPanel";
 import { PreviewPanel } from "./components/PreviewPanel";
@@ -18,21 +18,39 @@ import {
 } from "./utils/imageLimits";
 import type { PdfProgressPhase } from "./utils/pdfProgress";
 import type { GenerationStatus } from "./utils/generation";
+import type { ZoomMode } from "./utils/zoomMath";
+import {
+  getCurrentScreenEnvironment,
+  isCalibrationStale,
+} from "./utils/screenCalibration";
+import type { ScreenCalibration } from "./utils/screenCalibration";
+import { CalibrationDialog } from "./components/CalibrationDialog";
+import type { CalibrationDialogSource } from "./components/CalibrationDialog";
 import { useGenerationReadiness } from "./hooks/useGenerationReadiness";
 
 function App() {
   const { t } = useI18n();
-  const { config, imageItems, setImageItems, appMode, textConfig, theme } =
-    useStore(
-      useShallow((state) => ({
-        config: state.config,
-        imageItems: state.imageItems,
-        setImageItems: state.setImageItems,
-        appMode: state.appMode,
-        textConfig: state.textConfig,
-        theme: state.theme,
-      })),
-    );
+  const {
+    config,
+    imageItems,
+    setImageItems,
+    appMode,
+    textConfig,
+    theme,
+    screenCalibration,
+    setScreenCalibration,
+  } = useStore(
+    useShallow((state) => ({
+      config: state.config,
+      imageItems: state.imageItems,
+      setImageItems: state.setImageItems,
+      appMode: state.appMode,
+      textConfig: state.textConfig,
+      theme: state.theme,
+      screenCalibration: state.screenCalibration,
+      setScreenCalibration: state.setScreenCalibration,
+    })),
+  );
 
   // Toast State
   const [toast, setToast] = useState<{
@@ -54,6 +72,93 @@ function App() {
   // 移动端编辑面板状态（<lg 生效）
   const [editOpen, setEditOpen] = useState(false);
   const [editFull, setEditFull] = useState(false);
+
+  // 预览缩放三态与 1:1 校准（非持久化）
+  const [zoomMode, setZoomMode] = useState<ZoomMode>("fit");
+  const [manualScale, setManualScale] = useState(1);
+  const [calibrationSource, setCalibrationSource] =
+    useState<CalibrationDialogSource | null>(null);
+  // 每次打开对话框递增，用于强制重挂载以按当前校准值预填草稿
+  const [calibrationNonce, setCalibrationNonce] = useState(0);
+
+  const showToast = useCallback((message: string, type: ToastType) => {
+    setToast({ message, type, visible: true });
+  }, []);
+
+  const openCalibration = (source: CalibrationDialogSource) => {
+    setCalibrationNonce((nonce) => nonce + 1);
+    setCalibrationSource(source);
+  };
+
+  // 1:1 请求：未校准或环境失效时打开校准对话框，否则直接进入 actual
+  const handleRequestActual = () => {
+    if (
+      !screenCalibration ||
+      isCalibrationStale(screenCalibration, getCurrentScreenEnvironment())
+    ) {
+      openCalibration("zoom");
+      return;
+    }
+    setZoomMode("actual");
+  };
+
+  // 对话框打开时，若已存校准与环境不符 → 显示重校提示、不预填旧测量值
+  const calibrationMismatch =
+    calibrationSource !== null &&
+    !!screenCalibration &&
+    isCalibrationStale(screenCalibration, getCurrentScreenEnvironment());
+
+  const handleCalibrationSaved = (calibration: ScreenCalibration) => {
+    setScreenCalibration(calibration);
+    if (calibrationSource === "zoom") setZoomMode("actual");
+    setCalibrationSource(null);
+  };
+
+  const handleCalibrationClose = () => setCalibrationSource(null);
+
+  // 供环境监听读取最新的缩放模式（effect 闭包内取不到实时值）
+  const zoomModeRef = useRef(zoomMode);
+  useEffect(() => {
+    zoomModeRef.current = zoomMode;
+  }, [zoomMode]);
+
+  // 环境变化监听：actual 中检测到 DPR/分辨率变化则退出到 fit、重置手动倍率并提示重校
+  useEffect(() => {
+    if (!screenCalibration) return;
+    const check = () => {
+      if (
+        !isCalibrationStale(screenCalibration, getCurrentScreenEnvironment())
+      ) {
+        return;
+      }
+      if (zoomModeRef.current === "actual") {
+        setManualScale(1);
+        setZoomMode("fit");
+        showToast(t("calib_stale_toast"), "warning");
+      }
+    };
+    const handleVisibility = () => {
+      if (!document.hidden) check();
+    };
+    let mql: MediaQueryList | null = null;
+    const registerMql = () => {
+      mql?.removeEventListener("change", handleMqlChange);
+      mql = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
+      mql.addEventListener("change", handleMqlChange);
+    };
+    const handleMqlChange = () => {
+      check();
+      registerMql();
+    };
+    registerMql();
+    window.addEventListener("focus", check);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      mql?.removeEventListener("change", handleMqlChange);
+      window.removeEventListener("focus", check);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [screenCalibration, t, showToast]);
 
   // 桌面布局不保留移动端 Sheet 状态，避免缩回移动端时重新出现旧面板。
   useEffect(() => {
@@ -93,10 +198,6 @@ function App() {
     if (theme === "system") media.addEventListener("change", applyTheme);
     return () => media.removeEventListener("change", applyTheme);
   }, [theme]);
-
-  const showToast = (message: string, type: ToastType) => {
-    setToast({ message, type, visible: true });
-  };
 
   const handleFilesSelect = async (files: File[]) => {
     try {
@@ -190,7 +291,7 @@ function App() {
 
   return (
     <div className="safe-area-app flex h-dvh flex-col overflow-hidden bg-background text-text-main selection:bg-brand-primary/20">
-      <Header />
+      <Header onOpenCalibration={() => openCalibration("settings")} />
 
       <main className="flex flex-1 min-h-0 flex-col gap-3 p-2 lg:flex-row lg:overflow-hidden lg:p-3">
         {/* 桌面控制面板（<lg 隐藏，由 EditSheet 承担） */}
@@ -207,7 +308,13 @@ function App() {
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
           <div className="min-h-0 flex-1">
-            <PreviewPanel />
+            <PreviewPanel
+              zoomMode={zoomMode}
+              manualScale={manualScale}
+              onZoomModeChange={setZoomMode}
+              onManualScaleChange={setManualScale}
+              onRequestActual={handleRequestActual}
+            />
           </div>
           <MobileActionBar
             onOpenEdit={() => setEditOpen(true)}
@@ -227,6 +334,15 @@ function App() {
         onClose={() => setEditOpen(false)}
         onToggleFull={() => setEditFull((full) => !full)}
         onFilesSelect={handleFilesSelect}
+      />
+
+      <CalibrationDialog
+        key={calibrationNonce}
+        open={calibrationSource !== null}
+        source={calibrationSource ?? "zoom"}
+        environmentMismatch={calibrationMismatch}
+        onClose={handleCalibrationClose}
+        onSaved={handleCalibrationSaved}
       />
 
       <Toast

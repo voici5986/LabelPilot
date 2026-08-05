@@ -6,7 +6,11 @@ import { useI18n } from "../utils/i18nContext";
 import { LogoIcon } from "./LogoIcon";
 import { SettingsMenu } from "./SettingsMenu";
 
-export function Header() {
+interface HeaderProps {
+  onOpenCalibration: () => void;
+}
+
+export function Header({ onOpenCalibration }: HeaderProps) {
   const { theme, onThemeChange } = useStore(
     useShallow((state) => ({
       theme: state.theme,
@@ -76,7 +80,7 @@ export function Header() {
           </button>
         )}
 
-        <SettingsMenu />
+        <SettingsMenu onOpenCalibration={onOpenCalibration} />
 
         <button
           type="button"

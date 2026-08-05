@@ -8,7 +8,6 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-dist
 
 # Browser test artifacts
 test-results
@@ -36,3 +35,5 @@ dist
 .trae/
 UI视觉审查报告.md
 mobile-layout-prototype.html
+屏幕1比1校准实装设计方案.md
+calibration-prototype.html

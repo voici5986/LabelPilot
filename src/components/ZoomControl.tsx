@@ -13,19 +13,40 @@ import {
   MAX_SCALE,
   MIN_SCALE,
 } from "../utils/zoomMath";
+import type { ZoomMode } from "../utils/zoomMath";
 
 interface ZoomControlProps {
-  scale: number;
-  setScale: Dispatch<SetStateAction<number>>;
+  zoomMode: ZoomMode;
+  manualScale: number;
+  onZoomModeChange: (mode: ZoomMode) => void;
+  onManualScaleChange: Dispatch<SetStateAction<number>>;
+  onRequestActual: () => void;
 }
 
 type SliderEvent = ReactMouseEvent | ReactTouchEvent | MouseEvent | TouchEvent;
 
-export function ZoomControl({ scale, setScale }: ZoomControlProps) {
+export function ZoomControl({
+  zoomMode,
+  manualScale,
+  onZoomModeChange,
+  onManualScaleChange,
+  onRequestActual,
+}: ZoomControlProps) {
   const { t } = useI18n();
   const trackRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+
+  const isActual = zoomMode === "actual";
+
+  // 手动缩放（滑杆/键盘）统一进入 manual
+  const enterManual = useCallback(
+    (next: number) => {
+      onManualScaleChange(Math.min(MAX_SCALE, Math.max(MIN_SCALE, next)));
+      onZoomModeChange("manual");
+    },
+    [onManualScaleChange, onZoomModeChange],
+  );
 
   const handleSliderChange = useCallback(
     (event: SliderEvent) => {
@@ -34,9 +55,9 @@ export function ZoomControl({ scale, setScale }: ZoomControlProps) {
       const clientY =
         "touches" in event ? event.touches[0].clientY : event.clientY;
       const percentage = 1 - (clientY - rect.top) / rect.height;
-      setScale(mapPctToScale(percentage));
+      enterManual(mapPctToScale(percentage));
     },
-    [setScale],
+    [enterManual],
   );
 
   useEffect(() => {
@@ -56,20 +77,45 @@ export function ZoomControl({ scale, setScale }: ZoomControlProps) {
     };
   }, [handleSliderChange, isDragging]);
 
+  const handleReset = () => {
+    onManualScaleChange(1);
+    onZoomModeChange("fit");
+  };
+
+  const displayLabel = isActual
+    ? t("zoom_actual_short")
+    : `${Math.round(manualScale * 100)}%`;
+
   return (
     <div
-      className="absolute bottom-2 left-2 z-20 flex flex-col items-center gap-1"
+      className="absolute bottom-2 left-2 z-20 flex flex-col items-center gap-1.5"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       <button
         type="button"
         aria-label={t("zoom_reset")}
-        onClick={() => setScale(1)}
+        onClick={handleReset}
         className="hit-target flex h-8 w-8 items-center justify-center rounded-md border border-border-subtle bg-elevated text-text-muted transition-colors hover:text-brand-primary"
         title={t("zoom_reset")}
       >
         <Maximize className="h-4 w-4" />
+      </button>
+
+      {/* 1:1 实际尺寸（仅桌面断点显示，文字按钮更易识别） */}
+      <button
+        type="button"
+        aria-label={t("zoom_actual")}
+        aria-pressed={isActual}
+        onClick={onRequestActual}
+        className={`hit-target hidden h-8 min-w-8 items-center justify-center rounded-md border px-1.5 text-xs font-bold transition-colors lg:flex ${
+          isActual
+            ? "border-brand-primary bg-brand-primary text-on-brand"
+            : "border-border-subtle bg-elevated text-text-muted hover:text-brand-primary"
+        }`}
+        title={t("zoom_actual")}
+      >
+        {t("zoom_actual_short")}
       </button>
 
       <div
@@ -79,14 +125,14 @@ export function ZoomControl({ scale, setScale }: ZoomControlProps) {
         aria-orientation="vertical"
         aria-valuemin={Math.round(MIN_SCALE * 100)}
         aria-valuemax={Math.round(MAX_SCALE * 100)}
-        aria-valuenow={Math.round(scale * 100)}
+        aria-valuenow={Math.round(manualScale * 100)}
         onKeyDown={(event) => {
-          if (event.key === "Home") setScale(MIN_SCALE);
-          else if (event.key === "End") setScale(MAX_SCALE);
+          if (event.key === "Home") enterManual(MIN_SCALE);
+          else if (event.key === "End") enterManual(MAX_SCALE);
           else if (event.key === "ArrowUp" || event.key === "ArrowRight") {
-            setScale((current) => Math.min(MAX_SCALE, current + 0.1));
+            enterManual(manualScale + 0.1);
           } else if (event.key === "ArrowDown" || event.key === "ArrowLeft") {
-            setScale((current) => Math.max(MIN_SCALE, current - 0.1));
+            enterManual(manualScale - 0.1);
           } else {
             return;
           }
@@ -96,7 +142,7 @@ export function ZoomControl({ scale, setScale }: ZoomControlProps) {
       >
         {(isHovered || isDragging) && (
           <div className="pointer-events-none absolute left-10 top-1/2 z-30 -translate-y-1/2 whitespace-nowrap rounded bg-zinc-800 px-2 py-1 text-sm font-semibold text-white">
-            {Math.round(scale * 100)}%
+            {displayLabel}
           </div>
         )}
 
@@ -115,7 +161,7 @@ export function ZoomControl({ scale, setScale }: ZoomControlProps) {
           <div
             className="pointer-events-none absolute left-1/2 h-4 w-4 -translate-x-1/2 rounded border-2 border-brand-primary bg-white transition-[bottom] duration-150"
             style={{
-              bottom: `${getThumbBottomPct(scale)}%`,
+              bottom: `${getThumbBottomPct(manualScale)}%`,
               marginBottom: "-8px",
             }}
           />

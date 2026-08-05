@@ -165,4 +165,83 @@ describe("useStore text configuration", () => {
       startNumber: 12,
     });
   });
+
+  it("migrates screen calibration from version 2 and keeps valid data", async () => {
+    localStorage.setItem(
+      "label-pilot-storage",
+      JSON.stringify({
+        state: {
+          config: { pageWidthMm: 210, pageHeightMm: 297 },
+          paperSizeMode: "A4",
+          screenCalibration: {
+            k: 1.25,
+            referenceMm: 100,
+            measuredMm: 125,
+            dpr: 1.25,
+            screenWidth: 1536,
+            screenHeight: 864,
+            calibratedAt: "2026-08-05T00:00:00.000Z",
+          },
+        },
+        version: 2,
+      }),
+    );
+
+    const { useStore } = await import("./useStore");
+
+    expect(useStore.getState().screenCalibration).toEqual({
+      k: 1.25,
+      referenceMm: 100,
+      measuredMm: 125,
+      dpr: 1.25,
+      screenWidth: 1536,
+      screenHeight: 864,
+      calibratedAt: "2026-08-05T00:00:00.000Z",
+    });
+  });
+
+  it("falls back to null for corrupted calibration during migration", async () => {
+    localStorage.setItem(
+      "label-pilot-storage",
+      JSON.stringify({
+        state: {
+          config: { pageWidthMm: 210, pageHeightMm: 297 },
+          paperSizeMode: "A4",
+          screenCalibration: {
+            k: "broken",
+            referenceMm: 75,
+            measuredMm: -3,
+            dpr: 0,
+            screenWidth: Number.POSITIVE_INFINITY,
+            screenHeight: 864,
+            calibratedAt: "nope",
+          },
+        },
+        version: 2,
+      }),
+    );
+
+    const { useStore } = await import("./useStore");
+
+    expect(useStore.getState().screenCalibration).toBeNull();
+  });
+
+  it("saves and clears screen calibration", async () => {
+    const { useStore } = await import("./useStore");
+
+    const calibration = {
+      k: 1.5,
+      referenceMm: 50 as const,
+      measuredMm: 75,
+      dpr: 1,
+      screenWidth: 1920,
+      screenHeight: 1080,
+      calibratedAt: "2026-08-05T00:00:00.000Z",
+    };
+    useStore.getState().setScreenCalibration(calibration);
+    expect(useStore.getState().screenCalibration).toEqual(calibration);
+
+    useStore.getState().setScreenCalibration(null);
+    expect(useStore.getState().screenCalibration).toBeNull();
+  });
 });

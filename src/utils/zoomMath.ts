@@ -6,6 +6,14 @@ export const MIN_SCALE = 0.5;
 export const MAX_SCALE = 3.0;
 
 /**
+ * 预览缩放三态：
+ * - fit：适应预览区（重置目标），倍率 = baseFitScale
+ * - manual：用户滑杆手动缩放，倍率 = baseFitScale * manualScale
+ * - actual：屏幕实际尺寸，倍率 = 1 / k（不读 baseFitScale，窗口变化不破坏 1:1）
+ */
+export type ZoomMode = "fit" | "manual" | "actual";
+
+/**
  * Maps a slider percentage (0 to 1) to a scale value.
  * Uses a non-linear mapping where 1.0 (100%) is exactly at 0.5 (50%).
  */

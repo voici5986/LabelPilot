@@ -22,6 +22,8 @@ import {
   normalizeTextConfig,
 } from "../utils/layoutMath";
 import { normalizeImageItemCount } from "../utils/imageLimits";
+import { normalizeCalibration } from "../utils/screenCalibration";
+import type { ScreenCalibration } from "../utils/screenCalibration";
 
 export interface AppState {
   // Configs
@@ -30,6 +32,9 @@ export interface AppState {
   appMode: "image" | "text";
   theme: "system" | "light" | "dark";
   paperSizeMode: PaperSize;
+
+  // Screen 1:1 calibration (persisted)
+  screenCalibration: ScreenCalibration | null;
 
   // Non-persistent state
   imageItems: ImageItem[];
@@ -43,10 +48,11 @@ export interface AppState {
   setPaperSizeMode: (mode: PaperSize) => void;
   setImageItems: (items: ImageItem[]) => void;
   updateItemCount: (id: string, count: number) => void;
+  setScreenCalibration: (value: ScreenCalibration | null) => void;
 }
 
 export const PERSIST_STORAGE_KEY = "label-pilot-storage";
-export const PERSIST_STORAGE_VERSION = 2;
+export const PERSIST_STORAGE_VERSION = 3;
 
 type PaperPreset = Exclude<PaperSize, "Custom">;
 
@@ -115,6 +121,7 @@ export const useStore = create<AppState>()(
       appMode: "image",
       theme: "system",
       paperSizeMode: "A4",
+      screenCalibration: null,
       imageItems: [],
       imageUrlMap: new Map(),
 
@@ -201,6 +208,8 @@ export const useStore = create<AppState>()(
               : item,
           ),
         })),
+
+      setScreenCalibration: (value) => set({ screenCalibration: value }),
     }),
     {
       name: PERSIST_STORAGE_KEY,
@@ -213,6 +222,7 @@ export const useStore = create<AppState>()(
         appMode: state.appMode,
         theme: state.theme,
         paperSizeMode: state.paperSizeMode,
+        screenCalibration: state.screenCalibration,
       }),
       migrate: (persistedState) => {
         const persisted = asRecord(persistedState);
@@ -234,6 +244,7 @@ export const useStore = create<AppState>()(
               ? persisted.theme
               : "system",
           paperSizeMode: paperState.paperSizeMode,
+          screenCalibration: normalizeCalibration(persisted.screenCalibration),
         };
       },
       merge: (persistedState, currentState) => {
@@ -269,6 +280,7 @@ export const useStore = create<AppState>()(
               ? persisted.theme
               : currentState.theme,
           paperSizeMode: paperState.paperSizeMode,
+          screenCalibration: normalizeCalibration(persisted.screenCalibration),
         };
       },
     },

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import type { Dispatch, SetStateAction } from "react";
 import {
   calculateLabelLayout,
   resolvePageDimensions,
@@ -18,21 +19,49 @@ import { PageNavigator } from "./PageNavigator";
 import { ZoomControl } from "./ZoomControl";
 
 import type { Translations } from "../utils/i18nContext";
+import type { ZoomMode } from "../utils/zoomMath";
 
-export function PreviewPanel() {
-  const { config, imageItems, imageUrlMap, appMode, textConfig } = useStore(
+interface PreviewPanelProps {
+  zoomMode: ZoomMode;
+  manualScale: number;
+  onZoomModeChange: (mode: ZoomMode) => void;
+  onManualScaleChange: Dispatch<SetStateAction<number>>;
+  onRequestActual: () => void;
+}
+
+export function PreviewPanel({
+  zoomMode,
+  manualScale,
+  onZoomModeChange,
+  onManualScaleChange,
+  onRequestActual,
+}: PreviewPanelProps) {
+  const {
+    config,
+    imageItems,
+    imageUrlMap,
+    appMode,
+    textConfig,
+    screenCalibration,
+  } = useStore(
     useShallow((state) => ({
       config: state.config,
       imageItems: state.imageItems,
       imageUrlMap: state.imageUrlMap,
       appMode: state.appMode,
       textConfig: state.textConfig,
+      screenCalibration: state.screenCalibration,
     })),
   );
   const { t } = useI18n();
-  const [scale, setScale] = useState(1);
   const { containerRef, baseFitScale, isPanning, handlePointerDown } =
     usePreviewViewport(config);
+
+  // 三态渲染倍率：actual 不读 baseFitScale，窗口/纸张变化不破坏 1:1
+  const renderScale =
+    zoomMode === "actual" && screenCalibration
+      ? 1 / screenCalibration.k
+      : baseFitScale * manualScale;
 
   const layout = useMemo(() => calculateLabelLayout(config), [config]);
 
@@ -100,8 +129,8 @@ export function PreviewPanel() {
             <div
               className="inline-block text-left align-top"
               style={{
-                width: `${paperWidthMm * scale * baseFitScale}mm`,
-                height: `${paperHeightMm * scale * baseFitScale}mm`,
+                width: `${paperWidthMm * renderScale}mm`,
+                height: `${paperHeightMm * renderScale}mm`,
                 marginTop: "0px",
                 position: "relative",
               }}
@@ -109,7 +138,7 @@ export function PreviewPanel() {
               <motion.div
                 initial={false}
                 animate={{
-                  scale: scale * baseFitScale,
+                  scale: renderScale,
                 }}
                 transition={{
                   duration: 0.18,
@@ -246,7 +275,7 @@ export function PreviewPanel() {
             <div className="w-[1.5px] h-full bg-text-muted"></div>
             <div
               className="h-[1.5px] bg-text-muted"
-              style={{ width: `${50 * scale * baseFitScale}mm` }}
+              style={{ width: `${50 * renderScale}mm` }}
             />
             <div className="w-[1.5px] h-full bg-text-muted"></div>
           </div>
@@ -255,7 +284,13 @@ export function PreviewPanel() {
           </span>
         </div>
 
-        <ZoomControl scale={scale} setScale={setScale} />
+        <ZoomControl
+          zoomMode={zoomMode}
+          manualScale={manualScale}
+          onZoomModeChange={onZoomModeChange}
+          onManualScaleChange={onManualScaleChange}
+          onRequestActual={onRequestActual}
+        />
       </div>
     </section>
   );

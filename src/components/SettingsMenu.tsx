@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronDown, Settings } from "lucide-react";
+import { ChevronDown, Ruler, Settings } from "lucide-react";
 import { useShallow } from "zustand/shallow";
 import { useStore } from "../store/useStore";
 import { useI18n } from "../utils/i18nContext";
@@ -12,6 +12,10 @@ import {
   TEXT_CONFIG_LIMITS,
 } from "../utils/layoutMath";
 import type { PaperSize } from "../utils/layoutMath";
+import {
+  getCurrentScreenEnvironment,
+  isCalibrationStale,
+} from "../utils/screenCalibration";
 import { NumberInput } from "./NumberInput";
 
 const PAPER_SIZE_KEYS: Record<PaperSize, keyof Translations> = {
@@ -22,7 +26,11 @@ const PAPER_SIZE_KEYS: Record<PaperSize, keyof Translations> = {
   Custom: "paper_type_custom",
 };
 
-export function SettingsMenu() {
+interface SettingsMenuProps {
+  onOpenCalibration: () => void;
+}
+
+export function SettingsMenu({ onOpenCalibration }: SettingsMenuProps) {
   const {
     config,
     onConfigChange,
@@ -30,6 +38,7 @@ export function SettingsMenu() {
     onTextConfigChange,
     paperSizeMode,
     onPaperSizeModeChange,
+    screenCalibration,
   } = useStore(
     useShallow((state) => ({
       config: state.config,
@@ -38,8 +47,22 @@ export function SettingsMenu() {
       onTextConfigChange: state.setTextConfig,
       paperSizeMode: state.paperSizeMode,
       onPaperSizeModeChange: state.setPaperSizeMode,
+      screenCalibration: state.screenCalibration,
     })),
   );
+
+  const calibrationStale = screenCalibration
+    ? isCalibrationStale(screenCalibration, getCurrentScreenEnvironment())
+    : false;
+
+  // 先把焦点放到“全局设置”触发按钮，再打开校准对话框，
+  // 对话框关闭后焦点才能正确回到触发按钮（而非 BODY）。
+  const handleCalibrationClick = () => {
+    triggerRef.current?.focus();
+    setIsOpen(false);
+    setIsPresetsOpen(false);
+    onOpenCalibration();
+  };
   const { t } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
   const [isPresetsOpen, setIsPresetsOpen] = useState(false);
@@ -316,6 +339,29 @@ export function SettingsMenu() {
                   {textConfig.qrContentPrefix.length}/
                   {TEXT_CONFIG_LIMITS.qrContentPrefix.maxLength}
                 </p>
+              </div>
+
+              <div className="space-y-2 border-t border-border-subtle/50 pt-3">
+                <span className="group-title">{t("calib_display_group")}</span>
+                <button
+                  type="button"
+                  onClick={handleCalibrationClick}
+                  className="hidden w-full items-center justify-between gap-2 rounded-md border border-border-subtle px-3 py-2 text-left text-sm font-medium text-text-main transition-colors hover:bg-text-main/5 lg:flex"
+                >
+                  <span className="flex items-center gap-2">
+                    <Ruler className="h-4 w-4 text-brand-primary" />
+                    {t("calib_item")}
+                  </span>
+                  <span
+                    className={`shrink-0 text-xs ${calibrationStale ? "text-amber-600 dark:text-amber-400" : "text-text-muted"}`}
+                  >
+                    {!screenCalibration
+                      ? t("calib_state_none")
+                      : calibrationStale
+                        ? t("calib_state_stale")
+                        : `${t("calib_state_ok")} · k=${screenCalibration.k.toFixed(3)}`}
+                  </span>
+                </button>
               </div>
             </div>
           </motion.div>

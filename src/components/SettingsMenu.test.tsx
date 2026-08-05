@@ -1,6 +1,12 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useStore } from "../store/useStore";
 import { I18nProvider } from "../utils/i18n";
@@ -26,7 +32,7 @@ describe("SettingsMenu", () => {
   it("shows A4 as the preset fallback while custom paper is selected", () => {
     render(
       <I18nProvider>
-        <SettingsMenu />
+        <SettingsMenu onOpenCalibration={vi.fn()} />
       </I18nProvider>,
     );
 
@@ -37,5 +43,22 @@ describe("SettingsMenu", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "A4" }));
     expect(useStore.getState().paperSizeMode).toBe("A4");
+  });
+
+  it("opens the calibration flow from the display group and closes the menu", async () => {
+    const onOpenCalibration = vi.fn();
+    render(
+      <I18nProvider>
+        <SettingsMenu onOpenCalibration={onOpenCalibration} />
+      </I18nProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "全局设置" }));
+    fireEvent.click(screen.getByRole("button", { name: /屏幕 1:1 校准/ }));
+
+    expect(onOpenCalibration).toHaveBeenCalledTimes(1);
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: "全局设置" })).toBeNull(),
+    );
   });
 });

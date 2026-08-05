@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   act,
   cleanup,
@@ -44,6 +44,20 @@ function resetStore() {
   });
 }
 
+function renderPanel() {
+  return render(
+    <I18nProvider>
+      <PreviewPanel
+        zoomMode="fit"
+        manualScale={1}
+        onZoomModeChange={vi.fn()}
+        onManualScaleChange={vi.fn()}
+        onRequestActual={vi.fn()}
+      />
+    </I18nProvider>,
+  );
+}
+
 beforeEach(() => {
   localStorage.clear();
   resetStore();
@@ -56,11 +70,7 @@ afterEach(() => {
 
 describe("PreviewPanel", () => {
   it("supports next-page navigation and direct page input", () => {
-    render(
-      <I18nProvider>
-        <PreviewPanel />
-      </I18nProvider>,
-    );
+    renderPanel();
 
     const pageInput = screen.getByRole("textbox", { name: "第 1 / 10 页" });
     expect(pageInput).toHaveProperty("value", "1");
@@ -86,22 +96,14 @@ describe("PreviewPanel", () => {
       },
     });
 
-    render(
-      <I18nProvider>
-        <PreviewPanel />
-      </I18nProvider>,
-    );
+    renderPanel();
 
     expect(document.querySelector("svg")).not.toBeNull();
     expect(screen.getByText("SN-001")).not.toBeNull();
   });
 
   it("keeps the stored page index clamped when page count shrinks", () => {
-    render(
-      <I18nProvider>
-        <PreviewPanel />
-      </I18nProvider>,
-    );
+    renderPanel();
 
     const pageInput = screen.getByRole("textbox", { name: "第 1 / 10 页" });
     fireEvent.change(pageInput, { target: { value: "10" } });
