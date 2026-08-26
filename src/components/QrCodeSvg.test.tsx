@@ -2,8 +2,9 @@
 
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { QrCodeSvg } from "./QrCodeSvg";
+
 import { createQrMatrix, QR_QUIET_ZONE_MODULES } from "../utils/qrCode";
+import { QrCodeSvg } from "./QrCodeSvg";
 
 describe("QrCodeSvg", () => {
   it("uses the shared four-module quiet zone", () => {

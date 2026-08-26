@@ -1,17 +1,18 @@
-import { useMemo } from "react";
 import { UploadCloud } from "lucide-react";
+import { useMemo } from "react";
 import { useShallow } from "zustand/shallow";
+
+import { useGenerationReadiness } from "../hooks/useGenerationReadiness";
 import { useStore } from "../store/useStore";
+import type { GenerationStatus } from "../utils/generation";
 import { useI18n } from "../utils/i18nContext";
 import { getPaperSizeInfo } from "../utils/layoutMath";
 import type { PdfProgressPhase } from "../utils/pdfProgress";
-import type { GenerationStatus } from "../utils/generation";
-import { useGenerationReadiness } from "../hooks/useGenerationReadiness";
+import { ImageFilesSection } from "./ImageFilesSection";
+import { LayoutFields } from "./LayoutFields";
 import { SegmentedControl } from "./SegmentedControl";
 import { SmartButton } from "./SmartButton";
 import { TextModeFields } from "./TextModeFields";
-import { LayoutFields } from "./LayoutFields";
-import { ImageFilesSection } from "./ImageFilesSection";
 
 interface ControlPanelProps {
   onFilesSelect: (files: File[]) => void | Promise<void>;

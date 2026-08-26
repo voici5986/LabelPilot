@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import jsPDF from "jspdf";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
 import type { HelperLayoutConfig, TextConfig } from "./layoutMath";
 
 const mockJsPdfInstance = {

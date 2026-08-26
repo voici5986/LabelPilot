@@ -1,6 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
-import { I18nContext } from "../utils/i18nContext";
+
 import { resetPersistedSettings } from "../store/useStore";
+import { I18nContext } from "../utils/i18nContext";
 
 interface Props {
   children: ReactNode;

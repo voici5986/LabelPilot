@@ -1,9 +1,10 @@
-import { useId } from "react";
 import { Grid } from "lucide-react";
+import { useId } from "react";
+
+import { useI18n } from "../utils/i18nContext";
 import type { TextConfig } from "../utils/layoutMath";
 import { TEXT_CONFIG_LIMITS } from "../utils/layoutMath";
 import type { TextOutputMetrics } from "../utils/textValidation";
-import { useI18n } from "../utils/i18nContext";
 import { NumberInput } from "./NumberInput";
 
 interface TextModeFieldsProps {

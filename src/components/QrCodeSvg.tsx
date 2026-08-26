@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+
 import { createQrMatrix, QR_QUIET_ZONE_MODULES } from "../utils/qrCode";
 
 interface QrCodeSvgProps {

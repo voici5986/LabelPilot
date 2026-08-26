@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+
 import { resetForE2e } from "./helpers";
 
 /** 固定 1×1 PNG fixture，避免依赖运行时页面截图生成上传图 */

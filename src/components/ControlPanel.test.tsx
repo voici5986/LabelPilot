@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { I18nProvider } from "../utils/i18n";
-import { ControlPanel } from "./ControlPanel";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import { useStore } from "../store/useStore";
+import { I18nProvider } from "../utils/i18n";
 import { A4_HEIGHT_MM, A4_WIDTH_MM } from "../utils/layoutMath";
+import { ControlPanel } from "./ControlPanel";
 
 const defaultConfig = {
   rows: 2,

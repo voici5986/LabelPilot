@@ -1,5 +1,5 @@
-import React, { useId, useState } from "react";
 import { ChevronUp, ChevronDown, Minus, Plus } from "lucide-react";
+import React, { useId, useState } from "react";
 
 interface NumberInputProps {
   label: string;

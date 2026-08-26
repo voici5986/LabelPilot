@@ -1,7 +1,8 @@
-import { useId, useMemo } from "react";
-import type { ChangeEvent } from "react";
 import { Reorder, useDragControls } from "framer-motion";
 import { UploadCloud } from "lucide-react";
+import { useId, useMemo } from "react";
+import type { ChangeEvent } from "react";
+
 import { useI18n } from "../utils/i18nContext";
 import type { ImageItem } from "../utils/layoutMath";
 import { ThumbnailItem } from "./ThumbnailItem";

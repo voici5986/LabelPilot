@@ -2,6 +2,7 @@
 
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
 import { I18nProvider } from "../utils/i18n";
 import { Toast } from "./Toast";
 

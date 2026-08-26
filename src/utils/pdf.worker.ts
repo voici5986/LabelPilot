@@ -1,4 +1,12 @@
 import jsPDF from "jspdf";
+
+import { AppError, serializeAppError, type AppErrorCode } from "./appError";
+import {
+  validateImageDimensions,
+  validateImageFiles,
+  validateImageLabelCount,
+  normalizeImageItemCount,
+} from "./imageLimits";
 import {
   calculateLabelLayout,
   resolveItemAtSlot,
@@ -11,21 +19,14 @@ import {
   type LabelPosition,
   type TextConfig,
 } from "./layoutMath";
-import { AppError, serializeAppError, type AppErrorCode } from "./appError";
-import {
-  validateImageDimensions,
-  validateImageFiles,
-  validateImageLabelCount,
-  normalizeImageItemCount,
-} from "./imageLimits";
-import { createQrMatrix, QR_QUIET_ZONE_MODULES } from "./qrCode";
-import { validateTextOutput } from "./textValidation";
 import type { PdfProgressPhase } from "./pdfProgress";
 import {
   isPdfWorkerGenerateRequest,
   type PdfWorkerImageItem,
   type PdfWorkerResponse,
 } from "./pdfWorkerProtocol";
+import { createQrMatrix, QR_QUIET_ZONE_MODULES } from "./qrCode";
+import { validateTextOutput } from "./textValidation";
 
 /**
  * PDF Generation Worker

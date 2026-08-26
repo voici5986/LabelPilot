@@ -1,4 +1,5 @@
 import { File as FileIcon, FileMinus, Grid } from "lucide-react";
+
 import { useI18n } from "../utils/i18nContext";
 import { LAYOUT_CONFIG_LIMITS } from "../utils/layoutMath";
 import type { HelperLayoutConfig } from "../utils/layoutMath";

@@ -1,4 +1,5 @@
 import { createContext, useContext } from "react";
+
 import { translations } from "./translations";
 import type { Language } from "./translations";
 

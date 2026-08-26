@@ -1,5 +1,13 @@
+import { motion } from "framer-motion";
+import { AlertCircle } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
+import { useShallow } from "zustand/shallow";
+
+import { usePreviewViewport } from "../hooks/usePreviewViewport";
+import { useStore } from "../store/useStore";
+import { useI18n } from "../utils/i18nContext";
+import type { Translations } from "../utils/i18nContext";
 import {
   calculateLabelLayout,
   resolvePageDimensions,
@@ -8,18 +16,10 @@ import {
   getLabelTextFontSizeMm,
   getTextLayoutBoxes,
 } from "../utils/layoutMath";
-import { AlertCircle } from "lucide-react";
-import { useI18n } from "../utils/i18nContext";
-import { motion } from "framer-motion";
-import { QrCodeSvg } from "./QrCodeSvg";
-import { useStore } from "../store/useStore";
-import { useShallow } from "zustand/shallow";
-import { usePreviewViewport } from "../hooks/usePreviewViewport";
-import { PageNavigator } from "./PageNavigator";
-import { ZoomControl } from "./ZoomControl";
-
-import type { Translations } from "../utils/i18nContext";
 import type { ZoomMode } from "../utils/zoomMath";
+import { PageNavigator } from "./PageNavigator";
+import { QrCodeSvg } from "./QrCodeSvg";
+import { ZoomControl } from "./ZoomControl";
 
 interface PreviewPanelProps {
   zoomMode: ZoomMode;

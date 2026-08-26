@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import {
   DEFAULT_LAYOUT_CONFIG,
   DEFAULT_TEXT_CONFIG,

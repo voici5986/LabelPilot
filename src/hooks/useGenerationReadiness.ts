@@ -1,4 +1,6 @@
 import { useMemo } from "react";
+
+import { useI18n } from "../utils/i18nContext";
 import { calculateLabelLayout } from "../utils/layoutMath";
 import type {
   HelperLayoutConfig,
@@ -6,7 +8,6 @@ import type {
   TextConfig,
 } from "../utils/layoutMath";
 import { getTextOutputMetrics } from "../utils/textValidation";
-import { useI18n } from "../utils/i18nContext";
 
 /**
  * 生成就绪度单一来源：布局有效 + 图片模式下至少一张图 / 文本模式下配置无错误。

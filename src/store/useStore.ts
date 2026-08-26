@@ -1,5 +1,7 @@
 import { create, type StoreApi, type UseBoundStore } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+
+import { normalizeImageItemCount } from "../utils/imageLimits";
 import type {
   HelperLayoutConfig,
   ImageItem,
@@ -21,7 +23,6 @@ import {
   normalizeLayoutConfig,
   normalizeTextConfig,
 } from "../utils/layoutMath";
-import { normalizeImageItemCount } from "../utils/imageLimits";
 import { normalizeCalibration } from "../utils/screenCalibration";
 import type { ScreenCalibration } from "../utils/screenCalibration";
 

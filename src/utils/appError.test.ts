@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { AppError, deserializeAppError, isAppErrorCode } from "./appError";
 import { isPdfWorkerResponse } from "./pdfWorkerProtocol";
 

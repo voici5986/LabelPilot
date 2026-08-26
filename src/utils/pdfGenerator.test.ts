@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { generatePDF } from "./pdfGenerator";
+
 import type { HelperLayoutConfig, TextConfig } from "./layoutMath";
+import { generatePDF } from "./pdfGenerator";
 
 const config = {
   rows: 1,

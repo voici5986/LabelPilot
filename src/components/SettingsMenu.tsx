@@ -1,8 +1,9 @@
-import { useEffect, useId, useRef, useState } from "react";
-import type { KeyboardEvent } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown, Ruler, Settings } from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
+import type { KeyboardEvent } from "react";
 import { useShallow } from "zustand/shallow";
+
 import { useStore } from "../store/useStore";
 import { useI18n } from "../utils/i18nContext";
 import type { Translations } from "../utils/i18nContext";

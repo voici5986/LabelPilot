@@ -8,6 +8,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import { useStore } from "../store/useStore";
 import { I18nProvider } from "../utils/i18n";
 import { SettingsMenu } from "./SettingsMenu";

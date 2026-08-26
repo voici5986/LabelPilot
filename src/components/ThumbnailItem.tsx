@@ -2,10 +2,11 @@ import { motion } from "framer-motion";
 import type { DragControls } from "framer-motion";
 import { GripVertical, Image as ImageIcon, X } from "lucide-react";
 import type { ChangeEvent } from "react";
-import { normalizeImageItemCount } from "../utils/imageLimits";
-import type { ImageItem } from "../utils/layoutMath";
+
 import { useStore } from "../store/useStore";
 import { useI18n } from "../utils/i18nContext";
+import { normalizeImageItemCount } from "../utils/imageLimits";
+import type { ImageItem } from "../utils/layoutMath";
 
 interface ThumbnailItemProps {
   item: ImageItem;

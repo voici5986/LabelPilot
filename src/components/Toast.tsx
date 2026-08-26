@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle, XCircle, AlertCircle, X } from "lucide-react";
 import { useEffect, useRef } from "react";
+
 import { useI18n } from "../utils/i18nContext";
 
 export type ToastType = "success" | "error" | "warning";

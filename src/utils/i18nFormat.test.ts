@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { interpolateTranslation } from "./i18nFormat";
 
 describe("interpolateTranslation", () => {

@@ -1,5 +1,6 @@
-import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useState } from "react";
+
 import { useI18n } from "../utils/i18nContext";
 
 interface PageNavigatorProps {

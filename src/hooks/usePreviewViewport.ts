@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
+
 import type { HelperLayoutConfig } from "../utils/layoutMath";
 import { resolvePageDimensions } from "../utils/layoutMath";
 

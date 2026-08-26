@@ -1,6 +1,7 @@
 import { Download, Globe, Monitor, Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useShallow } from "zustand/shallow";
+
 import { useStore } from "../store/useStore";
 import { useI18n } from "../utils/i18nContext";
 import { LogoIcon } from "./LogoIcon";

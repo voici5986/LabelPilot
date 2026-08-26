@@ -1,14 +1,15 @@
-import { useEffect, useRef, useState } from "react";
-import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown, ChevronUp, Maximize2, UploadCloud } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useShallow } from "zustand/shallow";
+
+import { useGenerationReadiness } from "../hooks/useGenerationReadiness";
 import { useStore } from "../store/useStore";
 import { useI18n } from "../utils/i18nContext";
-import { useGenerationReadiness } from "../hooks/useGenerationReadiness";
-import { SegmentedControl } from "./SegmentedControl";
-import { LayoutFields } from "./LayoutFields";
 import { ImageFilesSection } from "./ImageFilesSection";
+import { LayoutFields } from "./LayoutFields";
+import { SegmentedControl } from "./SegmentedControl";
 import { TextModeFields } from "./TextModeFields";
 
 interface EditSheetProps {

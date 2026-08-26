@@ -1,18 +1,18 @@
-import type { HelperLayoutConfig, ImageItem, TextConfig } from "./layoutMath";
-import { formatDateForFilename } from "./format";
 import { AppError, deserializeAppError } from "./appError";
+import { formatDateForFilename } from "./format";
 import {
   readValidatedImageFile,
   validateImageFiles,
   validateImageLabelCount,
 } from "./imageLimits";
-import { validateTextOutput } from "./textValidation";
+import type { HelperLayoutConfig, ImageItem, TextConfig } from "./layoutMath";
 import type { PdfProgressUpdate } from "./pdfProgress";
 import {
   isPdfWorkerResponse,
   type PdfWorkerGenerateRequest,
   type PdfWorkerImageItem,
 } from "./pdfWorkerProtocol";
+import { validateTextOutput } from "./textValidation";
 
 export const DEFAULT_PDF_TIMEOUT_MS = 120_000;
 

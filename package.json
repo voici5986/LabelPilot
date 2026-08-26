@@ -25,7 +25,7 @@
       "pnpm exec oxlint --fix",
       "pnpm exec oxfmt --write"
     ],
-    "*.{json,css,md,yml,yaml,html}": [
+    "!(pnpm-lock).{json,css,md,yml,yaml,html}": [
       "pnpm exec oxfmt --write"
     ]
   },

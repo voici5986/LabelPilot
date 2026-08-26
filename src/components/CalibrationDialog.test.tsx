@@ -2,8 +2,9 @@
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { I18nProvider } from "../utils/i18n";
+
 import { useStore } from "../store/useStore";
+import { I18nProvider } from "../utils/i18n";
 import { CalibrationDialog } from "./CalibrationDialog";
 import type { CalibrationDialogSource } from "./CalibrationDialog";
 

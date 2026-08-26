@@ -1,32 +1,33 @@
 import { useCallback, useState, useEffect, useRef } from "react";
-import { Header } from "./components/Header";
+import { useShallow } from "zustand/shallow";
+
+import { CalibrationDialog } from "./components/CalibrationDialog";
+import type { CalibrationDialogSource } from "./components/CalibrationDialog";
 import { ControlPanel } from "./components/ControlPanel";
+import { EditSheet } from "./components/EditSheet";
+import { Header } from "./components/Header";
+import { MobileActionBar } from "./components/MobileActionBar";
 import { PreviewPanel } from "./components/PreviewPanel";
 import { ReloadPrompt } from "./components/ReloadPrompt";
-import { MobileActionBar } from "./components/MobileActionBar";
-import { EditSheet } from "./components/EditSheet";
-import { useStore } from "./store/useStore";
-import { useShallow } from "zustand/shallow";
-import { generatePDF } from "./utils/pdfGenerator";
 import { Toast, type ToastType } from "./components/Toast";
+import { useGenerationReadiness } from "./hooks/useGenerationReadiness";
+import { useStore } from "./store/useStore";
+import { AppError } from "./utils/appError";
+import type { GenerationStatus } from "./utils/generation";
 import { useI18n } from "./utils/i18nContext";
 import type { Translations } from "./utils/i18nContext";
-import { AppError } from "./utils/appError";
 import {
   validateImageFileContents,
   validateImageFiles,
 } from "./utils/imageLimits";
+import { generatePDF } from "./utils/pdfGenerator";
 import type { PdfProgressPhase } from "./utils/pdfProgress";
-import type { GenerationStatus } from "./utils/generation";
-import type { ZoomMode } from "./utils/zoomMath";
 import {
   getCurrentScreenEnvironment,
   isCalibrationStale,
 } from "./utils/screenCalibration";
 import type { ScreenCalibration } from "./utils/screenCalibration";
-import { CalibrationDialog } from "./components/CalibrationDialog";
-import type { CalibrationDialogSource } from "./components/CalibrationDialog";
-import { useGenerationReadiness } from "./hooks/useGenerationReadiness";
+import type { ZoomMode } from "./utils/zoomMath";
 
 function App() {
   const { t } = useI18n();

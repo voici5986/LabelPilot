@@ -1,7 +1,8 @@
 import { ChevronUp, SlidersHorizontal } from "lucide-react";
+
+import type { GenerationStatus } from "../utils/generation";
 import { useI18n } from "../utils/i18nContext";
 import type { PdfProgressPhase } from "../utils/pdfProgress";
-import type { GenerationStatus } from "../utils/generation";
 import { SmartButton } from "./SmartButton";
 
 interface MobileActionBarProps {

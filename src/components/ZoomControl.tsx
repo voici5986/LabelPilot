@@ -1,3 +1,4 @@
+import { Maximize } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   Dispatch,
@@ -5,7 +6,7 @@ import type {
   SetStateAction,
   TouchEvent as ReactTouchEvent,
 } from "react";
-import { Maximize } from "lucide-react";
+
 import { useI18n } from "../utils/i18nContext";
 import {
   getThumbBottomPct,

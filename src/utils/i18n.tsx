@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import type { ReactNode } from "react";
 
-import { translations } from "./translations";
-import type { Language } from "./translations";
 import { I18nContext } from "./i18nContext";
 import type { Translations } from "./i18nContext";
 import { interpolateTranslation } from "./i18nFormat";
+import { translations } from "./translations";
+import type { Language } from "./translations";
 
 const STORAGE_KEY = "label_printer_lang";
 

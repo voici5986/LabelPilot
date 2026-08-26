@@ -1,9 +1,10 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Download, CheckCircle, AlertCircle, X } from "lucide-react";
+
+import type { GenerationStatus } from "../utils/generation";
 import { useI18n } from "../utils/i18nContext";
 import type { Translations } from "../utils/i18nContext";
 import type { PdfProgressPhase } from "../utils/pdfProgress";
-import type { GenerationStatus } from "../utils/generation";
 
 interface SmartButtonProps {
   onClick: () => void;

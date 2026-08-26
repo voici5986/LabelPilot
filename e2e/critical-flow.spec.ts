@@ -1,3 +1,5 @@
+import { pathToFileURL } from "node:url";
+
 import {
   expect,
   test,
@@ -5,7 +7,7 @@ import {
   type Page,
   type TestInfo,
 } from "@playwright/test";
-import { pathToFileURL } from "node:url";
+
 import { resetForE2e } from "./helpers";
 
 async function expectValidPdf(

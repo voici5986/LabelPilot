@@ -1,8 +1,9 @@
-import { useRegisterSW } from "virtual:pwa-register/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { RefreshCw, X } from "lucide-react";
-import { useI18n } from "../utils/i18nContext";
 import { useEffect, useRef, useState } from "react";
+import { useRegisterSW } from "virtual:pwa-register/react";
+
+import { useI18n } from "../utils/i18nContext";
 
 export function ReloadPrompt() {
   const { t } = useI18n();
