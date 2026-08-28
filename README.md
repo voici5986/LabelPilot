@@ -4,7 +4,7 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-7.0.2-blue?style=flat-square&logo=typescript)
 ![Vite](https://img.shields.io/badge/Vite-8.0-646CFF?style=flat-square&logo=vite)
 ![Tailwind](https://img.shields.io/badge/Tailwind_CSS-4.2-38B2AC?style=flat-square&logo=tailwind-css)
-![Version](https://img.shields.io/badge/Version-1.4.3-green?style=flat-square)
+![Version](https://img.shields.io/github/v/tag/voici5986/label-react?label=Version&color=green&style=flat-square)
 
 **English** | [简体中文](./README.zh-CN.md)
 
@@ -59,6 +59,10 @@ This project is optimized for Vercel.
    - **Build Command**: `pnpm build`
    - **Output Directory**: `dist`
 4. Click **Deploy**.
+
+### Release process
+
+See [docs/release.md](./docs/release.md) for the Release Please workflow and local validation command.
 
 ## 📦 Building for Production
 

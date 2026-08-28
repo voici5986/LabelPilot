@@ -4,7 +4,7 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-7.0.2-blue?style=flat-square&logo=typescript)
 ![Vite](https://img.shields.io/badge/Vite-8.0-646CFF?style=flat-square&logo=vite)
 ![Tailwind](https://img.shields.io/badge/Tailwind_CSS-4.2-38B2AC?style=flat-square&logo=tailwind-css)
-![Version](https://img.shields.io/badge/Version-1.4.3-green?style=flat-square)
+![Version](https://img.shields.io/github/v/tag/voici5986/label-react?label=Version&color=green&style=flat-square)
 
 [English](./README.md) | **简体中文**
 
@@ -59,6 +59,10 @@
    - **Build Command**: `pnpm build`
    - **Output Directory**: `dist`
 4. 点击 **Deploy** 即可。
+
+### 发布流程
+
+请参阅 [docs/release.md](./docs/release.md) 了解 Release Please 流程和本地校验命令。
 
 ## 📦 生产环境构建
 

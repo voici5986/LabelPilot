@@ -58,25 +58,12 @@
 - 精简PWA资源缓存配置并放宽文件大小限制 ([998217b](https://github.com/voici5986/label-react/commit/998217b640fb89cea8a26116aa40216edbed12a6))
 - **pdf:** 使用Transferable Objects优化图片数据传输性能 ([393020a](https://github.com/voici5986/label-react/commit/393020a396748aa94adbde4162e8626a8563700d))
 
-# labelpilot
+# Historical unpublished notes
 
-## 1.4.3
+The following notes came from the legacy Changesets workflow. They have no
+corresponding Git tag and are retained for context only; they are not release
+versions.
 
-### Patch Changes
-
-- a68efff: Automated release for changes:
-  M .husky/pre-commit
-  D .husky/pre-push
-  M pnpm-lock.yaml
-
-## 1.4.2
-
-### Patch Changes
-
-- chore(release): cut new version
-
-## 1.4.1
-
-### Patch Changes
-
-- chore(release): cut new version
+- Legacy automation recorded changes to `.husky/pre-commit`, `.husky/pre-push`,
+  and `pnpm-lock.yaml`.
+- Legacy release attempts recorded two generic release-version bumps.
