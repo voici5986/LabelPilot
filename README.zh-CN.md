@@ -62,7 +62,7 @@
 
 ### 发布流程
 
-请参阅 [docs/release.md](./docs/release.md) 了解 Release Please 流程和本地校验命令。
+请参阅 [docs/release.md](./docs/release.md) 了解手动运行 `semantic-release` 的发版流程和本地校验命令。
 
 ## 📦 生产环境构建
 

@@ -1,116 +1,847 @@
-# LabelPilot 本地质量门禁
-# 用法:
-#   .\release.ps1 -ValidateOnly   # 运行本地发布前质量门禁，不修改 Git 或发布元数据
-#
-# 正式版本由 GitHub Actions 中的 release-please Release PR 管理。
+#requires -Version 7.0
+
+[CmdletBinding()]
 param(
+    [switch]$Release,
+    [switch]$DryRun,
     [switch]$ValidateOnly
 )
 
-if ($args.Count -gt 0) {
-    Write-Host "不支持的参数: $($args -join ' ')。正式版本由 release-please 管理；本地仅支持 -ValidateOnly。" -ForegroundColor Red
-    exit 2
-}
-
-Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
-
-# 统一控制台为 UTF-8，避免中文输出在 GBK（代码页 936）控制台上乱码。
-try {
-    [Console]::OutputEncoding = [Text.Encoding]::UTF8
-    $OutputEncoding = [Text.Encoding]::UTF8
-}
-catch {
-    # 非交互或受限环境下无法修改控制台编码，不影响质量门禁。
-}
-
-$root = $PSScriptRoot
-$packageJson = Join-Path $root "package.json"
-$lockFile = Join-Path $root "pnpm-lock.yaml"
+$formalReleaseStarted = $false
+$beforeFormalSnapshot = $null
+$beforeFormalSnapshotPath = $null
+$locationPushed = $false
+$releaseMutex = $null
 
 function Assert-RequiredFile {
-    param([Parameter(Mandatory)][string]$Path)
+    param([Parameter(Mandatory = $true)][string]$Path)
 
     if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
-        throw "缺少质量门禁所需文件: $Path"
+        throw "缺少必需文件：$Path"
+    }
+}
+
+function Assert-RequiredCommand {
+    param([Parameter(Mandatory = $true)][string]$Name)
+
+    if (-not (Get-Command $Name -ErrorAction SilentlyContinue)) {
+        throw "找不到命令 '$Name'，请先安装并确保它位于 PATH 中。"
     }
 }
 
 function Invoke-NativeStep {
     param(
-        [Parameter(Mandatory)][string]$Label,
-        [Parameter(Mandatory)][string]$Command,
-        [Parameter(Mandatory)][string[]]$Arguments,
-        [string]$WorkingDirectory = $root
+        [Parameter(Mandatory = $true)][string]$Description,
+        [Parameter(Mandatory = $true)][string]$Command,
+        [string[]]$Arguments = @()
     )
 
-    Write-Host $Label -ForegroundColor Yellow
-    Push-Location $WorkingDirectory
-    try {
-        & $Command @Arguments
-        $exitCode = $LASTEXITCODE
+    Write-Host ""
+    Write-Host "==> $Description" -ForegroundColor Cyan
+    & $Command @Arguments
+    $exitCode = $LASTEXITCODE
+    if ($exitCode -ne 0) {
+        throw "$Description 失败，退出码：$exitCode"
     }
-    finally {
-        Pop-Location
+}
+
+function Invoke-NativeCaptureStep {
+    param(
+        [Parameter(Mandatory = $true)][string]$Description,
+        [Parameter(Mandatory = $true)][string]$Command,
+        [string[]]$Arguments = @()
+    )
+
+    Write-Host ""
+    Write-Host "==> $Description" -ForegroundColor Cyan
+    $output = @(& $Command @Arguments 2>&1)
+    $exitCode = $LASTEXITCODE
+
+    foreach ($line in $output) {
+        Write-Host $line
     }
 
     if ($exitCode -ne 0) {
-        throw "$Label 失败，退出码: $exitCode"
+        throw "$Description 失败，退出码：$exitCode"
     }
 
-    Write-Host "$Label 通过。" -ForegroundColor Green
+    return @($output | ForEach-Object { $_.ToString() })
+}
+
+function Invoke-NativeQuiet {
+    param(
+        [Parameter(Mandatory = $true)][string]$Description,
+        [Parameter(Mandatory = $true)][string]$Command,
+        [string[]]$Arguments = @()
+    )
+
+    $output = @(& $Command @Arguments 2>&1)
+    $exitCode = $LASTEXITCODE
+    if ($exitCode -ne 0) {
+        $details = ($output | ForEach-Object { $_.ToString() }) -join [Environment]::NewLine
+        if ([string]::IsNullOrWhiteSpace($details)) {
+            throw "$Description 失败，退出码：$exitCode"
+        }
+        throw "$Description 失败，退出码：$exitCode$([Environment]::NewLine)$details"
+    }
+
+    return @($output | ForEach-Object { $_.ToString() })
+}
+
+function Get-QuietSingleLine {
+    param(
+        [Parameter(Mandatory = $true)][string]$Description,
+        [Parameter(Mandatory = $true)][string]$Command,
+        [string[]]$Arguments = @()
+    )
+
+    $lines = @(Invoke-NativeQuiet -Description $Description -Command $Command -Arguments $Arguments)
+    $value = ($lines | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Last 1)
+    if ([string]::IsNullOrWhiteSpace($value)) {
+        throw "$Description 未返回结果。"
+    }
+
+    return $value.Trim()
+}
+
+function Get-PackageVersion {
+    $package = Get-Content -LiteralPath "package.json" -Raw -Encoding UTF8 | ConvertFrom-Json
+    $version = [string]$package.version
+    if ([string]::IsNullOrWhiteSpace($version)) {
+        throw "package.json 中缺少 version。"
+    }
+
+    return $version
+}
+
+function Get-LocalTagSnapshot {
+    return @(
+        Invoke-NativeQuiet -Description "读取本地标签" -Command "git" -Arguments @(
+            "for-each-ref",
+            "--format=%(refname:short)|%(objectname)",
+            "refs/tags"
+        )
+    )
+}
+
+function Get-RepositorySnapshot {
+    param(
+        [AllowNull()][string]$RemoteHead,
+        [Parameter(Mandatory = $true)][string]$Kind,
+        [string[]]$RemoteTagRefs = @()
+    )
+
+    $packageHash = (Get-FileHash -LiteralPath "package.json" -Algorithm SHA256).Hash
+    $changelogHash = (Get-FileHash -LiteralPath "CHANGELOG.md" -Algorithm SHA256).Hash
+    $status = @(Invoke-NativeQuiet -Description "读取工作区状态" -Command "git" -Arguments @(
+        "status",
+        "--porcelain=v1",
+        "--untracked-files=all"
+    ))
+
+    return [pscustomobject]@{
+        kind            = $Kind
+        capturedAtUtc   = [DateTime]::UtcNow.ToString("o")
+        branch          = Get-QuietSingleLine -Description "读取当前分支" -Command "git" -Arguments @("branch", "--show-current")
+        head            = Get-QuietSingleLine -Description "读取 HEAD" -Command "git" -Arguments @("rev-parse", "HEAD")
+        remoteMainHead  = $RemoteHead
+        remoteTagRefs   = @($RemoteTagRefs)
+        packageVersion  = Get-PackageVersion
+        packageSha256   = $packageHash
+        changelogSha256 = $changelogHash
+        status          = $status
+        tags            = @(Get-LocalTagSnapshot)
+    }
+}
+
+function Save-ReleaseSnapshot {
+    param(
+        [Parameter(Mandatory = $true)]$Snapshot,
+        [Parameter(Mandatory = $true)][string]$Suffix
+    )
+
+    $timestamp = Get-Date -Format "yyyyMMdd-HHmmss-fff"
+    $path = Join-Path ([IO.Path]::GetTempPath()) "LabelPilot-release-$timestamp-$Suffix.json"
+    $Snapshot | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $path -Encoding UTF8
+    return $path
+}
+
+function Assert-SnapshotUnchanged {
+    param(
+        [Parameter(Mandatory = $true)]$Before,
+        [Parameter(Mandatory = $true)]$After,
+        [Parameter(Mandatory = $true)][string]$Stage
+    )
+
+    $differences = [System.Collections.Generic.List[string]]::new()
+    if ($Before.head -ne $After.head) {
+        $differences.Add("HEAD")
+    }
+    if ($Before.packageVersion -ne $After.packageVersion) {
+        $differences.Add("package.json version")
+    }
+    if ($Before.packageSha256 -ne $After.packageSha256) {
+        $differences.Add("package.json")
+    }
+    if ($Before.changelogSha256 -ne $After.changelogSha256) {
+        $differences.Add("CHANGELOG.md")
+    }
+    if (($Before.status -join [Environment]::NewLine) -ne ($After.status -join [Environment]::NewLine)) {
+        $differences.Add("工作区状态")
+    }
+    if (($Before.tags -join [Environment]::NewLine) -ne ($After.tags -join [Environment]::NewLine)) {
+        $differences.Add("本地标签")
+    }
+
+    if ($differences.Count -gt 0) {
+        throw "$Stage 意外修改了仓库：$($differences -join '、')。已停止发版。"
+    }
+}
+
+function Enter-ReleaseMutex {
+    $repositoryRoot = Get-QuietSingleLine -Description "读取仓库根目录" -Command "git" -Arguments @(
+        "rev-parse",
+        "--show-toplevel"
+    )
+    $normalizedRoot = [IO.Path]::GetFullPath($repositoryRoot).ToLowerInvariant()
+    $sha256 = [Security.Cryptography.SHA256]::Create()
+    try {
+        $pathHash = $sha256.ComputeHash([Text.Encoding]::UTF8.GetBytes($normalizedRoot))
+    }
+    finally {
+        $sha256.Dispose()
+    }
+    $pathHashText = -join ($pathHash | ForEach-Object { $_.ToString("X2") })
+    $mutexName = "Local\LabelPilot-release-$($pathHashText.Substring(0, 24))"
+    $mutex = [Threading.Mutex]::new($false, $mutexName)
+
+    try {
+        $acquired = $false
+        try {
+            $acquired = $mutex.WaitOne(0)
+        }
+        catch [Threading.AbandonedMutexException] {
+            $acquired = $true
+        }
+
+        if (-not $acquired) {
+            throw "同一工作树已有另一个发版脚本正在运行；请等待其结束后再试。"
+        }
+
+        return $mutex
+    }
+    catch {
+        $mutex.Dispose()
+        throw
+    }
+}
+
+function Get-NormalizedTagRefs {
+    param(
+        [Parameter(Mandatory = $true)][string]$Description,
+        [Parameter(Mandatory = $true)][string]$Repository
+    )
+
+    return @(
+        Invoke-NativeQuiet -Description $Description -Command "git" -Arguments @(
+            "ls-remote",
+            "--tags",
+            $Repository
+        ) |
+            Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+            ForEach-Object { $_.Trim() } |
+            Sort-Object
+    )
+}
+
+function Assert-LocalTagsMatchOrigin {
+    param([Parameter(Mandatory = $true)][string]$Stage)
+
+    $localTags = @(Get-NormalizedTagRefs -Description "读取本地标签引用" -Repository ".")
+    $remoteTags = @(Get-NormalizedTagRefs -Description "读取 origin 标签引用" -Repository "origin")
+    if (($localTags -join [Environment]::NewLine) -eq ($remoteTags -join [Environment]::NewLine)) {
+        return $remoteTags
+    }
+
+    $difference = @(
+        Compare-Object -ReferenceObject $remoteTags -DifferenceObject $localTags |
+            Select-Object -First 12 |
+            ForEach-Object {
+                $location = if ($_.SideIndicator -eq "=>") { "仅本地" } else { "仅远端或目标不同" }
+                "$location：$($_.InputObject)"
+            }
+    )
+    throw "$Stage：本地标签与 origin 标签不完全一致。@semantic-release/git 会推送所有本地标签，因此已停止发版。$([Environment]::NewLine)$($difference -join [Environment]::NewLine)"
+}
+
+function Assert-FormalReleaseGitState {
+    param([Parameter(Mandatory = $true)][string]$Stage)
+
+    Write-Host ""
+    Write-Host "==> $Stage：校验 main 与 origin/main" -ForegroundColor Cyan
+
+    $branch = Get-QuietSingleLine -Description "读取当前分支" -Command "git" -Arguments @("branch", "--show-current")
+    if ($branch -ne "main") {
+        throw "正式发版只能从 main 分支执行；当前分支：$branch"
+    }
+
+    $statusBeforeFetch = @(Invoke-NativeQuiet -Description "读取工作区状态" -Command "git" -Arguments @(
+        "status",
+        "--porcelain=v1",
+        "--untracked-files=all"
+    ))
+    if ($statusBeforeFetch.Count -gt 0) {
+        throw "工作区必须完全干净（包括未跟踪文件）后才能继续。"
+    }
+
+    Invoke-NativeStep -Description "$Stage：刷新 origin/main 与远端标签" -Command "git" -Arguments @(
+        "fetch",
+        "--tags",
+        "origin",
+        "+refs/heads/main:refs/remotes/origin/main"
+    )
+
+    $head = Get-QuietSingleLine -Description "读取 HEAD" -Command "git" -Arguments @("rev-parse", "HEAD")
+    $localMain = Get-QuietSingleLine -Description "读取本地 main" -Command "git" -Arguments @("rev-parse", "refs/heads/main")
+    $remoteMain = Get-QuietSingleLine -Description "读取 origin/main" -Command "git" -Arguments @("rev-parse", "refs/remotes/origin/main")
+
+    if ($head -ne $localMain) {
+        throw "HEAD 与本地 main 不一致，可能处于 detached HEAD；已停止发版。"
+    }
+
+    if ($head -ne $remoteMain) {
+        $counts = Get-QuietSingleLine -Description "比较 main 与 origin/main" -Command "git" -Arguments @(
+            "rev-list",
+            "--left-right",
+            "--count",
+            "refs/heads/main...refs/remotes/origin/main"
+        )
+        throw "本地 main 与刚刷新得到的 origin/main 不一致（本地/远端计数：$counts）。请先处理同步关系。"
+    }
+
+    $statusAfterFetch = @(Invoke-NativeQuiet -Description "再次读取工作区状态" -Command "git" -Arguments @(
+        "status",
+        "--porcelain=v1",
+        "--untracked-files=all"
+    ))
+    if ($statusAfterFetch.Count -gt 0) {
+        throw "刷新远端状态后工作区不再干净；已停止发版。"
+    }
+
+    $tagRefs = @(Assert-LocalTagsMatchOrigin -Stage $Stage)
+    Write-Host "main 已与刚刷新得到的 origin/main 精确同步：$head" -ForegroundColor Green
+    Write-Host "本地与 origin 的标签引用完全一致：$($tagRefs.Count) 条" -ForegroundColor Green
+    return [pscustomobject]@{
+        Head       = $head
+        RemoteHead = $remoteMain
+        TagRefs    = $tagRefs
+    }
+}
+
+function Select-ReleaseMode {
+    while ($true) {
+        Write-Host ""
+        Write-Host "请选择操作：" -ForegroundColor Cyan
+        Write-Host "  1. 正式发版（默认）"
+        Write-Host "  2. 发版预演（不修改仓库）"
+        Write-Host "  3. 仅运行完整验证"
+        Write-Host "  Q. 退出"
+        $choice = Read-Host "输入选项"
+
+        if ([string]::IsNullOrWhiteSpace($choice) -or $choice -eq "1") {
+            return "Release"
+        }
+        if ($choice -eq "2") {
+            return "DryRun"
+        }
+        if ($choice -eq "3") {
+            return "ValidateOnly"
+        }
+        if ($choice -match "^[Qq]$") {
+            return "Quit"
+        }
+
+        Write-Warning "无效选项，请重新输入。"
+    }
+}
+
+function Invoke-PlaywrightGate {
+    $nodePath = (Get-Command "node" -ErrorAction Stop).Source
+    $timestamp = Get-Date -Format "yyyyMMdd-HHmmss-fff"
+    $serverOutputPath = Join-Path ([IO.Path]::GetTempPath()) "LabelPilot-vite-$timestamp.stdout.log"
+    $serverErrorPath = Join-Path ([IO.Path]::GetTempPath()) "LabelPilot-vite-$timestamp.stderr.log"
+    $server = $null
+    $hadCi = Test-Path Env:CI
+    $previousCi = $env:CI
+    $hadExternalServer = Test-Path Env:PLAYWRIGHT_EXTERNAL_SERVER
+    $previousExternalServer = $env:PLAYWRIGHT_EXTERNAL_SERVER
+
+    try {
+        Write-Host ""
+        Write-Host "==> 启动受控的 Vite 预览服务" -ForegroundColor Cyan
+        $server = Start-Process -FilePath $nodePath -ArgumentList @(
+            "node_modules/vite/bin/vite.js",
+            "preview",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "4173",
+            "--strictPort"
+        ) -WorkingDirectory $PSScriptRoot -WindowStyle Hidden -RedirectStandardOutput $serverOutputPath -RedirectStandardError $serverErrorPath -PassThru
+
+        $ready = $false
+        for ($attempt = 0; $attempt -lt 60; $attempt++) {
+            if ($server.HasExited) {
+                break
+            }
+
+            try {
+                $response = Invoke-WebRequest -Uri "http://127.0.0.1:4173" -Method Head -TimeoutSec 1
+                if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 500) {
+                    $ready = $true
+                    break
+                }
+            }
+            catch {
+                Start-Sleep -Milliseconds 250
+            }
+        }
+
+        if (-not $ready) {
+            $serverError = if (Test-Path -LiteralPath $serverErrorPath) {
+                Get-Content -LiteralPath $serverErrorPath -Raw -ErrorAction SilentlyContinue
+            }
+            else {
+                ""
+            }
+            throw "Vite 预览服务未能在 15 秒内就绪。错误日志：$serverErrorPath$([Environment]::NewLine)$serverError"
+        }
+
+        $env:CI = "true"
+        $env:PLAYWRIGHT_EXTERNAL_SERVER = "true"
+        Invoke-NativeStep -Description "6/6 Playwright 端到端测试（CI 等价模式）" -Command "node" -Arguments @(
+            "node_modules/@playwright/test/cli.js",
+            "test"
+        )
+    }
+    catch {
+        Write-Warning "Vite 预览日志：$serverOutputPath"
+        Write-Warning "Vite 错误日志：$serverErrorPath"
+        throw
+    }
+    finally {
+        if ($hadCi) {
+            $env:CI = $previousCi
+        }
+        else {
+            $env:CI = $null
+        }
+
+        if ($hadExternalServer) {
+            $env:PLAYWRIGHT_EXTERNAL_SERVER = $previousExternalServer
+        }
+        else {
+            $env:PLAYWRIGHT_EXTERNAL_SERVER = $null
+        }
+
+        if ($null -ne $server -and -not $server.HasExited) {
+            Stop-Process -Id $server.Id -Force -ErrorAction SilentlyContinue
+            $null = $server.WaitForExit(5000)
+        }
+    }
 }
 
 function Invoke-QualityGates {
-    # 先锁定依赖，后续步骤统一使用已安装的依赖解析结果。
-    Invoke-NativeStep "[准备] 校验锁文件并安装依赖" "pnpm" @(
-        "install",
-        "--frozen-lockfile"
-    ) $root
+    Write-Host ""
+    Write-Host "开始完整发版验证。" -ForegroundColor Cyan
 
-    # Release PR 的完整门禁由 .github/workflows/ci.yml 执行；这里保留
-    # Windows 本地可复现的格式、lint、单测和生产构建检查。
-    Invoke-NativeStep "[1/4] 检查代码格式" "pnpm" @(
-        "run",
-        "format:check"
-    ) $root
-    Invoke-NativeStep "[2/4] 运行 lint" "pnpm" @(
-        "run",
-        "lint"
-    ) $root
-    Invoke-NativeStep "[3/4] 运行单元测试" "pnpm" @(
-        "run",
-        "test"
-    ) $root
-    Invoke-NativeStep "[4/4] 构建前端生产包" "pnpm" @(
-        "run",
-        "build"
-    ) $root
+    Invoke-NativeStep -Description "1/6 锁定依赖安装" -Command "pnpm" -Arguments @("install", "--frozen-lockfile")
+    Invoke-NativeStep -Description "2/6 格式检查" -Command "pnpm" -Arguments @("run", "format:check")
+    Invoke-NativeStep -Description "3/6 静态检查" -Command "pnpm" -Arguments @("run", "lint")
+    Invoke-NativeStep -Description "4/6 单元测试" -Command "pnpm" -Arguments @("test")
+    Invoke-NativeStep -Description "5/6 生产构建" -Command "pnpm" -Arguments @("run", "build")
+    Invoke-PlaywrightGate
 }
 
-if (-not $ValidateOnly) {
-    Write-Host "正式版本不再由本地脚本创建。请使用 .\release.ps1 -ValidateOnly 运行本地门禁；release-please 负责 GitHub Release PR、版本、标签和发布记录。" -ForegroundColor Yellow
-    exit 2
-}
+function Invoke-SemanticReleasePreview {
+    $nodeScript = @'
+(async () => {
+  const { default: semanticRelease } = await import("semantic-release");
+  const result = await semanticRelease({ dryRun: true, ci: false });
+  const version = result && result.nextRelease ? result.nextRelease.version : "";
+  console.log("RELEASE_NEXT_VERSION=" + version);
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
+'@
 
-Write-Host "=== LabelPilot 本地质量门禁 ===" -ForegroundColor Cyan
-Write-Host "模式: 仅运行校验，不创建版本、不修改 Git、不推送远程状态"
-Write-Host ""
+    $output = @(Invoke-NativeCaptureStep -Description "semantic-release 发版预演" -Command "node" -Arguments @(
+        "-e",
+        $nodeScript
+    ))
 
-try {
-    if (-not (Get-Command pnpm -ErrorAction SilentlyContinue)) {
-        throw "未找到命令 'pnpm'，请先安装并加入 PATH。"
+    $timestamp = Get-Date -Format "yyyyMMdd-HHmmss-fff"
+    $logPath = Join-Path ([IO.Path]::GetTempPath()) "LabelPilot-semantic-release-$timestamp-dry-run.log"
+    $output | Set-Content -LiteralPath $logPath -Encoding UTF8
+
+    $marker = $output | Where-Object { $_ -match "^RELEASE_NEXT_VERSION=" } | Select-Object -Last 1
+    if ($null -eq $marker) {
+        throw "semantic-release 预演未返回版本标记。预演日志：$logPath"
     }
 
-    Assert-RequiredFile $packageJson
-    Assert-RequiredFile $lockFile
-    Invoke-QualityGates
+    $nextVersion = $marker.Substring("RELEASE_NEXT_VERSION=".Length).Trim()
+    return [pscustomobject]@{
+        NextVersion = $nextVersion
+        LogPath      = $logPath
+    }
+}
+
+function Confirm-FormalRelease {
+    param([Parameter(Mandatory = $true)][string]$NextVersion)
 
     Write-Host ""
-    Write-Host "=== 本地质量门禁全部通过，未创建版本 ===" -ForegroundColor Cyan
+    Write-Host "即将发布 v$NextVersion。" -ForegroundColor Yellow
+    Write-Host "semantic-release 将更新 package.json 与 CHANGELOG.md，创建 release commit 和标签，并推送 main 与标签。"
+    $confirmation = Read-Host "输入版本号 $NextVersion 以确认，其他输入将取消"
+    if ([string]::IsNullOrWhiteSpace($confirmation)) {
+        return $false
+    }
+    return $confirmation.Trim() -eq $NextVersion
+}
+
+function Get-RemoteTagState {
+    param([Parameter(Mandatory = $true)][string]$TagName)
+
+    $output = @(& git ls-remote --tags origin "refs/tags/$TagName" "refs/tags/$TagName^{}" 2>&1)
+    $exitCode = $LASTEXITCODE
+    if ($exitCode -ne 0) {
+        return [pscustomobject]@{
+            tag    = $TagName
+            known  = $false
+            exists = $null
+            output = @($output | ForEach-Object { $_.ToString() })
+        }
+    }
+
+    $lines = @($output | ForEach-Object { $_.ToString() } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    return [pscustomobject]@{
+        tag    = $TagName
+        known  = $true
+        exists = $lines.Count -gt 0
+        output = $lines
+    }
+}
+
+function Get-NewLocalTags {
+    param(
+        [Parameter(Mandatory = $true)][string[]]$BeforeTags,
+        [Parameter(Mandatory = $true)][string[]]$AfterTags
+    )
+
+    $beforeNames = @($BeforeTags | ForEach-Object { ($_ -split "\|", 2)[0] })
+    return @(
+        $AfterTags |
+            ForEach-Object { ($_ -split "\|", 2)[0] } |
+            Where-Object { $_ -notin $beforeNames }
+    )
+}
+
+function Write-ReleaseFailureDiagnostics {
+    param(
+        [Parameter(Mandatory = $true)]$Before,
+        [Parameter(Mandatory = $true)][string]$BeforePath
+    )
+
+    Write-Host ""
+    Write-Warning "正式发版未完整成功。脚本不会自动回滚、删除标签或覆盖远端。"
+
+    $remoteFetchOutput = @(& git fetch --tags origin "+refs/heads/main:refs/remotes/origin/main" 2>&1)
+    $remoteFetchExitCode = $LASTEXITCODE
+    $remoteKnown = $remoteFetchExitCode -eq 0
+    $remoteHead = $null
+    $remoteTagRefs = @()
+    if ($remoteKnown) {
+        try {
+            $remoteHead = Get-QuietSingleLine -Description "读取失败后的 origin/main" -Command "git" -Arguments @(
+                "rev-parse",
+                "refs/remotes/origin/main"
+            )
+            $remoteTagRefs = @(Get-NormalizedTagRefs -Description "读取失败后的 origin 标签引用" -Repository "origin")
+        }
+        catch {
+            $remoteKnown = $false
+        }
+    }
+
+    $after = Get-RepositorySnapshot -RemoteHead $remoteHead -Kind "after-formal-release-failure" -RemoteTagRefs $remoteTagRefs
+    $newTags = @(Get-NewLocalTags -BeforeTags $Before.tags -AfterTags $after.tags)
+    $remoteTags = @($newTags | ForEach-Object { Get-RemoteTagState -TagName $_ })
+    $remoteTagRefsUnchanged = $remoteKnown -and (
+        ($Before.remoteTagRefs -join [Environment]::NewLine) -eq
+        ($remoteTagRefs -join [Environment]::NewLine)
+    )
+
+    $diagnostics = [pscustomobject]@{
+        before                 = $Before
+        after                  = $after
+        newLocalTags           = $newTags
+        remoteFetchKnown       = $remoteKnown
+        remoteFetchOutput      = @($remoteFetchOutput | ForEach-Object { $_.ToString() })
+        remoteTagRefsUnchanged = $remoteTagRefsUnchanged
+        remoteTags             = $remoteTags
+    }
+    $diagnosticPath = Save-ReleaseSnapshot -Snapshot $diagnostics -Suffix "failure"
+
+    Write-Host "发版前快照：$BeforePath"
+    Write-Host "失败诊断：$diagnosticPath"
+    Write-Host "发版前 HEAD：$($Before.head)"
+    Write-Host "当前 HEAD：$($after.head)"
+    Write-Host "发版前版本：$($Before.packageVersion)"
+    Write-Host "当前版本：$($after.packageVersion)"
+    Write-Host "新增本地标签：$(if ($newTags.Count -eq 0) { '无' } else { $newTags -join ', ' })"
+    Write-Host "远端标签引用是否确认未变化：$remoteTagRefsUnchanged"
+
+    $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+    $rescueBranch = "rescue/release-failure-$timestamp"
+    if ($after.head -ne $Before.head) {
+        Write-Host ""
+        Write-Host "先保留当前提交的建议命令（未自动执行）：" -ForegroundColor Yellow
+        Write-Host "  git branch $rescueBranch $($after.head)"
+    }
+    if ($after.status.Count -gt 0) {
+        Write-Host "当前还有未提交修改；先运行 git diff 并另存补丁，再决定如何恢复。" -ForegroundColor Yellow
+    }
+
+    $remoteUnchanged = $remoteKnown -and $remoteHead -eq $Before.remoteMainHead -and $remoteTagRefsUnchanged
+    if ($remoteUnchanged -and ($after.head -ne $Before.head -or $newTags.Count -gt 0)) {
+        Write-Host ""
+        Write-Host "远端 main 与新增标签均确认未发布。保存救援分支/补丁后，可人工选择以下恢复命令：" -ForegroundColor Yellow
+        if ($after.head -ne $Before.head) {
+            Write-Host "  git reset --hard $($Before.head)"
+        }
+        foreach ($tag in $newTags) {
+            Write-Host "  git tag -d $tag"
+        }
+    }
+    elseif (-not $remoteUnchanged) {
+        Write-Host ""
+        Write-Warning "远端状态未知、已变化或标签可能已推送；不要重跑发版或删除标签，请先查看诊断文件并核对 GitHub。"
+    }
+}
+
+function Assert-FormalReleaseResult {
+    param(
+        [Parameter(Mandatory = $true)]$Before,
+        [Parameter(Mandatory = $true)][string]$ExpectedVersion
+    )
+
+    $state = Assert-FormalReleaseGitState -Stage "发版后"
+    $actualVersion = Get-PackageVersion
+    if ($actualVersion -ne $ExpectedVersion) {
+        throw "发版后 package.json 版本为 $actualVersion，预期为 $ExpectedVersion。"
+    }
+
+    if ($state.Head -eq $Before.head) {
+        throw "发版后 HEAD 未变化，未检测到 release commit。"
+    }
+
+    & git merge-base --is-ancestor $Before.head $state.Head
+    if ($LASTEXITCODE -ne 0) {
+        throw "发版前提交不是发版后 HEAD 的祖先，已停止验收。"
+    }
+
+    $tagName = "v$ExpectedVersion"
+    $tagCommit = Get-QuietSingleLine -Description "解析本地发布标签" -Command "git" -Arguments @(
+        "rev-parse",
+        "refs/tags/$tagName^{}"
+    )
+    if ($tagCommit -ne $state.Head) {
+        throw "本地标签 $tagName 未指向 release commit。"
+    }
+
+    $remoteTag = Get-RemoteTagState -TagName $tagName
+    if (-not $remoteTag.known -or -not $remoteTag.exists) {
+        throw "无法确认远端标签 $tagName。"
+    }
+    $remoteTagLine = $remoteTag.output | Where-Object { $_ -match "\^\{\}$" } | Select-Object -Last 1
+    if ($null -eq $remoteTagLine) {
+        $remoteTagLine = $remoteTag.output | Select-Object -Last 1
+    }
+    $remoteTagCommit = ($remoteTagLine -split "\s+")[0]
+    if ($remoteTagCommit -ne $state.Head) {
+        throw "远端标签 $tagName 未指向 release commit。"
+    }
+
+    $releaseFiles = @(
+        Invoke-NativeQuiet -Description "读取 release commit 文件" -Command "git" -Arguments @(
+            "diff-tree",
+            "--no-commit-id",
+            "--name-only",
+            "-r",
+            $state.Head
+        )
+    )
+    $expectedFiles = @("CHANGELOG.md", "package.json")
+    if ((@($releaseFiles | Sort-Object) -join "|") -ne (@($expectedFiles | Sort-Object) -join "|")) {
+        throw "release commit 修改范围异常：$($releaseFiles -join '、')"
+    }
+
+    $commitMessage = (
+        Invoke-NativeQuiet -Description "读取 release commit message" -Command "git" -Arguments @(
+            "log",
+            "-1",
+            "--pretty=%B",
+            $state.Head
+        )
+    ) -join [Environment]::NewLine
+    if ($commitMessage -notmatch "\[skip ci\]") {
+        throw "release commit message 缺少 [skip ci]。"
+    }
+
+    return $state
+}
+
+if ($args.Count -gt 0) {
+    throw "不支持的位置参数：$($args -join ' ')"
+}
+
+$selectedSwitches = 0
+if ($Release) {
+    $selectedSwitches++
+}
+if ($DryRun) {
+    $selectedSwitches++
+}
+if ($ValidateOnly) {
+    $selectedSwitches++
+}
+if ($selectedSwitches -gt 1) {
+    throw "-Release、-DryRun 和 -ValidateOnly 只能选择一个。"
+}
+
+try {
+    Push-Location $PSScriptRoot
+    $locationPushed = $true
+
+    Assert-RequiredCommand -Name "git"
+    Assert-RequiredCommand -Name "pnpm"
+    Assert-RequiredCommand -Name "node"
+    Assert-RequiredFile -Path "package.json"
+    Assert-RequiredFile -Path "pnpm-lock.yaml"
+    Assert-RequiredFile -Path "CHANGELOG.md"
+    Assert-RequiredFile -Path ".releaserc.json"
+
+    $releaseMutex = Enter-ReleaseMutex
+
+    $mode = if ($Release) {
+        "Release"
+    }
+    elseif ($DryRun) {
+        "DryRun"
+    }
+    elseif ($ValidateOnly) {
+        "ValidateOnly"
+    }
+    else {
+        Select-ReleaseMode
+    }
+
+    if ($mode -eq "Quit") {
+        Write-Host "已取消。"
+        return
+    }
+
+    $initialState = Assert-FormalReleaseGitState -Stage "开始前"
+    $beforeGates = Get-RepositorySnapshot -RemoteHead $initialState.RemoteHead -Kind "before-quality-gates"
+
+    Invoke-QualityGates
+
+    $afterGates = Get-RepositorySnapshot -RemoteHead $initialState.RemoteHead -Kind "after-quality-gates"
+    Assert-SnapshotUnchanged -Before $beforeGates -After $afterGates -Stage "完整发版验证"
+
+    if ($mode -eq "ValidateOnly") {
+        Write-Host ""
+        Write-Host "完整发版验证通过；未运行 semantic-release，仓库未发生变化。" -ForegroundColor Green
+        return
+    }
+
+    $preview = Invoke-SemanticReleasePreview
+    $afterPreview = Get-RepositorySnapshot -RemoteHead $initialState.RemoteHead -Kind "after-semantic-release-dry-run"
+    Assert-SnapshotUnchanged -Before $beforeGates -After $afterPreview -Stage "semantic-release 预演"
+
+    if ([string]::IsNullOrWhiteSpace($preview.NextVersion)) {
+        Write-Host ""
+        Write-Host "semantic-release 判定当前没有需要发布的版本；本次正常结束。" -ForegroundColor Green
+        Write-Host "预演日志：$($preview.LogPath)"
+        return
+    }
+
+    Write-Host ""
+    Write-Host "semantic-release 判定下一版本：v$($preview.NextVersion)" -ForegroundColor Green
+    Write-Host "预演日志：$($preview.LogPath)"
+
+    if ($mode -eq "DryRun") {
+        Write-Host "发版预演完成；未修改文件、创建提交、标签或推送。" -ForegroundColor Green
+        return
+    }
+
+    if (-not (Confirm-FormalRelease -NextVersion $preview.NextVersion)) {
+        Write-Host "已取消正式发版；仓库未发生变化。"
+        return
+    }
+
+    $secondState = Assert-FormalReleaseGitState -Stage "正式发版前二次检查"
+    if ($secondState.Head -ne $initialState.Head) {
+        throw "验证期间 main 发生变化；请从头重新运行发版脚本。"
+    }
+
+    $beforeFormalSnapshot = Get-RepositorySnapshot -RemoteHead $secondState.RemoteHead -Kind "before-formal-release" -RemoteTagRefs $secondState.TagRefs
+    $beforeFormalSnapshotPath = Save-ReleaseSnapshot -Snapshot $beforeFormalSnapshot -Suffix "before"
+    Write-Host "发版前快照：$beforeFormalSnapshotPath"
+
+    $formalReleaseStarted = $true
+    Invoke-NativeStep -Description "执行 semantic-release 正式发版" -Command "node" -Arguments @(
+        "node_modules/semantic-release/bin/semantic-release.js",
+        "--no-ci"
+    )
+    $finalState = Assert-FormalReleaseResult -Before $beforeFormalSnapshot -ExpectedVersion $preview.NextVersion
+    $formalReleaseStarted = $false
+
+    Write-Host ""
+    Write-Host "发版成功：v$($preview.NextVersion)" -ForegroundColor Green
+    Write-Host "main 与标签已推送，远端提交：$($finalState.Head)"
+    Write-Host "本流程不创建 GitHub Release 页面，也不发布 npm 包。"
 }
 catch {
-    Write-Host ""
-    Write-Host "操作已中止: $($_.Exception.Message)" -ForegroundColor Red
+    if ($formalReleaseStarted -and $null -ne $beforeFormalSnapshot) {
+        try {
+            Write-ReleaseFailureDiagnostics -Before $beforeFormalSnapshot -BeforePath $beforeFormalSnapshotPath
+        }
+        catch {
+            Write-Warning "生成失败诊断时又发生错误：$($_.Exception.Message)"
+            Write-Warning "发版前快照仍保留在：$beforeFormalSnapshotPath"
+        }
+    }
+
+    Write-Error $_
     exit 1
+}
+finally {
+    if ($null -ne $releaseMutex) {
+        try {
+            $releaseMutex.ReleaseMutex()
+        }
+        catch {
+            Write-Warning "释放发版互斥锁时发生错误：$($_.Exception.Message)"
+        }
+        finally {
+            $releaseMutex.Dispose()
+        }
+    }
+
+    if ($locationPushed) {
+        Pop-Location
+    }
 }

@@ -62,7 +62,7 @@ This project is optimized for Vercel.
 
 ### Release process
 
-See [docs/release.md](./docs/release.md) for the Release Please workflow and local validation command.
+See [docs/release.md](./docs/release.md) for the manually triggered `semantic-release` workflow and local validation commands.
 
 ## 📦 Building for Production
 
