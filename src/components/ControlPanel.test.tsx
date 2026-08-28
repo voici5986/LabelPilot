@@ -84,17 +84,25 @@ describe("ControlPanel", () => {
     expect(onFilesSelect).toHaveBeenCalledWith([file]);
   });
 
-  it("updates image item quantity from the thumbnail input", () => {
+  it("keeps an editable image quantity draft until blur", () => {
     const file = new File(["image"], "label.png", { type: "image/png" });
     useStore.getState().setImageItems([{ id: "img-1", file, count: 3 }]);
 
     renderControlPanel();
 
-    fireEvent.change(screen.getByDisplayValue("3"), {
-      target: { value: "7" },
-    });
+    const input = screen.getByDisplayValue("3");
+    fireEvent.change(input, { target: { value: "" } });
 
-    expect(useStore.getState().imageItems[0].count).toBe(7);
+    expect(input).toHaveProperty("value", "");
+    expect(useStore.getState().imageItems[0].count).toBe(3);
+
+    fireEvent.change(input, { target: { value: "9" } });
+    expect(input).toHaveProperty("value", "9");
+    expect(useStore.getState().imageItems[0].count).toBe(3);
+
+    fireEvent.blur(input);
+
+    expect(useStore.getState().imageItems[0].count).toBe(9);
   });
 
   it("uses the landscape row limit before updating the store", () => {

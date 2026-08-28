@@ -44,6 +44,95 @@ const flushAsync = async () => {
   await new Promise((resolve) => setTimeout(resolve, 0));
 };
 
+function createJpegWithMetadata({
+  width = 80,
+  height = 40,
+  orientation,
+  fillBeforeSof = false,
+}: {
+  width?: number;
+  height?: number;
+  orientation?: number;
+  fillBeforeSof?: boolean;
+} = {}): ArrayBuffer {
+  const exif =
+    orientation === undefined
+      ? []
+      : [
+          0xff,
+          0xe1,
+          0x00,
+          0x22,
+          0x45,
+          0x78,
+          0x69,
+          0x66,
+          0x00,
+          0x00,
+          0x49,
+          0x49,
+          0x2a,
+          0x00,
+          0x08,
+          0x00,
+          0x00,
+          0x00,
+          0x01,
+          0x00,
+          0x12,
+          0x01,
+          0x03,
+          0x00,
+          0x01,
+          0x00,
+          0x00,
+          0x00,
+          orientation,
+          0x00,
+          0x00,
+          0x00,
+          0x00,
+          0x00,
+          0x00,
+          0x00,
+        ];
+  return new Uint8Array([
+    0xff,
+    0xd8,
+    ...exif,
+    0xff,
+    0xe0,
+    0x00,
+    0x02,
+    ...(fillBeforeSof ? [0xff] : []),
+    0xff,
+    0xc0,
+    0x00,
+    0x0b,
+    0x08,
+    (height >> 8) & 0xff,
+    height & 0xff,
+    (width >> 8) & 0xff,
+    width & 0xff,
+    0x01,
+    0x01,
+    0x11,
+    0x00,
+    0xff,
+    0xda,
+    0x00,
+    0x08,
+    0x01,
+    0x01,
+    0x00,
+    0x00,
+    0x3f,
+    0x00,
+    0xff,
+    0xd9,
+  ]).buffer;
+}
+
 type WorkerSelf = {
   postMessage: (message: unknown, transfer?: Transferable[]) => void;
   onmessage?: (e: { data: unknown }) => void;
@@ -171,7 +260,7 @@ describe("pdf.worker", () => {
             count: 1,
             name: "phone.jpg",
             type: "image/jpeg",
-            buffer: new ArrayBuffer(4),
+            buffer: createJpegWithMetadata({ orientation: 6 }),
           },
         ],
         appMode: "image",
@@ -200,6 +289,198 @@ describe("pdf.worker", () => {
       expect.objectContaining({ type: "complete" }),
       expect.any(Array),
     );
+  });
+
+  it("embeds an orientation-1 JPEG without allocating a canvas", async () => {
+    const createBitmap = vi.fn();
+    const createCanvas = vi.fn();
+    vi.stubGlobal("createImageBitmap", createBitmap);
+    vi.stubGlobal("OffscreenCanvas", createCanvas);
+    const { postMessage, onmessage } = await setupWorker();
+    const buffer = createJpegWithMetadata({ orientation: 1 });
+
+    onmessage({
+      data: {
+        config: createBaseConfig(),
+        imageItems: [
+          {
+            id: "1",
+            count: 1,
+            name: "camera.jpg",
+            type: "image/jpeg",
+            buffer,
+          },
+        ],
+        appMode: "image",
+        textConfig: createTextConfig(),
+      },
+    });
+    await flushAsync();
+    await flushAsync();
+
+    expect(createBitmap).not.toHaveBeenCalled();
+    expect(createCanvas).not.toHaveBeenCalled();
+    expect(mockJsPdfInstance.addImage).toHaveBeenCalledWith(
+      new Uint8Array(buffer),
+      "JPEG",
+      expect.any(Number),
+      expect.any(Number),
+      expect.any(Number),
+      expect.any(Number),
+      undefined,
+      "FAST",
+    );
+    expect(postMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "complete" }),
+      expect.any(Array),
+    );
+  });
+
+  it("reads JPEG dimensions through legal marker fill bytes", async () => {
+    vi.stubGlobal("createImageBitmap", vi.fn());
+    vi.stubGlobal("OffscreenCanvas", vi.fn());
+    const { postMessage, onmessage } = await setupWorker();
+
+    onmessage({
+      data: {
+        config: createBaseConfig(),
+        imageItems: [
+          {
+            id: "1",
+            count: 1,
+            name: "filled.jpg",
+            type: "image/jpeg",
+            buffer: createJpegWithMetadata({ fillBeforeSof: true }),
+          },
+        ],
+        appMode: "image",
+        textConfig: createTextConfig(),
+      },
+    });
+    await flushAsync();
+    await flushAsync();
+
+    expect(mockJsPdfInstance.addImage).toHaveBeenCalledOnce();
+    expect(postMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "complete" }),
+      expect.any(Array),
+    );
+  });
+
+  it("downscales a large oriented JPEG before canvas normalization", async () => {
+    const createBitmap = vi.fn(
+      async (_blob: Blob, options: ImageBitmapOptions) => ({
+        width: options.resizeWidth,
+        height: options.resizeHeight,
+        close: vi.fn(),
+      }),
+    );
+    vi.stubGlobal("createImageBitmap", createBitmap);
+    vi.stubGlobal("OffscreenCanvas", MockOffscreenCanvas);
+    const { onmessage } = await setupWorker();
+
+    onmessage({
+      data: {
+        config: createBaseConfig(),
+        imageItems: [
+          {
+            id: "1",
+            count: 1,
+            name: "large-phone.jpg",
+            type: "image/jpeg",
+            buffer: createJpegWithMetadata({
+              width: 8_000,
+              height: 5_000,
+              orientation: 6,
+            }),
+          },
+        ],
+        appMode: "image",
+        textConfig: createTextConfig(),
+      },
+    });
+    await flushAsync();
+    await flushAsync();
+
+    const options = createBitmap.mock.calls[0][1];
+    expect(options).toMatchObject({
+      imageOrientation: "from-image",
+      resizeQuality: "high",
+    });
+    expect(options.resizeWidth).toBeLessThan(options.resizeHeight ?? 0);
+    expect(
+      (options.resizeWidth ?? 0) * (options.resizeHeight ?? 0),
+    ).toBeLessThanOrEqual(16_000_000);
+  });
+
+  it("rejects a truncated JPEG before the direct-embed path", async () => {
+    const createBitmap = vi.fn();
+    vi.stubGlobal("createImageBitmap", createBitmap);
+    const { postMessage, onmessage } = await setupWorker();
+    const complete = new Uint8Array(createJpegWithMetadata());
+    const truncated = complete.slice(0, -2).buffer;
+
+    onmessage({
+      data: {
+        config: createBaseConfig(),
+        imageItems: [
+          {
+            id: "1",
+            count: 1,
+            name: "truncated.jpg",
+            type: "image/jpeg",
+            buffer: truncated,
+          },
+        ],
+        appMode: "image",
+        textConfig: createTextConfig(),
+      },
+    });
+    await flushAsync();
+
+    expect(createBitmap).not.toHaveBeenCalled();
+    expect(mockJsPdfInstance.addImage).not.toHaveBeenCalled();
+    expect(postMessage).toHaveBeenCalledWith({
+      type: "error",
+      data: expect.objectContaining({ code: "image_error_decode" }),
+    });
+  });
+
+  it("does not scan JPEG entropy data for fake frame markers", async () => {
+    const createBitmap = vi.fn();
+    vi.stubGlobal("createImageBitmap", createBitmap);
+    vi.stubGlobal("OffscreenCanvas", MockOffscreenCanvas);
+    const { postMessage, onmessage } = await setupWorker();
+    const entropyWithFakeFrame = new Uint8Array([
+      0xff, 0xd8, 0xff, 0xda, 0x00, 0x08, 0x01, 0x01, 0x00, 0x00, 0x3f, 0x00,
+      0xff, 0x00, 0xff, 0xc0, 0x00, 0x0b, 0x08, 0x00, 0x28, 0x00, 0x50, 0x01,
+      0x01, 0x11, 0x00, 0xff, 0xd9,
+    ]).buffer;
+
+    onmessage({
+      data: {
+        config: createBaseConfig(),
+        imageItems: [
+          {
+            id: "1",
+            count: 1,
+            name: "entropy.jpg",
+            type: "image/jpeg",
+            buffer: entropyWithFakeFrame,
+          },
+        ],
+        appMode: "image",
+        textConfig: createTextConfig(),
+      },
+    });
+    await flushAsync();
+
+    expect(createBitmap).not.toHaveBeenCalled();
+    expect(mockJsPdfInstance.addImage).not.toHaveBeenCalled();
+    expect(postMessage).toHaveBeenCalledWith({
+      type: "error",
+      data: expect.objectContaining({ code: "image_error_decode" }),
+    });
   });
 
   it("rejects images that exceed the decoded dimension budget", async () => {

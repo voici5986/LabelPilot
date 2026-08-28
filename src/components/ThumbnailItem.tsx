@@ -1,7 +1,8 @@
 import { motion } from "framer-motion";
 import type { DragControls } from "framer-motion";
 import { GripVertical, Image as ImageIcon, X } from "lucide-react";
-import type { ChangeEvent } from "react";
+import { useState } from "react";
+import type { ChangeEvent, KeyboardEvent } from "react";
 
 import { useStore } from "../store/useStore";
 import { useI18n } from "../utils/i18nContext";
@@ -36,9 +37,32 @@ export function ThumbnailItem({
   const imageUrlMap = useStore((state) => state.imageUrlMap);
   const { t } = useI18n();
   const url = imageUrlMap.get(item.id) || "";
+  const [countDraft, setCountDraft] = useState<string | null>(null);
+  const displayedCount = countDraft ?? String(item.count);
 
   const handleCountChange = (event: ChangeEvent<HTMLInputElement>) => {
-    onCountChange(normalizeImageItemCount(Number(event.currentTarget.value)));
+    const next = event.currentTarget.value;
+    if (/^\d*$/.test(next)) setCountDraft(next);
+  };
+
+  const commitCountDraft = () => {
+    const next = normalizeImageItemCount(Number(displayedCount));
+    setCountDraft(null);
+    if (next !== item.count) onCountChange(next);
+  };
+
+  const handleCountKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      event.currentTarget.blur();
+    } else if (event.key === "Escape") {
+      setCountDraft(null);
+    }
+  };
+
+  const stepCount = (candidate: number) => {
+    const next = normalizeImageItemCount(candidate);
+    setCountDraft(null);
+    if (next !== item.count) onCountChange(next);
   };
 
   return (
@@ -94,7 +118,7 @@ export function ThumbnailItem({
           <button
             type="button"
             aria-label={`${t("image_quantity", { name: item.file.name })}: -1`}
-            onClick={() => onCountChange(Math.max(1, item.count - 1))}
+            onClick={() => stepCount(item.count - 1)}
             className="flex h-10 w-10 shrink-0 items-center justify-center text-text-muted transition-colors hover:bg-brand-primary/10 hover:text-brand-primary active:bg-brand-primary/10"
           >
             −
@@ -104,15 +128,20 @@ export function ThumbnailItem({
             aria-label={t("image_quantity", { name: item.file.name })}
             type="text"
             inputMode="numeric"
-            value={item.count}
+            value={displayedCount}
             onChange={handleCountChange}
-            onFocus={(e) => e.target.select()}
+            onBlur={commitCountDraft}
+            onKeyDown={handleCountKeyDown}
+            onFocus={(e) => {
+              setCountDraft(String(item.count));
+              e.target.select();
+            }}
             className="h-10 w-9 shrink-0 border-x border-border-subtle/40 bg-transparent text-center font-mono text-sm font-semibold text-brand-primary focus:outline-none"
           />
           <button
             type="button"
             aria-label={`${t("image_quantity", { name: item.file.name })}: +1`}
-            onClick={() => onCountChange(item.count + 1)}
+            onClick={() => stepCount(item.count + 1)}
             className="flex h-10 w-10 shrink-0 items-center justify-center text-text-muted transition-colors hover:bg-brand-primary/10 hover:text-brand-primary active:bg-brand-primary/10"
           >
             +

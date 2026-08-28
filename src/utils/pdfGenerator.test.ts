@@ -3,7 +3,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { HelperLayoutConfig, TextConfig } from "./layoutMath";
+import type { ImageItem } from "./layoutMath";
 import { generatePDF } from "./pdfGenerator";
+import type { PdfWorkerGenerateRequest } from "./pdfWorkerProtocol";
 
 const config = {
   rows: 1,
@@ -31,7 +33,7 @@ class MockWorker {
 
   onmessage: ((event: MessageEvent) => void) | null = null;
   onerror: ((event: ErrorEvent) => void) | null = null;
-  postMessage = vi.fn(() => {
+  postMessage = vi.fn((_message: unknown, _transfer?: Transferable[]) => {
     if (MockWorker.postMessageError) throw MockWorker.postMessageError;
   });
   terminate = vi.fn();
@@ -47,6 +49,7 @@ class MockURL extends URL {
 }
 
 beforeEach(() => {
+  MockWorker.instance = undefined as unknown as MockWorker;
   MockWorker.postMessageError = null;
   vi.stubGlobal("Worker", MockWorker);
   vi.stubGlobal("URL", MockURL);
@@ -88,6 +91,42 @@ describe("generatePDF", () => {
       percent: 100,
       phase: "serializing",
     });
+  });
+
+  it("reads the same selected File once and transfers its buffer once", async () => {
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    const file = new File(
+      [new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])],
+      "label.png",
+      { type: "image/png" },
+    );
+    const arrayBuffer = vi.spyOn(file, "arrayBuffer");
+    const imageItems: ImageItem[] = [
+      { id: "first", file, count: 1 },
+      { id: "second", file, count: 2 },
+    ];
+
+    const result = generatePDF(config, imageItems, "image", textConfig);
+    await vi.waitFor(() =>
+      expect(MockWorker.instance?.postMessage).toHaveBeenCalledOnce(),
+    );
+
+    expect(arrayBuffer).toHaveBeenCalledOnce();
+    const [rawRequest, transfer] =
+      MockWorker.instance.postMessage.mock.calls[0];
+    const request = rawRequest as PdfWorkerGenerateRequest;
+    expect(request.data.imageItems).toHaveLength(2);
+    expect(request.data.imageItems[0].buffer).toBe(
+      request.data.imageItems[1].buffer,
+    );
+    expect(transfer).toHaveLength(1);
+
+    MockWorker.instance.onmessage?.(
+      new MessageEvent("message", {
+        data: { type: "complete", data: new ArrayBuffer(8) },
+      }),
+    );
+    await expect(result).resolves.toBeUndefined();
   });
 
   it("cleans up download resources when clicking the link fails", async () => {

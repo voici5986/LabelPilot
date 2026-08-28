@@ -3,7 +3,9 @@ import { RefreshCw, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useRegisterSW } from "virtual:pwa-register/react";
 
+import { useStore } from "../store/useStore";
 import { useI18n } from "../utils/i18nContext";
+import type { ImageItem } from "../utils/layoutMath";
 
 export function ReloadPrompt() {
   const { t } = useI18n();
@@ -11,6 +13,13 @@ export function ReloadPrompt() {
   const registrationRef = useRef<ServiceWorkerRegistration | null>(null);
   const [updateError, setUpdateError] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [confirmedImageItems, setConfirmedImageItems] = useState<
+    ImageItem[] | null
+  >(null);
+  const imageItems = useStore((state) => state.imageItems);
+  const imageItemCount = imageItems.length;
+  const confirmImageLoss =
+    imageItemCount > 0 && confirmedImageItems === imageItems;
   const {
     offlineReady: offlineReadySW,
     needRefresh: needRefreshSW,
@@ -48,9 +57,14 @@ export function ReloadPrompt() {
     setOfflineReady(false);
     setNeedUpdate(false);
     setUpdateError(false);
+    setConfirmedImageItems(null);
   };
 
   const applyUpdate = async () => {
+    if (isNeedUpdate && imageItemCount > 0 && !confirmImageLoss) {
+      setConfirmedImageItems(imageItems);
+      return;
+    }
     setIsUpdating(true);
     setUpdateError(false);
     try {
@@ -110,7 +124,13 @@ export function ReloadPrompt() {
                   )}
                 </h4>
                 <p className="text-sm text-text-muted mt-0.5">
-                  {t(updateError ? "pwa_update_error_desc" : "pwa_update_desc")}
+                  {confirmImageLoss
+                    ? t("pwa_image_loss_warning", { n: imageItemCount })
+                    : t(
+                        updateError
+                          ? "pwa_update_error_desc"
+                          : "pwa_update_desc",
+                      )}
                 </p>
               </div>
             </div>
@@ -133,7 +153,13 @@ export function ReloadPrompt() {
             <RefreshCw className="w-3.5 h-3.5" />
             {isUpdating
               ? t("pwa_updating")
-              : t(updateError ? "pwa_update_retry" : "pwa_update_btn")}
+              : t(
+                  confirmImageLoss
+                    ? "pwa_update_confirm_btn"
+                    : updateError
+                      ? "pwa_update_retry"
+                      : "pwa_update_btn",
+                )}
           </button>
         </motion.div>
       )}
