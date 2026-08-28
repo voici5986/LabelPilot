@@ -13,6 +13,12 @@ $beforeFormalSnapshot = $null
 $beforeFormalSnapshotPath = $null
 $locationPushed = $false
 $releaseMutex = $null
+$ExpectedReleaseCommitFiles = @(
+    "CHANGELOG.md"
+    "docs/release.md"
+    "package.json"
+)
+$ReleaseDocPlugin = "./scripts/semantic-release-update-release-doc.mjs"
 
 function Assert-RequiredFile {
     param([Parameter(Mandatory = $true)][string]$Path)
@@ -27,6 +33,90 @@ function Assert-RequiredCommand {
 
     if (-not (Get-Command $Name -ErrorAction SilentlyContinue)) {
         throw "找不到命令 '$Name'，请先安装并确保它位于 PATH 中。"
+    }
+}
+
+function ConvertTo-NormalizedReleasePath {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    $normalized = $Path.Replace("\", "/")
+    while ($normalized.StartsWith("./", [StringComparison]::Ordinal)) {
+        $normalized = $normalized.Substring(2)
+    }
+    return $normalized
+}
+
+function Get-SemanticReleasePluginName {
+    param([Parameter(Mandatory = $true)]$PluginEntry)
+
+    if ($PluginEntry -is [string]) {
+        return [string]$PluginEntry
+    }
+    if ($PluginEntry -is [Collections.IList] -and $PluginEntry.Count -gt 0) {
+        return [string]$PluginEntry[0]
+    }
+    return ""
+}
+
+function Assert-ReleaseConfiguration {
+    $config = Get-Content -LiteralPath ".releaserc.json" -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ([string]$config.tagFormat -cne 'v${version}') {
+        throw '.releaserc.json 的 tagFormat 必须为 v${version}。'
+    }
+
+    $plugins = @($config.plugins)
+    $npmIndices = [Collections.Generic.List[int]]::new()
+    $docIndices = [Collections.Generic.List[int]]::new()
+    $gitIndices = [Collections.Generic.List[int]]::new()
+    $gitPluginConfig = $null
+
+    for ($index = 0; $index -lt $plugins.Count; $index++) {
+        $entry = $plugins[$index]
+        $name = Get-SemanticReleasePluginName -PluginEntry $entry
+        switch -CaseSensitive ($name) {
+            "@semantic-release/npm" {
+                $npmIndices.Add($index)
+            }
+            $ReleaseDocPlugin {
+                $docIndices.Add($index)
+            }
+            "@semantic-release/git" {
+                $gitIndices.Add($index)
+                if ($entry -is [Collections.IList] -and $entry.Count -gt 1) {
+                    $gitPluginConfig = $entry[1]
+                }
+            }
+        }
+    }
+
+    if ($npmIndices.Count -ne 1 -or $docIndices.Count -ne 1 -or $gitIndices.Count -ne 1) {
+        throw ".releaserc.json 必须各包含一个 npm、release 文档和 git plugin。"
+    }
+    if (-not ($npmIndices[0] -lt $docIndices[0] -and $docIndices[0] -lt $gitIndices[0])) {
+        throw ".releaserc.json plugin 顺序必须为 npm、release 文档、git。"
+    }
+    if ($null -eq $gitPluginConfig) {
+        throw ".releaserc.json 缺少 @semantic-release/git 配置。"
+    }
+
+    $actualAssets = @(
+        $gitPluginConfig.assets |
+            ForEach-Object { ConvertTo-NormalizedReleasePath -Path ([string]$_) } |
+            Sort-Object
+    )
+    $expectedAssets = @(
+        $ExpectedReleaseCommitFiles |
+            ForEach-Object { ConvertTo-NormalizedReleasePath -Path $_ } |
+            Sort-Object
+    )
+    if (($actualAssets -join "|") -cne ($expectedAssets -join "|")) {
+        throw "@semantic-release/git assets 与发版文件清单不一致。实际：$($actualAssets -join '、')；预期：$($expectedAssets -join '、')。"
+    }
+
+    $packageVersion = Get-PackageVersion
+    $releaseDocVersion = Get-ReleaseDocVersion
+    if ($packageVersion -cne $releaseDocVersion) {
+        throw "发版基线不一致：package.json 为 $packageVersion，docs/release.md 为 $releaseDocVersion。"
     }
 }
 
@@ -115,6 +205,36 @@ function Get-PackageVersion {
     return $version
 }
 
+function Get-ReleaseDocVersion {
+    $content = Get-Content -LiteralPath "docs/release.md" -Raw -Encoding UTF8
+    $tagMatches = [regex]::Matches(
+        $content,
+        '(?m)^当前发布标签：`v(?<version>[^`\r\n]+)`\r?$'
+    )
+    $packageMatches = [regex]::Matches(
+        $content,
+        '(?m)^`package\.json` 版本：`(?<version>[^`\r\n]+)`\r?$'
+    )
+    if ($tagMatches.Count -ne 1 -or $packageMatches.Count -ne 1) {
+        throw "docs/release.md 必须各包含一行当前发布标签和 package.json 版本。"
+    }
+
+    $tagVersion = $tagMatches[0].Groups["version"].Value
+    $packageVersion = $packageMatches[0].Groups["version"].Value
+    if ($tagVersion -cne $packageVersion) {
+        throw "docs/release.md 的标签版本 $tagVersion 与 package 版本 $packageVersion 不一致。"
+    }
+    return $tagVersion
+}
+
+function Get-ReleaseFileHashes {
+    $hashes = [ordered]@{}
+    foreach ($path in $ExpectedReleaseCommitFiles) {
+        $hashes[$path] = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash
+    }
+    return [pscustomobject]$hashes
+}
+
 function Get-LocalTagSnapshot {
     return @(
         Invoke-NativeQuiet -Description "读取本地标签" -Command "git" -Arguments @(
@@ -132,8 +252,6 @@ function Get-RepositorySnapshot {
         [string[]]$RemoteTagRefs = @()
     )
 
-    $packageHash = (Get-FileHash -LiteralPath "package.json" -Algorithm SHA256).Hash
-    $changelogHash = (Get-FileHash -LiteralPath "CHANGELOG.md" -Algorithm SHA256).Hash
     $status = @(Invoke-NativeQuiet -Description "读取工作区状态" -Command "git" -Arguments @(
         "status",
         "--porcelain=v1",
@@ -148,8 +266,8 @@ function Get-RepositorySnapshot {
         remoteMainHead  = $RemoteHead
         remoteTagRefs   = @($RemoteTagRefs)
         packageVersion  = Get-PackageVersion
-        packageSha256   = $packageHash
-        changelogSha256 = $changelogHash
+        releaseDocVersion = Get-ReleaseDocVersion
+        releaseFileSha256 = Get-ReleaseFileHashes
         status          = $status
         tags            = @(Get-LocalTagSnapshot)
     }
@@ -181,11 +299,15 @@ function Assert-SnapshotUnchanged {
     if ($Before.packageVersion -ne $After.packageVersion) {
         $differences.Add("package.json version")
     }
-    if ($Before.packageSha256 -ne $After.packageSha256) {
-        $differences.Add("package.json")
+    if ($Before.releaseDocVersion -ne $After.releaseDocVersion) {
+        $differences.Add("docs/release.md version")
     }
-    if ($Before.changelogSha256 -ne $After.changelogSha256) {
-        $differences.Add("CHANGELOG.md")
+    foreach ($path in $ExpectedReleaseCommitFiles) {
+        $beforeHash = $Before.releaseFileSha256.PSObject.Properties[$path].Value
+        $afterHash = $After.releaseFileSha256.PSObject.Properties[$path].Value
+        if ($beforeHash -ne $afterHash) {
+            $differences.Add($path)
+        }
     }
     if (($Before.status -join [Environment]::NewLine) -ne ($After.status -join [Environment]::NewLine)) {
         $differences.Add("工作区状态")
@@ -503,7 +625,7 @@ function Confirm-FormalRelease {
 
     Write-Host ""
     Write-Host "即将发布 v$NextVersion。" -ForegroundColor Yellow
-    Write-Host "semantic-release 将更新 package.json 与 CHANGELOG.md，创建 release commit 和标签，并推送 main 与标签。"
+    Write-Host "semantic-release 将更新 $($ExpectedReleaseCommitFiles -join '、')，创建 release commit 和标签，并推送 main 与标签。"
     $confirmation = Read-Host "输入版本号 $NextVersion 以确认，其他输入将取消"
     if ([string]::IsNullOrWhiteSpace($confirmation)) {
         return $false
@@ -600,6 +722,7 @@ function Write-ReleaseFailureDiagnostics {
     Write-Host "当前 HEAD：$($after.head)"
     Write-Host "发版前版本：$($Before.packageVersion)"
     Write-Host "当前版本：$($after.packageVersion)"
+    Write-Host "当前 release 文档版本：$($after.releaseDocVersion)"
     Write-Host "新增本地标签：$(if ($newTags.Count -eq 0) { '无' } else { $newTags -join ', ' })"
     Write-Host "远端标签引用是否确认未变化：$remoteTagRefsUnchanged"
 
@@ -642,6 +765,10 @@ function Assert-FormalReleaseResult {
     if ($actualVersion -ne $ExpectedVersion) {
         throw "发版后 package.json 版本为 $actualVersion，预期为 $ExpectedVersion。"
     }
+    $releaseDocVersion = Get-ReleaseDocVersion
+    if ($releaseDocVersion -ne $ExpectedVersion) {
+        throw "发版后 docs/release.md 版本为 $releaseDocVersion，预期为 $ExpectedVersion。"
+    }
 
     if ($state.Head -eq $Before.head) {
         throw "发版后 HEAD 未变化，未检测到 release commit。"
@@ -681,10 +808,9 @@ function Assert-FormalReleaseResult {
             "--name-only",
             "-r",
             $state.Head
-        )
+        ) | ForEach-Object { ConvertTo-NormalizedReleasePath -Path $_ }
     )
-    $expectedFiles = @("CHANGELOG.md", "package.json")
-    if ((@($releaseFiles | Sort-Object) -join "|") -ne (@($expectedFiles | Sort-Object) -join "|")) {
+    if ((@($releaseFiles | Sort-Object) -join "|") -cne (@($ExpectedReleaseCommitFiles | Sort-Object) -join "|")) {
         throw "release commit 修改范围异常：$($releaseFiles -join '、')"
     }
 
@@ -728,10 +854,15 @@ try {
     Assert-RequiredCommand -Name "git"
     Assert-RequiredCommand -Name "pnpm"
     Assert-RequiredCommand -Name "node"
-    Assert-RequiredFile -Path "package.json"
-    Assert-RequiredFile -Path "pnpm-lock.yaml"
-    Assert-RequiredFile -Path "CHANGELOG.md"
-    Assert-RequiredFile -Path ".releaserc.json"
+    $requiredFiles = @(
+        "pnpm-lock.yaml"
+        ".releaserc.json"
+        $ReleaseDocPlugin.Substring(2)
+    ) + $ExpectedReleaseCommitFiles
+    foreach ($path in $requiredFiles) {
+        Assert-RequiredFile -Path $path
+    }
+    Assert-ReleaseConfiguration
 
     $releaseMutex = Enter-ReleaseMutex
 

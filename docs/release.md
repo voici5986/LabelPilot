@@ -2,7 +2,14 @@
 
 ## 版本基线
 
-当前发布基线是 Git tag `v1.3.0`，对应提交 `0ee1446`；根 `package.json` 的版本保持为 `1.3.0`。后续版本完全由 `semantic-release` 根据 `v1.3.0` 之后的 Conventional Commits 计算，不要手工修改版本号或 `CHANGELOG.md`。
+<!-- semantic-release:current-release:start -->
+
+当前发布标签：`v1.3.1`
+`package.json` 版本：`1.3.1`
+
+<!-- semantic-release:current-release:end -->
+
+上述区块由 `semantic-release` 在正式发版时自动更新。后续版本完全根据当前发布标签之后的 Conventional Commits 计算，不要手工修改版本区块、`package.json` 版本号或 `CHANGELOG.md`。
 
 ## 什么时候发版
 
@@ -25,7 +32,7 @@
 3. 运行 `semantic-release` 预演，显示下一版本；没有可发布提交时正常结束。
 4. 要求输入完整版本号进行确认。
 5. 再次刷新并校验远端，防止验证期间 `main` 已发生变化。
-6. 更新 `package.json` 和 `CHANGELOG.md`，创建 `chore(release): ... [skip ci]` 提交和 `vX.Y.Z` 标签，然后推送 `main` 与标签。
+6. 更新 `package.json`、`CHANGELOG.md` 和 `docs/release.md`，创建 `chore(release): ... [skip ci]` 提交和 `vX.Y.Z` 标签，然后推送 `main` 与标签。
 7. 重新读取远端，确认分支、版本和标签都指向同一个 release commit。
 
 本流程不发布 npm 包、不上传 `dist`、不创建 GitHub Release 页面，也不替代 Vercel 的部署策略。
@@ -75,7 +82,7 @@ pnpm exec playwright install chromium
 
 - 普通 push 仍由 GitHub Actions 的 `CI / verify` 执行完整 CI。
 - 本地提交继续执行 pre-commit 的 format/lint-staged 和 commit-msg 检查。
-- 本地 push 继续执行 `pnpm test`。
+- 本地 push 继续直接执行 `vitest run`。
 - 正式发版前已经完成完整门禁，因此自动生成的 release commit 带 `[skip ci]`；semantic-release 推送时本地 pre-push hook 仍会再运行一次单元测试。
 
 不需要单独的 GitHub Token、Actions 发版权限或 Release Please ruleset；只需要当前 Git 凭据有权向 `origin/main` 推送提交和标签。
