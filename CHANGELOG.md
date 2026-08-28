@@ -1,3 +1,10 @@
+## [1.3.1](https://github.com/voici5986/LabelPilot/compare/v1.3.0...v1.3.1) (2026-08-28)
+
+### Bug Fixes
+
+- **app:** 修复 PDF 生成与图片处理的缺陷并优化内存占用 ([06cbc9d](https://github.com/voici5986/LabelPilot/commit/06cbc9d6846053dc227ec3c5184e0840283867b0))
+- **release:** 避免 hooks 触发 pnpm 自动安装 ([5774d25](https://github.com/voici5986/LabelPilot/commit/5774d25f5cdec48ae08e69c1471fada441206f4f))
+
 # [1.3.0](https://github.com/voici5986/label-react/compare/v1.2.0...v1.3.0) (2026-08-05)
 
 ### Features
