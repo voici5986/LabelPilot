@@ -1,17 +1,26 @@
-# [1.3.0](https://github.com/voici5986/label-react/compare/v1.2.0...v1.3.0) (2026-08-05)
+# Changelog
+
+## [1.3.1](https://github.com/voici5986/LabelPilot/compare/v1.3.0...v1.3.1) (2026-08-28)
+
+
+### Bug Fixes
+
+* **app:** 修复 PDF 生成与图片处理的缺陷并优化内存占用 ([06cbc9d](https://github.com/voici5986/LabelPilot/commit/06cbc9d6846053dc227ec3c5184e0840283867b0))
+
+## [1.3.0](https://github.com/voici5986/label-react/compare/v1.2.0...v1.3.0) (2026-08-05)
 
 ### Features
 
 - **preview:** 添加屏幕1:1校准功能 ([e76e740](https://github.com/voici5986/label-react/commit/e76e740e0688ba00bcb2f76de5a2f79a60d551e8))
 
-# [1.2.0](https://github.com/voici5986/label-react/compare/v1.1.0...v1.2.0) (2026-08-04)
+## [1.2.0](https://github.com/voici5986/label-react/compare/v1.1.0...v1.2.0) (2026-08-04)
 
 ### Features
 
 - **mobile:** 新增移动端编辑面板与操作栏支持 ([ce1856d](https://github.com/voici5986/label-react/commit/ce1856d1034dfbfd4cf8ad5d3d392f484ae4de9f))
 - **ui:** 添加可变字体支持并优化界面组件 ([b05c586](https://github.com/voici5986/label-react/commit/b05c586e3642ac31e1e33633e7d060abacd18310))
 
-# [1.1.0](https://github.com/voici5986/label-react/compare/v1.0.0...v1.1.0) (2026-08-04)
+## [1.1.0](https://github.com/voici5986/label-react/compare/v1.0.0...v1.1.0) (2026-08-04)
 
 ### Bug Fixes
 
@@ -26,7 +35,7 @@
 - add Husky pre-commit and commit-msg hooks, and update dependencies ([71c57d8](https://github.com/voici5986/label-react/commit/71c57d84b0883389580188ff8f83ba84ae6bed0e))
 - **release:** 新增 LabelPilot 严格校验与正式版本发布脚本 ([56da4aa](https://github.com/voici5986/label-react/commit/56da4aa2abe4d50e3a1e3172d7819fe45ba6753b))
 
-# 1.0.0 (2026-02-24)
+## 1.0.0 (2026-02-24)
 
 ### Bug Fixes
 
@@ -58,7 +67,7 @@
 - 精简PWA资源缓存配置并放宽文件大小限制 ([998217b](https://github.com/voici5986/label-react/commit/998217b640fb89cea8a26116aa40216edbed12a6))
 - **pdf:** 使用Transferable Objects优化图片数据传输性能 ([393020a](https://github.com/voici5986/label-react/commit/393020a396748aa94adbde4162e8626a8563700d))
 
-# Historical unpublished notes
+## Historical unpublished notes
 
 The following notes came from the legacy Changesets workflow. They have no
 corresponding Git tag and are retained for context only; they are not release
