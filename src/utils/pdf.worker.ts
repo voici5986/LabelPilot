@@ -186,10 +186,24 @@ type LoadedImage = ImageWorkerItem & {
   height: number;
 };
 
+type PreparedImage = Pick<
+  LoadedImage,
+  "data" | "format" | "width" | "height"
+> & {
+  sourceWidth: number;
+  sourceHeight: number;
+};
+
 type ImageDimensions = {
   width: number;
   height: number;
 };
+
+type JpegMetadata = ImageDimensions & {
+  orientation: number;
+};
+
+const MAX_NORMALIZED_JPEG_PIXELS = 16_000_000;
 
 function readPngDimensions(data: Uint8Array): ImageDimensions | null {
   if (
@@ -218,33 +232,130 @@ function isJpegStartOfFrame(marker: number): boolean {
   );
 }
 
-function readJpegDimensions(data: Uint8Array): ImageDimensions | null {
-  if (data.length < 4 || data[0] !== 0xff || data[1] !== 0xd8) return null;
+function readExifOrientation(
+  data: Uint8Array,
+  payloadOffset: number,
+  payloadLength: number,
+): number | null {
+  const payloadEnd = payloadOffset + payloadLength;
+  if (
+    payloadLength < 14 ||
+    data[payloadOffset] !== 0x45 ||
+    data[payloadOffset + 1] !== 0x78 ||
+    data[payloadOffset + 2] !== 0x69 ||
+    data[payloadOffset + 3] !== 0x66 ||
+    data[payloadOffset + 4] !== 0x00 ||
+    data[payloadOffset + 5] !== 0x00
+  ) {
+    return null;
+  }
+
+  const tiffOffset = payloadOffset + 6;
+  const littleEndian =
+    data[tiffOffset] === 0x49 && data[tiffOffset + 1] === 0x49;
+  const bigEndian = data[tiffOffset] === 0x4d && data[tiffOffset + 1] === 0x4d;
+  if (!littleEndian && !bigEndian) return null;
 
   const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
-  let offset = 2;
+  if (view.getUint16(tiffOffset + 2, littleEndian) !== 0x2a) return null;
+  const firstIfdOffset = view.getUint32(tiffOffset + 4, littleEndian);
+  const ifdOffset = tiffOffset + firstIfdOffset;
+  if (ifdOffset + 2 > payloadEnd) return null;
 
-  while (offset + 4 <= data.length) {
+  const entryCount = view.getUint16(ifdOffset, littleEndian);
+  for (let index = 0; index < entryCount; index++) {
+    const entryOffset = ifdOffset + 2 + index * 12;
+    if (entryOffset + 12 > payloadEnd) return null;
+    if (
+      view.getUint16(entryOffset, littleEndian) === 0x0112 &&
+      view.getUint16(entryOffset + 2, littleEndian) === 3 &&
+      view.getUint32(entryOffset + 4, littleEndian) === 1
+    ) {
+      const orientation = view.getUint16(entryOffset + 8, littleEndian);
+      return orientation >= 1 && orientation <= 8 ? orientation : null;
+    }
+  }
+
+  return null;
+}
+
+function hasJpegEndOfImage(data: Uint8Array, startOffset: number): boolean {
+  let offset = startOffset;
+  while (offset < data.length) {
     if (data[offset] !== 0xff) {
       offset += 1;
       continue;
     }
+    while (offset < data.length && data[offset] === 0xff) offset += 1;
+    if (offset >= data.length) return false;
 
-    const marker = data[offset + 1];
-    const blockLength = view.getUint16(offset + 2);
-    if (blockLength < 2 || offset + 2 + blockLength > data.length) return null;
+    const marker = data[offset];
+    offset += 1;
+    if (marker === 0x00 || (marker >= 0xd0 && marker <= 0xd7)) continue;
+    if (marker === 0xd9) return true;
+    if (marker === 0x01 || marker === 0xd8) continue;
+    if (offset + 2 > data.length) return false;
 
-    if (isJpegStartOfFrame(marker)) {
-      return {
-        height: view.getUint16(offset + 5),
-        width: view.getUint16(offset + 7),
-      };
+    const blockLength = (data[offset] << 8) | data[offset + 1];
+    if (blockLength < 2 || offset + blockLength > data.length) return false;
+    offset += blockLength;
+  }
+  return false;
+}
+
+function readJpegMetadata(data: Uint8Array): JpegMetadata | null {
+  if (data.length < 4 || data[0] !== 0xff || data[1] !== 0xd8) return null;
+
+  const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+  let offset = 2;
+  let dimensions: ImageDimensions | null = null;
+  let orientation = 1;
+  let hasCompleteScan = false;
+
+  while (offset < data.length) {
+    while (offset < data.length && data[offset] !== 0xff) offset += 1;
+    while (offset < data.length && data[offset] === 0xff) offset += 1;
+    if (offset >= data.length) break;
+
+    const marker = data[offset];
+    offset += 1;
+    if (marker === 0x00) continue;
+    if (marker === 0xd9) break;
+    if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd8)) continue;
+    if (offset + 2 > data.length) return null;
+
+    const blockLength = view.getUint16(offset);
+    const segmentEnd = offset + blockLength;
+    if (blockLength < 2 || segmentEnd > data.length) return null;
+
+    if (marker === 0xda) {
+      hasCompleteScan = hasJpegEndOfImage(data, segmentEnd);
+      break;
     }
 
-    offset += 2 + blockLength;
+    if (isJpegStartOfFrame(marker)) {
+      if (blockLength < 7) return null;
+      dimensions = {
+        height: view.getUint16(offset + 3),
+        width: view.getUint16(offset + 5),
+      };
+    } else if (marker === 0xe1) {
+      orientation =
+        readExifOrientation(data, offset + 2, blockLength - 2) ?? orientation;
+    }
+
+    offset = segmentEnd;
   }
 
-  return null;
+  if (
+    !dimensions ||
+    dimensions.width <= 0 ||
+    dimensions.height <= 0 ||
+    !hasCompleteScan
+  ) {
+    return null;
+  }
+  return { ...dimensions, orientation };
 }
 
 function parseImageDimensions(
@@ -252,26 +363,64 @@ function parseImageDimensions(
   type: string,
 ): ImageDimensions | null {
   if (type === "image/png") return readPngDimensions(data);
-  if (type === "image/jpeg" || type === "image/jpg") {
-    return readJpegDimensions(data);
-  }
+  if (type === "image/jpeg") return readJpegMetadata(data);
   return null;
+}
+
+function getJpegBitmapOptions(metadata: JpegMetadata): ImageBitmapOptions {
+  const swapsAxes = metadata.orientation >= 5 && metadata.orientation <= 8;
+  const orientedWidth = swapsAxes ? metadata.height : metadata.width;
+  const orientedHeight = swapsAxes ? metadata.width : metadata.height;
+  const scale = Math.min(
+    1,
+    Math.sqrt(MAX_NORMALIZED_JPEG_PIXELS / (orientedWidth * orientedHeight)),
+  );
+
+  return {
+    imageOrientation: "from-image",
+    ...(scale < 1
+      ? {
+          resizeWidth: Math.max(1, Math.round(orientedWidth * scale)),
+          resizeHeight: Math.max(1, Math.round(orientedHeight * scale)),
+          resizeQuality: "high" as const,
+        }
+      : {}),
+  };
 }
 
 async function prepareImageForPdf(
   buffer: ArrayBuffer,
   type: string,
   name: string,
-): Promise<Pick<LoadedImage, "data" | "format" | "width" | "height">> {
+): Promise<PreparedImage> {
   const originalData = new Uint8Array(buffer);
+  const jpegMetadata =
+    type === "image/jpeg" ? readJpegMetadata(originalData) : null;
+
+  if (type === "image/jpeg") {
+    if (!jpegMetadata) throw new AppError("image_error_decode", { name });
+    if (jpegMetadata.orientation === 1) {
+      return {
+        data: originalData,
+        format: "JPEG",
+        width: jpegMetadata.width,
+        height: jpegMetadata.height,
+        sourceWidth: jpegMetadata.width,
+        sourceHeight: jpegMetadata.height,
+      };
+    }
+  }
 
   if (typeof createImageBitmap === "function") {
     let bitmap: ImageBitmap | null = null;
     try {
       const blob = new Blob([buffer], { type });
-      bitmap = await createImageBitmap(blob, {
-        imageOrientation: "from-image",
-      });
+      bitmap = await createImageBitmap(
+        blob,
+        jpegMetadata
+          ? getJpegBitmapOptions(jpegMetadata)
+          : { imageOrientation: "from-image" },
+      );
 
       if (type !== "image/jpeg") {
         return {
@@ -279,6 +428,8 @@ async function prepareImageForPdf(
           format: "PNG",
           width: bitmap.width,
           height: bitmap.height,
+          sourceWidth: bitmap.width,
+          sourceHeight: bitmap.height,
         };
       }
 
@@ -303,6 +454,8 @@ async function prepareImageForPdf(
         format: "JPEG",
         width: bitmap.width,
         height: bitmap.height,
+        sourceWidth: jpegMetadata?.width ?? bitmap.width,
+        sourceHeight: jpegMetadata?.height ?? bitmap.height,
       };
     } catch (error) {
       if (error instanceof AppError) throw error;
@@ -326,6 +479,8 @@ async function prepareImageForPdf(
       format: "PNG",
       width: parsed.width,
       height: parsed.height,
+      sourceWidth: parsed.width,
+      sourceHeight: parsed.height,
     };
   }
 
@@ -386,8 +541,8 @@ ctx.onmessage = async (event: MessageEvent<unknown>) => {
         );
         totalPixels = validateImageDimensions(
           item.name,
-          prepared.width,
-          prepared.height,
+          prepared.sourceWidth,
+          prepared.sourceHeight,
           totalPixels,
         );
 

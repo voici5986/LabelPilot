@@ -86,6 +86,25 @@ describe("image resource limits", () => {
     });
   });
 
+  it("accepts the image/jpg alias and returns the canonical JPEG type", async () => {
+    const jpegHeader = new Uint8Array([0xff, 0xd8, 0xff]);
+    const file = new File([jpegHeader], "label.jpg", { type: "image/jpg" });
+
+    expect(() => validateImageFiles([file])).not.toThrow();
+    await expect(readValidatedImageFile(file)).resolves.toMatchObject({
+      type: "image/jpeg",
+    });
+
+    const mismatchedFile = new File(
+      [new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])],
+      "label.jpg",
+      { type: "image/jpg" },
+    );
+    await expect(readValidatedImageFile(mismatchedFile)).rejects.toMatchObject({
+      code: "image_error_content",
+    });
+  });
+
   it("decodes selected images before accepting them", async () => {
     const close = vi.fn();
     vi.stubGlobal(
@@ -97,8 +116,10 @@ describe("image resource limits", () => {
       "label.png",
       { type: "image/png" },
     );
+    const fullFileRead = vi.spyOn(file, "arrayBuffer");
 
     await expect(validateImageFileContents([file])).resolves.toBeUndefined();
+    expect(fullFileRead).not.toHaveBeenCalled();
     expect(createImageBitmap).toHaveBeenCalledWith(file, {
       imageOrientation: "from-image",
     });

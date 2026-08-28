@@ -22,6 +22,11 @@ const SUPPORTED_IMAGE_TYPES = new Set<SupportedImageMimeType>([
 
 type ImageFileMetadata = Pick<File, "name" | "size" | "type">;
 
+export function normalizeImageMimeType(value: string): string {
+  const normalized = value.trim().toLowerCase();
+  return normalized === "image/jpg" ? "image/jpeg" : normalized;
+}
+
 export function normalizeImageItemCount(value: unknown): number {
   if (typeof value !== "number" || !Number.isFinite(value)) return 1;
   return Math.min(IMAGE_LIMITS.maxItemCount, Math.max(1, Math.trunc(value)));
@@ -34,7 +39,7 @@ export function validateImageFiles(files: ImageFileMetadata[]): void {
 
   let totalBytes = 0;
   for (const file of files) {
-    const declaredType = file.type.trim().toLowerCase();
+    const declaredType = normalizeImageMimeType(file.type);
     if (
       declaredType &&
       !SUPPORTED_IMAGE_TYPES.has(declaredType as SupportedImageMimeType)
@@ -84,19 +89,27 @@ export function detectImageMimeType(
   return null;
 }
 
-export async function readValidatedImageFile(
-  file: File,
-): Promise<{ buffer: ArrayBuffer; type: SupportedImageMimeType }> {
-  const buffer = await file.arrayBuffer();
-  const actualType = detectImageMimeType(new Uint8Array(buffer));
+function validateImageSignature(
+  file: Pick<File, "name" | "type">,
+  data: Uint8Array,
+): SupportedImageMimeType {
+  const actualType = detectImageMimeType(data);
   if (!actualType) {
     throw new AppError("image_error_content", { name: file.name });
   }
 
-  const declaredType = file.type.trim().toLowerCase();
+  const declaredType = normalizeImageMimeType(file.type);
   if (declaredType && declaredType !== actualType) {
     throw new AppError("image_error_content", { name: file.name });
   }
+  return actualType;
+}
+
+export async function readValidatedImageFile(
+  file: File,
+): Promise<{ buffer: ArrayBuffer; type: SupportedImageMimeType }> {
+  const buffer = await file.arrayBuffer();
+  const actualType = validateImageSignature(file, new Uint8Array(buffer));
 
   return { buffer, type: actualType };
 }
@@ -144,7 +157,8 @@ type ImageDimensions = { width: number; height: number };
 export async function validateImageFileContents(files: File[]): Promise<void> {
   let totalPixels = 0;
   for (const file of files) {
-    await readValidatedImageFile(file);
+    const signature = await file.slice(0, 8).arrayBuffer();
+    validateImageSignature(file, new Uint8Array(signature));
     const { width, height } = await decodeImageDimensions(file);
     totalPixels = validateImageDimensions(
       file.name,

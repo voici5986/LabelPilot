@@ -52,10 +52,19 @@ export async function generatePDF(
   // Read sequentially to avoid a burst of simultaneous file allocations.
   const itemsWithBuffers: PdfWorkerImageItem[] = [];
   if (appMode === "image") {
+    const validatedFiles = new Map<
+      File,
+      Awaited<ReturnType<typeof readValidatedImageFile>>
+    >();
     for (let index = 0; index < imageItems.length; index++) {
       const item = imageItems[index];
       throwIfAborted(signal);
-      const { buffer, type } = await readValidatedImageFile(item.file);
+      let validatedFile = validatedFiles.get(item.file);
+      if (!validatedFile) {
+        validatedFile = await readValidatedImageFile(item.file);
+        validatedFiles.set(item.file, validatedFile);
+      }
+      const { buffer, type } = validatedFile;
       throwIfAborted(signal);
       itemsWithBuffers.push({
         id: item.id,
@@ -73,7 +82,7 @@ export async function generatePDF(
     onProgress?.({ percent: 20, phase: "preparing" });
   }
 
-  const buffers = itemsWithBuffers.map((item) => item.buffer);
+  const buffers = [...new Set(itemsWithBuffers.map((item) => item.buffer))];
 
   return new Promise((resolve, reject) => {
     let worker: Worker;

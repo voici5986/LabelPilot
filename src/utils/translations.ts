@@ -82,6 +82,9 @@ export const translations = {
       "The update could not be completed. Check your connection and try again.",
     pwa_update_retry: "Try Again",
     pwa_updating: "Updating...",
+    pwa_image_loss_warning:
+      "Updating will clear {n} selected image(s) and their order. Generate the PDF first, or confirm to continue.",
+    pwa_update_confirm_btn: "Update and Clear Images",
     app_mode: "Label Mode",
     mode_image: "Image",
     mode_text: "Auto Number",
@@ -222,6 +225,9 @@ export const translations = {
     pwa_update_error_desc: "无法完成更新，请检查网络后重试。",
     pwa_update_retry: "重试",
     pwa_updating: "正在更新...",
+    pwa_image_loss_warning:
+      "更新会清除 {n} 张已选图片及其排序。请先生成 PDF，或确认继续更新。",
+    pwa_update_confirm_btn: "仍然更新并刷新",
     app_mode: "标签类型",
     mode_image: "图片模式",
     mode_text: "自动编号",

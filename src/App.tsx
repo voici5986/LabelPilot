@@ -223,6 +223,10 @@ function App() {
 
   const handleGeneratePdf = async () => {
     if (genStatus === "generating") return;
+    if (resetTimerRef.current !== null) {
+      window.clearTimeout(resetTimerRef.current);
+      resetTimerRef.current = null;
+    }
     const controller = new AbortController();
     generationControllerRef.current = controller;
     try {
@@ -245,10 +249,10 @@ function App() {
       if (resetTimerRef.current !== null) {
         window.clearTimeout(resetTimerRef.current);
       }
-      resetTimerRef.current = window.setTimeout(
-        () => setGenStatus("idle"),
-        2500,
-      );
+      resetTimerRef.current = window.setTimeout(() => {
+        resetTimerRef.current = null;
+        setGenStatus("idle");
+      }, 2500);
     } catch (e) {
       if (e instanceof AppError && e.code === "generation_cancelled") {
         setGenStatus("idle");
@@ -261,10 +265,10 @@ function App() {
       if (resetTimerRef.current !== null) {
         window.clearTimeout(resetTimerRef.current);
       }
-      resetTimerRef.current = window.setTimeout(
-        () => setGenStatus("idle"),
-        3000,
-      );
+      resetTimerRef.current = window.setTimeout(() => {
+        resetTimerRef.current = null;
+        setGenStatus("idle");
+      }, 3000);
     } finally {
       if (generationControllerRef.current === controller) {
         generationControllerRef.current = null;
