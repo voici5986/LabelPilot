@@ -22,11 +22,11 @@
   },
   "lint-staged": {
     "*.{js,cjs,ts,tsx}": [
-      "pnpm exec oxlint --fix",
-      "pnpm exec oxfmt --write"
+      "oxlint --fix",
+      "oxfmt --write"
     ],
     "!(pnpm-lock).{json,css,md,yml,yaml,html}": [
-      "pnpm exec oxfmt --write"
+      "oxfmt --write"
     ]
   },
   "dependencies": {
