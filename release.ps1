@@ -1,4 +1,4 @@
-#requires -Version 7.0
+#requires -Version 7.6
 
 [CmdletBinding()]
 param(
@@ -519,7 +519,7 @@ function Invoke-PlaywrightGate {
             }
 
             try {
-                $response = Invoke-WebRequest -Uri "http://127.0.0.1:4173" -Method Head -TimeoutSec 1
+                $response = Invoke-WebRequest -Uri "http://127.0.0.1:4173" -Method Head -TimeoutSec 1 -NoProxy
                 if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 500) {
                     $ready = $true
                     break
