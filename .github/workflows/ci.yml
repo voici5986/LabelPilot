@@ -28,8 +28,8 @@ jobs:
       - name: Setup pnpm and Node.js
         uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
         with:
-          version: 11.24.0
-          runtime: node@24
+          version: 12.3.4
+          runtime: node@26
           cache: true
           cache-dependency-path: pnpm-lock.yaml
           install: false
