@@ -179,7 +179,7 @@ export function SettingsMenu({ onOpenCalibration }: SettingsMenuProps) {
   };
 
   return (
-    <div className="relative">
+    <div className="relative" onKeyDown={handlePanelKeyDown}>
       <button
         ref={triggerRef}
         type="button"
@@ -200,7 +200,6 @@ export function SettingsMenu({ onOpenCalibration }: SettingsMenuProps) {
             role="dialog"
             aria-label={t("settings")}
             ref={panelRef}
-            onKeyDown={handlePanelKeyDown}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 4 }}
