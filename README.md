@@ -1,9 +1,9 @@
 # LabelPilot (Web Version)
 
-![React](https://img.shields.io/badge/React-19.2-61DAFB?style=flat-square&logo=react&logoColor=black)
-![TypeScript](https://img.shields.io/badge/TypeScript-7.0.2-blue?style=flat-square&logo=typescript)
-![Vite](https://img.shields.io/badge/Vite-8.0-646CFF?style=flat-square&logo=vite)
-![Tailwind](https://img.shields.io/badge/Tailwind_CSS-4.2-38B2AC?style=flat-square&logo=tailwind-css)
+![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-7-blue?style=flat-square&logo=typescript)
+![Vite](https://img.shields.io/badge/Vite-8-646CFF?style=flat-square&logo=vite)
+![Tailwind](https://img.shields.io/badge/Tailwind_CSS-4-38B2AC?style=flat-square&logo=tailwind-css)
 ![Version](https://img.shields.io/github/v/tag/voici5986/label-react?label=Version&color=green&style=flat-square)
 
 **English** | [简体中文](./README.zh-CN.md)
@@ -23,7 +23,7 @@ A modern, offline-capable web application for batch generating label PDF documen
 - **🚀 Enhanced Preview Navigation**: Jump directly to specific pages with the new input-based pagination control.
 - **🌍 Internationalization**: Built-in support for **English** and **Chinese**, with instant language switching.
 - **🌓 Adaptive Dark Mode**: Full dark mode support that follows your system preferences or can be manually toggled ('System', 'Light', 'Dark'). Powered by Tailwind CSS 4.
-- **👁️ Real-time Preview**: What you see is what you get with a virtual A4 canvas.
+- **👁️ Real-time Preview**: What you see is what you get with a virtual paper canvas.
 - **📏 Screen 1:1 Actual Size**: Calibrate once by measuring an on-screen ruler line, then view the paper at its true physical size on desktop. The calibration is stored locally and survives reloads.
 - **📲 PWA Ready**: Supports offline use and can be installed as a standalone app.
 - **📱 Mobile Optimized**: A preview-first workspace with a collapsible edit sheet for comfortable touch workflows.

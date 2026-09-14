@@ -1,9 +1,9 @@
 # LabelPilot (Web 版)
 
-![React](https://img.shields.io/badge/React-19.2-61DAFB?style=flat-square&logo=react&logoColor=black)
-![TypeScript](https://img.shields.io/badge/TypeScript-7.0.2-blue?style=flat-square&logo=typescript)
-![Vite](https://img.shields.io/badge/Vite-8.0-646CFF?style=flat-square&logo=vite)
-![Tailwind](https://img.shields.io/badge/Tailwind_CSS-4.2-38B2AC?style=flat-square&logo=tailwind-css)
+![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-7-blue?style=flat-square&logo=typescript)
+![Vite](https://img.shields.io/badge/Vite-8-646CFF?style=flat-square&logo=vite)
+![Tailwind](https://img.shields.io/badge/Tailwind_CSS-4-38B2AC?style=flat-square&logo=tailwind-css)
 ![Version](https://img.shields.io/github/v/tag/voici5986/label-react?label=Version&color=green&style=flat-square)
 
 [English](./README.md) | **简体中文**
@@ -23,7 +23,7 @@
 - **🚀 增强型预览导航**: 支持通过输入页码直接跳转，大批量生成时浏览更便捷。
 - **🌍 国际化支持**: 内置 **中/英文** 实时切换，所有提示与状态信息均已完美适配。
 - **🌓 适配暗色模式**: 完美支持跟随系统的深浅色切换，并支持手动切换（“自动”、“亮色”、“暗色”）。基于 Tailwind CSS 4 深度感知。
-- **👁️ 实时预览**: 所见即所得。基于 A4 画布的精准视觉预览。
+- **👁️ 实时预览**: 所见即所得。基于纸张画布的精准视觉预览，支持标准和自定义尺寸。
 - **📏 屏幕 1:1 实际尺寸**: 桌面端量一次屏幕刻度线完成校准，即可按真实物理尺寸查看纸张。校准结果保存在本地，刷新/重启后依然有效。
 - **📲 PWA 支持**: 支持离线使用，可作为独立应用安装至桌面或手机。
 - **📱 移动端优化**: 预览优先的工作台 + 可折叠的合并编辑面板，触控操作更顺手。

@@ -98,6 +98,9 @@ pnpm exec playwright install chromium
 
 脚本不会自动 reset、删标签或覆盖远端。出现失败后不要直接重跑发版，应先按输出核对 GitHub 和诊断文件。
 
-## 从 Release Please 迁移的一次性清理
+## 历史说明：Release Please 迁移清理
 
-仓库中的 Release Please workflow 已删除。若 GitHub 上仍有旧的 Release PR 或 `release-please--branches--main--components--labelpilot` 分支，请手工关闭 PR 并删除该远端分支；若 `RELEASE_PLEASE_TOKEN` 只用于这个流程，也可以删除该 Secret。
+仓库曾短暂尝试 Release Please，随后已回退到本文件前文描述的本地
+`semantic-release` 流程，当前仓库不包含 Release Please workflow。只有在 GitHub
+上仍残留旧的 Release PR、`release-please--branches--main--components--labelpilot`
+分支或专用 `RELEASE_PLEASE_TOKEN` 时，才需要手工清理；没有这些远端残留时可忽略本节。
