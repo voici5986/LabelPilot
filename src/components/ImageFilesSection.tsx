@@ -1,6 +1,6 @@
 import { Reorder, useDragControls } from "framer-motion";
 import { UploadCloud } from "lucide-react";
-import { useId, useMemo } from "react";
+import { useId } from "react";
 import type { ChangeEvent } from "react";
 
 import { useI18n } from "../utils/i18nContext";
@@ -16,12 +16,22 @@ interface ImageFilesSectionProps {
 
 interface FileListItemProps {
   item: ImageItem;
+  index: number;
+  itemCount: number;
+  onMove: (direction: "up" | "down") => void;
   onCountChange: (count: number) => void;
   onRemove: () => void;
 }
 
 /** 单个文件行：仅拖拽把手启动排序，避免触摸行/数量输入/滚动时误触发 */
-function FileListItem({ item, onCountChange, onRemove }: FileListItemProps) {
+function FileListItem({
+  item,
+  index,
+  itemCount,
+  onMove,
+  onCountChange,
+  onRemove,
+}: FileListItemProps) {
   const dragControls = useDragControls();
   return (
     <Reorder.Item value={item} dragListener={false} dragControls={dragControls}>
@@ -29,6 +39,9 @@ function FileListItem({ item, onCountChange, onRemove }: FileListItemProps) {
         item={item}
         onCountChange={onCountChange}
         onRemove={onRemove}
+        onMove={onMove}
+        canMoveUp={index > 0}
+        canMoveDown={index < itemCount - 1}
         dragControls={dragControls}
       />
     </Reorder.Item>
@@ -43,12 +56,7 @@ export function ImageFilesSection({
 }: ImageFilesSectionProps) {
   const { t } = useI18n();
   const fileInputId = useId();
-
-  const selectedFileName = useMemo(() => {
-    if (imageItems.length === 0) return "";
-    if (imageItems.length === 1) return imageItems[0].file.name;
-    return t("files_selected", { n: imageItems.length });
-  }, [imageItems, t]);
+  const hasImages = imageItems.length > 0;
 
   const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const input = event.currentTarget;
@@ -74,24 +82,30 @@ export function ImageFilesSection({
           aria-label={t("browse_btn")}
           className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
         />
-        <div
-          className={`absolute inset-0 rounded-md border border-dashed transition-colors ${selectedFileName ? "border-brand-primary bg-brand-primary/10" : "border-brand-primary/30 bg-brand-primary/5 group-hover:border-brand-primary/60"}`}
-        />
-        <div className="pointer-events-none relative flex items-center gap-3 px-4 py-3">
-          <div className="shrink-0 rounded-md bg-text-main/5 p-2">
-            <UploadCloud
-              className={`h-6 w-6 ${selectedFileName ? "text-brand-primary" : "text-brand-primary/50"}`}
-            />
+        {hasImages ? (
+          <div className="pointer-events-none relative flex min-h-9 items-center justify-center gap-2 rounded-md border border-dashed border-brand-primary/30 bg-brand-primary/5 px-3 py-2 text-sm font-semibold text-brand-primary transition-colors group-hover:border-brand-primary/60 group-hover:bg-brand-primary/10">
+            <UploadCloud className="h-4 w-4" aria-hidden="true" />
+            <span>{t("add_more_images")}</span>
           </div>
-          <div className="flex min-w-0 flex-1 flex-col">
-            <p className="w-full truncate text-sm font-semibold text-text-main">
-              {selectedFileName || t("browse_btn")}
-            </p>
-            {!selectedFileName && (
-              <p className="text-xs text-text-muted">{t("browse_hint")}</p>
-            )}
-          </div>
-        </div>
+        ) : (
+          <>
+            <div className="absolute inset-0 rounded-md border border-dashed border-brand-primary/30 bg-brand-primary/5 transition-colors group-hover:border-brand-primary/60" />
+            <div className="pointer-events-none relative flex items-center gap-3 px-4 py-3">
+              <div className="shrink-0 rounded-md bg-text-main/5 p-2">
+                <UploadCloud
+                  className="h-6 w-6 text-brand-primary/50"
+                  aria-hidden="true"
+                />
+              </div>
+              <div className="flex min-w-0 flex-1 flex-col">
+                <p className="w-full truncate text-sm font-semibold text-text-main">
+                  {t("browse_btn")}
+                </p>
+                <p className="text-xs text-text-muted">{t("browse_hint")}</p>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       <Reorder.Group
@@ -100,10 +114,22 @@ export function ImageFilesSection({
         onReorder={onReorder}
         className="space-y-2"
       >
-        {imageItems.map((item) => (
+        {imageItems.map((item, index) => (
           <FileListItem
             key={item.id}
             item={item}
+            index={index}
+            itemCount={imageItems.length}
+            onMove={(direction) => {
+              const targetIndex = direction === "up" ? index - 1 : index + 1;
+              if (targetIndex < 0 || targetIndex >= imageItems.length) return;
+              const nextItems = [...imageItems];
+              [nextItems[index], nextItems[targetIndex]] = [
+                nextItems[targetIndex],
+                nextItems[index],
+              ];
+              onReorder(nextItems);
+            }}
             onCountChange={(count) => onItemCountChange(item.id, count)}
             onRemove={() =>
               onReorder(
