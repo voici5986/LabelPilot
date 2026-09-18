@@ -34,14 +34,14 @@ export function Toast({ message, type, isVisible, onClose }: ToastProps) {
   return (
     <AnimatePresence>
       {isVisible && (
-        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+        <div className="pointer-events-none fixed left-1/2 top-6 z-50 max-w-[calc(100vw-2rem)] -translate-x-1/2">
           <motion.div
             role={type === "error" ? "alert" : "status"}
             initial={{ y: -12, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: -8, opacity: 0 }}
             transition={{ duration: 0.18, ease: "easeOut" }}
-            className={`pointer-events-auto flex items-center gap-3 rounded-md border bg-elevated px-4 py-3 shadow-md transition-colors duration-200 ${
+            className={`pointer-events-auto flex w-max max-w-full items-start gap-3 rounded-md border bg-elevated px-4 py-3 shadow-md transition-colors duration-200 ${
               type === "success"
                 ? "border-green-500/20 text-green-700 dark:text-green-300"
                 : type === "error"
@@ -57,13 +57,15 @@ export function Toast({ message, type, isVisible, onClose }: ToastProps) {
               <AlertCircle className="w-5 h-5 text-amber-500 shrink-0" />
             )}
 
-            <span className="text-sm font-medium">{message}</span>
+            <span className="min-w-0 break-words text-sm font-medium">
+              {message}
+            </span>
 
             <button
               type="button"
               aria-label={t("close")}
               onClick={onClose}
-              className={`rounded-full p-1 text-text-muted transition-colors hover:text-text-main ${
+              className={`shrink-0 rounded-full p-1 text-text-muted transition-colors hover:text-text-main ${
                 type === "success"
                   ? "hover:bg-green-500/10"
                   : type === "error"

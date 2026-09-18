@@ -62,6 +62,10 @@ export function normalizeCalibration(raw: unknown): ScreenCalibration | null {
   const r = raw as Record<string, unknown>;
   if (!isReference(r.referenceMm)) return null;
   if (!isFinitePositive(r.k) || !isFinitePositive(r.measuredMm)) return null;
+  const kClassification = kIssue(r.k);
+  if (kClassification === "hard-low" || kClassification === "hard-high") {
+    return null;
+  }
   if (
     !isFinitePositive(r.dpr) ||
     !isFinitePositive(r.screenWidth) ||

@@ -73,10 +73,16 @@ describe("normalizeCalibration", () => {
     expect(normalizeCalibration(valid)).toEqual(valid);
   });
 
+  it.each([0.2, 4.0])("accepts hard-range boundary k=%s", (k) => {
+    expect(normalizeCalibration({ ...valid, k })).toMatchObject({ k });
+  });
+
   it.each([
     ["non-object", null],
     ["bad reference", { ...valid, referenceMm: 75 }],
     ["bad k", { ...valid, k: Number.NaN }],
+    ["k below hard range", { ...valid, k: 0.1 }],
+    ["k above hard range", { ...valid, k: 4.1 }],
     ["bad measured", { ...valid, measuredMm: -5 }],
     ["bad dpr", { ...valid, dpr: 0 }],
     ["bad width", { ...valid, screenWidth: Number.POSITIVE_INFINITY }],

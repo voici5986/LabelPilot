@@ -41,4 +41,18 @@ describe("theme contrast tokens", () => {
       contrast(colorToken(background), colorToken(foreground)),
     ).toBeGreaterThanOrEqual(4.5);
   });
+
+  it("uses theme-aware tokens for calibration ruler ticks", () => {
+    expect(css).toContain("--calibration-ruler-tick: #18181b;");
+    expect(css).toContain(
+      "--calibration-ruler-minor-tick: rgb(24 24 27 / 45%);",
+    );
+    expect(css).toContain("--calibration-ruler-tick: #f4f4f5;");
+    expect(css).toContain(
+      "--calibration-ruler-minor-tick: rgb(244 244 245 / 65%);",
+    );
+    expect(css).toContain("background: var(--calibration-ruler-tick);");
+    expect(css).toContain("background: var(--calibration-ruler-minor-tick);");
+    expect(css).not.toMatch(/\.cal-ruler \.tick\.minor\s*\{[^}]*opacity:/s);
+  });
 });

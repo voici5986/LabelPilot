@@ -86,6 +86,7 @@ export function ZoomControl({
   const displayLabel = isActual
     ? t("zoom_actual_short")
     : `${Math.round(manualScale * 100)}%`;
+  const ariaValueText = displayLabel;
 
   return (
     <div
@@ -126,7 +127,8 @@ export function ZoomControl({
         aria-orientation="vertical"
         aria-valuemin={Math.round(MIN_SCALE * 100)}
         aria-valuemax={Math.round(MAX_SCALE * 100)}
-        aria-valuenow={Math.round(manualScale * 100)}
+        aria-valuenow={isActual ? 100 : Math.round(manualScale * 100)}
+        aria-valuetext={ariaValueText}
         onKeyDown={(event) => {
           if (event.key === "Home") enterManual(MIN_SCALE);
           else if (event.key === "End") enterManual(MAX_SCALE);
