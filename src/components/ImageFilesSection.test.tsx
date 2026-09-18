@@ -52,6 +52,12 @@ describe("ImageFilesSection ordering", () => {
     const firstQuantityInput = screen.getByRole("textbox", {
       name: "a.png 的数量",
     });
+    const firstQuantityDecrement = screen.getByRole("button", {
+      name: "a.png 的数量: -1",
+    });
+    const firstQuantityIncrement = screen.getByRole("button", {
+      name: "a.png 的数量: +1",
+    });
     const firstQuantityBox = firstQuantityInput.parentElement;
     const firstRow = screen.getByText("a.png", { exact: true }).parentElement;
     const firstMoveRow = firstUp.parentElement?.parentElement;
@@ -70,6 +76,8 @@ describe("ImageFilesSection ordering", () => {
     expect(firstMoveRow?.contains(firstUp)).toBe(true);
     expect(firstMoveRow?.contains(firstDown)).toBe(true);
     expect(firstMoveRow?.contains(lastDown)).toBe(false);
+    expect(firstQuantityDecrement.classList.contains("h-10")).toBe(true);
+    expect(firstQuantityIncrement.classList.contains("h-10")).toBe(true);
 
     fireEvent.click(screen.getByRole("button", { name: "将 b.png 上移" }));
 

@@ -133,7 +133,7 @@ export function ThumbnailItem({
             type="button"
             aria-label={`${t("image_quantity", { name: item.file.name })}: -1`}
             onClick={() => stepCount(item.count - 1)}
-            className="group/btn flex h-full w-10 shrink-0 items-center justify-center text-text-muted transition-colors hover:bg-brand-primary/10 hover:text-brand-primary active:bg-brand-primary/10"
+            className="group/btn flex h-10 w-10 shrink-0 items-center justify-center text-text-muted transition-colors hover:bg-brand-primary/10 hover:text-brand-primary active:bg-brand-primary/10"
           >
             <Minus className="h-4 w-4" aria-hidden="true" />
           </button>
@@ -156,7 +156,7 @@ export function ThumbnailItem({
             type="button"
             aria-label={`${t("image_quantity", { name: item.file.name })}: +1`}
             onClick={() => stepCount(item.count + 1)}
-            className="group/btn flex h-full w-10 shrink-0 items-center justify-center text-text-muted transition-colors hover:bg-brand-primary/10 hover:text-brand-primary active:bg-brand-primary/10"
+            className="group/btn flex h-10 w-10 shrink-0 items-center justify-center text-text-muted transition-colors hover:bg-brand-primary/10 hover:text-brand-primary active:bg-brand-primary/10"
           >
             <Plus className="h-4 w-4" aria-hidden="true" />
           </button>
