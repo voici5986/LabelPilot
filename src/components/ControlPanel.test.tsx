@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import type { ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useStore } from "../store/useStore";
@@ -29,10 +30,16 @@ const defaultTextConfig = {
 };
 const originalSetConfig = useStore.getState().setConfig;
 
-function renderControlPanel() {
+function renderControlPanel(
+  props: Partial<ComponentProps<typeof ControlPanel>> = {},
+) {
   return render(
     <I18nProvider>
-      <ControlPanel onFilesSelect={vi.fn()} onGeneratePdf={vi.fn()} />
+      <ControlPanel
+        onFilesSelect={vi.fn()}
+        onGeneratePdf={vi.fn()}
+        {...props}
+      />
     </I18nProvider>,
   );
 }
@@ -160,5 +167,54 @@ describe("ControlPanel", () => {
 
     expect(digitsInput).toHaveProperty("value", "10");
     expect(useStore.getState().textConfig.digits).toBe(10);
+  });
+
+  it("blocks generation when image quantities exceed the aggregate label limit", () => {
+    const items = Array.from({ length: 6 }, (_, index) => ({
+      id: `img-${index}`,
+      file: new File(["image"], `label-${index}.png`, { type: "image/png" }),
+      count: 999,
+    }));
+    useStore.getState().setImageItems(items);
+
+    renderControlPanel();
+
+    expect(screen.getByRole("alert").textContent).toContain("5000");
+    expect(
+      screen.getByRole("button", { name: "生成 PDF 文档" }),
+    ).toHaveProperty("disabled", true);
+  });
+
+  it("disables all PDF input controls while generation is running", () => {
+    renderControlPanel({ isGenerating: true });
+
+    expect(screen.getByLabelText("行数").matches(":disabled")).toBe(true);
+    expect(screen.getByLabelText("点击上传标签图片").matches(":disabled")).toBe(
+      true,
+    );
+    expect(
+      screen.getByRole("button", { name: "图片模式" }).matches(":disabled"),
+    ).toBe(true);
+  });
+
+  it("keeps the cancel action enabled while inputs are locked", () => {
+    renderControlPanel({ isGenerating: true, genStatus: "generating" });
+
+    expect(
+      screen.getByRole("button", { name: /取消生成/ }).getAttribute("disabled"),
+    ).toBeNull();
+  });
+
+  it("keeps the desktop settings area in a flex scroll chain", () => {
+    renderControlPanel();
+
+    const fieldset = document.querySelector("aside > fieldset");
+    const scrollPanel = fieldset?.firstElementChild;
+
+    expect(fieldset?.classList.contains("flex")).toBe(true);
+    expect(fieldset?.classList.contains("flex-col")).toBe(true);
+    expect(scrollPanel?.classList.contains("min-h-0")).toBe(true);
+    expect(scrollPanel?.classList.contains("flex-1")).toBe(true);
+    expect(scrollPanel?.classList.contains("lg:overflow-y-auto")).toBe(true);
   });
 });

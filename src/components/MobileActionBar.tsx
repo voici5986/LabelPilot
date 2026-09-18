@@ -13,6 +13,7 @@ interface MobileActionBarProps {
   genStatus: GenerationStatus;
   genProgress: number;
   genPhase: PdfProgressPhase;
+  editDisabled?: boolean;
 }
 
 /** 移动端底部操作栏：编辑面板入口 + 生成 PDF（常驻）。仅在 <lg 渲染。 */
@@ -24,6 +25,7 @@ export function MobileActionBar({
   genStatus,
   genProgress,
   genPhase,
+  editDisabled = false,
 }: MobileActionBarProps) {
   const { t } = useI18n();
 
@@ -32,6 +34,7 @@ export function MobileActionBar({
       <button
         type="button"
         onClick={onOpenEdit}
+        disabled={editDisabled}
         aria-haspopup="dialog"
         className="hit-target flex h-11 shrink-0 items-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-3 text-sm font-semibold text-text-main transition-colors hover:border-brand-primary/50 active:bg-text-main/10"
       >

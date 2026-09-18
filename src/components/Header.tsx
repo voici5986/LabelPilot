@@ -9,9 +9,13 @@ import { SettingsMenu } from "./SettingsMenu";
 
 interface HeaderProps {
   onOpenCalibration: () => void;
+  isGenerating?: boolean;
 }
 
-export function Header({ onOpenCalibration }: HeaderProps) {
+export function Header({
+  onOpenCalibration,
+  isGenerating = false,
+}: HeaderProps) {
   const { theme, onThemeChange } = useStore(
     useShallow((state) => ({
       theme: state.theme,
@@ -81,7 +85,10 @@ export function Header({ onOpenCalibration }: HeaderProps) {
           </button>
         )}
 
-        <SettingsMenu onOpenCalibration={onOpenCalibration} />
+        <SettingsMenu
+          onOpenCalibration={onOpenCalibration}
+          disabled={isGenerating}
+        />
 
         <button
           type="button"

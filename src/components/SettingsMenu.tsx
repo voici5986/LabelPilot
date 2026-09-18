@@ -29,9 +29,13 @@ const PAPER_SIZE_KEYS: Record<PaperSize, keyof Translations> = {
 
 interface SettingsMenuProps {
   onOpenCalibration: () => void;
+  disabled?: boolean;
 }
 
-export function SettingsMenu({ onOpenCalibration }: SettingsMenuProps) {
+export function SettingsMenu({
+  onOpenCalibration,
+  disabled = false,
+}: SettingsMenuProps) {
   const {
     config,
     onConfigChange,
@@ -75,6 +79,11 @@ export function SettingsMenu({ onOpenCalibration }: SettingsMenuProps) {
   const qrPrefixHintId = useId();
 
   useEffect(() => {
+    if (disabled) {
+      setIsOpen(false);
+      setIsPresetsOpen(false);
+      return;
+    }
     if (!isOpen) return;
 
     const handleClickOutside = (event: MouseEvent) => {
@@ -85,12 +94,20 @@ export function SettingsMenu({ onOpenCalibration }: SettingsMenuProps) {
       ) {
         setIsOpen(false);
         setIsPresetsOpen(false);
+        requestAnimationFrame(() => {
+          const activeElement = document.activeElement;
+          const focusIsInsidePanel =
+            !!activeElement && panelRef.current?.contains(activeElement);
+          if (activeElement === document.body || focusIsInsidePanel) {
+            triggerRef.current?.focus();
+          }
+        });
       }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen]);
+  }, [disabled, isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -183,6 +200,7 @@ export function SettingsMenu({ onOpenCalibration }: SettingsMenuProps) {
       <button
         ref={triggerRef}
         type="button"
+        disabled={disabled}
         onClick={() => setIsOpen((open) => !open)}
         aria-label={t("settings")}
         aria-expanded={isOpen}
@@ -198,6 +216,7 @@ export function SettingsMenu({ onOpenCalibration }: SettingsMenuProps) {
           <motion.div
             id="global-settings-panel"
             role="dialog"
+            aria-modal="true"
             aria-label={t("settings")}
             ref={panelRef}
             initial={{ opacity: 0, y: 8 }}
@@ -206,7 +225,10 @@ export function SettingsMenu({ onOpenCalibration }: SettingsMenuProps) {
             transition={{ duration: 0.18, ease: "easeOut" }}
             className="fixed left-2 right-2 top-12 z-50 rounded-lg border border-border-subtle bg-elevated p-4 shadow-lg sm:absolute sm:left-auto sm:right-0 sm:w-80"
           >
-            <div className="space-y-4">
+            <fieldset
+              disabled={disabled}
+              className="m-0 space-y-4 border-0 p-0"
+            >
               <div className="space-y-3">
                 <span className="group-title">{t("paper_size")}</span>
 
@@ -363,7 +385,7 @@ export function SettingsMenu({ onOpenCalibration }: SettingsMenuProps) {
                   </span>
                 </button>
               </div>
-            </div>
+            </fieldset>
           </motion.div>
         )}
       </AnimatePresence>

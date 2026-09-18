@@ -30,12 +30,15 @@ vi.mock("./components/ControlPanel", () => ({
   ControlPanel: ({
     onGeneratePdf,
     genStatus,
+    isGenerating,
   }: {
     onGeneratePdf: () => void;
     genStatus: string;
+    isGenerating?: boolean;
   }) => (
     <>
       <output aria-label="generation status">{genStatus}</output>
+      <output aria-label="generation lock">{String(isGenerating)}</output>
       <button type="button" onClick={onGeneratePdf}>
         generate
       </button>
@@ -90,6 +93,7 @@ describe("App PDF generation state", () => {
     expect(screen.getByLabelText("generation status").textContent).toBe(
       "generating",
     );
+    expect(screen.getByLabelText("generation lock").textContent).toBe("true");
 
     await act(async () => first.resolve());
     expect(screen.getByLabelText("generation status").textContent).toBe(

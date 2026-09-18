@@ -4,6 +4,7 @@ import { AppError } from "./appError";
 import {
   IMAGE_LIMITS,
   detectImageMimeType,
+  getImageLabelCount,
   normalizeImageItemCount,
   readValidatedImageFile,
   validateImageFileContents,
@@ -38,6 +39,10 @@ describe("image resource limits", () => {
     expect(normalizeImageItemCount(Number.POSITIVE_INFINITY)).toBe(1);
     expect(normalizeImageItemCount(-10)).toBe(1);
     expect(normalizeImageItemCount(9_999)).toBe(999);
+  });
+
+  it("sums normalized image label counts for readiness checks", () => {
+    expect(getImageLabelCount([{ count: 2 }, { count: 9999 }])).toBe(1001);
   });
 
   it("rejects excessive file count and bytes", () => {

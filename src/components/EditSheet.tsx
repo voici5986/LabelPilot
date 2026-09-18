@@ -18,6 +18,8 @@ interface EditSheetProps {
   onClose: () => void;
   onToggleFull: () => void;
   onFilesSelect: (files: File[]) => void;
+  /** 生成期间冻结会影响当前 PDF 的输入。 */
+  isGenerating?: boolean;
 }
 
 /**
@@ -31,6 +33,7 @@ export function EditSheet({
   onClose,
   onToggleFull,
   onFilesSelect,
+  isGenerating = false,
 }: EditSheetProps) {
   const { t } = useI18n();
   const [filesCollapsed, setFilesCollapsed] = useState(false);
@@ -113,12 +116,8 @@ export function EditSheet({
     })),
   );
 
-  const { textOutputMetrics, textOutputError } = useGenerationReadiness(
-    config,
-    appMode,
-    imageItems,
-    textConfig,
-  );
+  const { textOutputMetrics, textOutputError, imageOutputError } =
+    useGenerationReadiness(config, appMode, imageItems, textConfig);
 
   return (
     <AnimatePresence>
@@ -178,72 +177,85 @@ export function EditSheet({
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-[max(16px,env(safe-area-inset-bottom))]">
-              <div className="space-y-4">
-                {/* 标签类型：一级工作流，面板第一项 */}
-                <div>
-                  <h2 className="group-title">{t("app_mode")}</h2>
-                  <SegmentedControl
-                    label={t("app_mode")}
-                    layoutId="app-mode-active-sheet"
-                    value={appMode}
-                    onChange={onAppModeChange}
-                    options={[
-                      { label: t("mode_image"), value: "image" },
-                      { label: t("mode_text"), value: "text" },
-                    ]}
-                  />
-                </div>
-
-                {appMode === "image" ? (
-                  <div className="rounded-xl border border-border-subtle bg-surface p-3">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setFilesCollapsed((collapsed) => !collapsed)
-                      }
-                      aria-expanded={!filesCollapsed}
-                      className="flex w-full items-center gap-2"
-                    >
-                      <h3
-                        className="group-title flex flex-1 items-center gap-2"
-                        style={{ marginBottom: 0 }}
-                      >
-                        <UploadCloud className="h-4 w-4" /> {t("file_group")}
-                      </h3>
-                      <ChevronDown
-                        className={`h-4 w-4 text-text-muted transition-transform duration-200 ${filesCollapsed ? "-rotate-90" : ""}`}
-                        aria-hidden="true"
-                      />
-                    </button>
-                    <div className={filesCollapsed ? "hidden" : "mt-3"}>
-                      <ImageFilesSection
-                        imageItems={imageItems}
-                        onFilesSelect={onFilesSelect}
-                        onReorder={onReorder}
-                        onItemCountChange={onItemCountChange}
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="rounded-xl border border-border-subtle bg-surface p-3">
-                    <TextModeFields
-                      textConfig={textConfig}
-                      metrics={textOutputMetrics}
-                      error={textOutputError}
-                      onChange={onTextConfigChange}
+              <fieldset
+                disabled={isGenerating}
+                className="m-0 min-w-0 border-0 p-0"
+              >
+                <div className="space-y-4">
+                  {/* 标签类型：一级工作流，面板第一项 */}
+                  <div>
+                    <h2 className="group-title">{t("app_mode")}</h2>
+                    <SegmentedControl
+                      label={t("app_mode")}
+                      layoutId="app-mode-active-sheet"
+                      value={appMode}
+                      onChange={onAppModeChange}
+                      options={[
+                        { label: t("mode_image"), value: "image" },
+                        { label: t("mode_text"), value: "text" },
+                      ]}
                     />
                   </div>
-                )}
 
-                {/* 排版设置 */}
-                <div className="rounded-xl border border-border-subtle bg-surface p-3">
-                  <LayoutFields
-                    config={config}
-                    onConfigChange={onConfigChange}
-                    layoutIdPrefix="sheet-orientation-active"
-                  />
+                  {appMode === "image" ? (
+                    <div className="rounded-xl border border-border-subtle bg-surface p-3">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFilesCollapsed((collapsed) => !collapsed)
+                        }
+                        aria-expanded={!filesCollapsed}
+                        className="flex w-full items-center gap-2"
+                      >
+                        <h3
+                          className="group-title flex flex-1 items-center gap-2"
+                          style={{ marginBottom: 0 }}
+                        >
+                          <UploadCloud className="h-4 w-4" /> {t("file_group")}
+                        </h3>
+                        <ChevronDown
+                          className={`h-4 w-4 text-text-muted transition-transform duration-200 ${filesCollapsed ? "-rotate-90" : ""}`}
+                          aria-hidden="true"
+                        />
+                      </button>
+                      <div className={filesCollapsed ? "hidden" : "mt-3"}>
+                        <ImageFilesSection
+                          imageItems={imageItems}
+                          onFilesSelect={onFilesSelect}
+                          onReorder={onReorder}
+                          onItemCountChange={onItemCountChange}
+                        />
+                      </div>
+                      {imageOutputError && (
+                        <p
+                          role="alert"
+                          className="mt-3 text-sm text-red-700 dark:text-red-300"
+                        >
+                          {imageOutputError}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-border-subtle bg-surface p-3">
+                      <TextModeFields
+                        textConfig={textConfig}
+                        metrics={textOutputMetrics}
+                        error={textOutputError}
+                        onChange={onTextConfigChange}
+                      />
+                    </div>
+                  )}
+
+                  {/* 排版设置 */}
+                  <div className="rounded-xl border border-border-subtle bg-surface p-3">
+                    <LayoutFields
+                      config={config}
+                      onConfigChange={onConfigChange}
+                      layoutIdPrefix="sheet-orientation-active"
+                    />
+                  </div>
                 </div>
-              </div>
+              </fieldset>
             </div>
           </motion.div>
         </div>

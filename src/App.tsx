@@ -34,7 +34,6 @@ function App() {
   const {
     config,
     imageItems,
-    setImageItems,
     appMode,
     textConfig,
     theme,
@@ -44,7 +43,6 @@ function App() {
     useShallow((state) => ({
       config: state.config,
       imageItems: state.imageItems,
-      setImageItems: state.setImageItems,
       appMode: state.appMode,
       textConfig: state.textConfig,
       theme: state.theme,
@@ -204,21 +202,27 @@ function App() {
     try {
       validateImageFiles([...imageItems.map((item) => item.file), ...files]);
       await validateImageFileContents(files);
+      // Validation is asynchronous. Read the store only after it completes so
+      // two quick selections cannot both append to the same stale snapshot.
+      const latestState = useStore.getState();
+      validateImageFiles([
+        ...latestState.imageItems.map((item) => item.file),
+        ...files,
+      ]);
+
+      const defaultCount = latestState.config.rows * latestState.config.cols;
+      const newItems = files.map((file) => ({
+        id:
+          typeof crypto !== "undefined" && "randomUUID" in crypto
+            ? crypto.randomUUID()
+            : Math.random().toString(36).slice(2, 11),
+        file,
+        count: defaultCount,
+      }));
+      latestState.setImageItems([...latestState.imageItems, ...newItems]);
     } catch (error) {
       showToast(getLocalizedError(error), "error");
-      return;
     }
-
-    const defaultCount = config.rows * config.cols;
-    const newItems = files.map((file) => ({
-      id:
-        typeof crypto !== "undefined" && "randomUUID" in crypto
-          ? crypto.randomUUID()
-          : Math.random().toString(36).slice(2, 11),
-      file,
-      count: defaultCount,
-    }));
-    setImageItems([...imageItems, ...newItems]);
   };
 
   const handleGeneratePdf = async () => {
@@ -296,7 +300,10 @@ function App() {
 
   return (
     <div className="safe-area-app flex h-dvh flex-col overflow-hidden bg-background text-text-main selection:bg-brand-primary/20">
-      <Header onOpenCalibration={() => openCalibration("settings")} />
+      <Header
+        onOpenCalibration={() => openCalibration("settings")}
+        isGenerating={genStatus === "generating"}
+      />
 
       <main className="flex flex-1 min-h-0 flex-col gap-3 p-2 lg:flex-row lg:overflow-hidden lg:p-3">
         {/* 桌面控制面板（<lg 隐藏，由 EditSheet 承担） */}
@@ -308,6 +315,7 @@ function App() {
             genStatus={genStatus}
             genProgress={genProgress}
             genPhase={genPhase}
+            isGenerating={genStatus === "generating"}
           />
         </div>
 
@@ -325,6 +333,7 @@ function App() {
             onOpenEdit={() => setEditOpen(true)}
             onGenerate={handleGeneratePdf}
             onCancel={handleCancelPdf}
+            editDisabled={genStatus === "generating"}
             disabled={!mobileCanGenerate}
             genStatus={genStatus}
             genProgress={genProgress}
@@ -339,6 +348,7 @@ function App() {
         onClose={() => setEditOpen(false)}
         onToggleFull={() => setEditFull((full) => !full)}
         onFilesSelect={handleFilesSelect}
+        isGenerating={genStatus === "generating"}
       />
 
       <CalibrationDialog

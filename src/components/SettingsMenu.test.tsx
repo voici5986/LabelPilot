@@ -30,6 +30,19 @@ afterEach(() => {
 });
 
 describe("SettingsMenu", () => {
+  it("disables the settings entry point while generation is running", () => {
+    render(
+      <I18nProvider>
+        <SettingsMenu onOpenCalibration={vi.fn()} disabled />
+      </I18nProvider>,
+    );
+
+    const settingsButton = screen.getByRole("button", { name: "全局设置" });
+    expect(settingsButton).toHaveProperty("disabled", true);
+    fireEvent.click(settingsButton);
+    expect(screen.queryByRole("dialog", { name: "全局设置" })).toBeNull();
+  });
+
   it("shows A4 as the preset fallback while custom paper is selected", () => {
     render(
       <I18nProvider>
@@ -61,6 +74,54 @@ describe("SettingsMenu", () => {
     await waitFor(() =>
       expect(screen.queryByRole("dialog", { name: "全局设置" })).toBeNull(),
     );
+  });
+
+  it("marks the menu as modal and restores trigger focus after an outside click", async () => {
+    render(
+      <I18nProvider>
+        <SettingsMenu onOpenCalibration={vi.fn()} />
+      </I18nProvider>,
+    );
+
+    const settingsButton = screen.getByRole("button", { name: "全局设置" });
+    fireEvent.click(settingsButton);
+    expect(
+      screen
+        .getByRole("dialog", { name: "全局设置" })
+        .getAttribute("aria-modal"),
+    ).toBe("true");
+
+    fireEvent.mouseDown(document.body);
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: "全局设置" })).toBeNull(),
+    );
+    expect(document.activeElement).toBe(settingsButton);
+  });
+
+  it("does not steal focus from an external control after an outside click", () => {
+    const pendingFrames: FrameRequestCallback[] = [];
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      pendingFrames.push(callback);
+      return pendingFrames.length;
+    });
+
+    render(
+      <I18nProvider>
+        <SettingsMenu onOpenCalibration={vi.fn()} />
+        <button type="button">外部控件</button>
+      </I18nProvider>,
+    );
+
+    const settingsButton = screen.getByRole("button", { name: "全局设置" });
+    const outsideButton = screen.getByRole("button", { name: "外部控件" });
+    fireEvent.click(settingsButton);
+    for (const frame of pendingFrames.splice(0)) frame(0);
+
+    fireEvent.mouseDown(outsideButton);
+    outsideButton.focus();
+    for (const frame of pendingFrames.splice(0)) frame(0);
+
+    expect(document.activeElement).toBe(outsideButton);
   });
 
   it("closes via Escape while focus is still on the trigger before the pending focus rAF runs", async () => {

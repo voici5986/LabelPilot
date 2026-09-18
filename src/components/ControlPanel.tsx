@@ -23,6 +23,8 @@ interface ControlPanelProps {
   genPhase?: PdfProgressPhase;
   maxRows?: number;
   maxCols?: number;
+  /** 生成期间冻结会影响当前 PDF 的输入，取消按钮仍保持可用。 */
+  isGenerating?: boolean;
 }
 
 export function ControlPanel({
@@ -34,6 +36,7 @@ export function ControlPanel({
   genPhase = "preparing",
   maxRows,
   maxCols,
+  isGenerating = false,
 }: ControlPanelProps) {
   const {
     config,
@@ -62,7 +65,7 @@ export function ControlPanel({
   );
   const { t } = useI18n();
 
-  const { textOutputMetrics, textOutputError, canGenerate } =
+  const { textOutputMetrics, textOutputError, imageOutputError, canGenerate } =
     useGenerationReadiness(config, appMode, imageItems, textConfig);
 
   const paperSizeInfo = useMemo(() => {
@@ -76,52 +79,65 @@ export function ControlPanel({
 
   return (
     <aside className="z-10 flex h-auto w-full flex-col overflow-hidden rounded-lg border border-border-subtle bg-surface lg:h-full">
-      <div className="flex-1 space-y-5 p-4 scrollbar-hide lg:overflow-y-auto lg:p-5">
-        <div className="space-y-3 border-b border-border-subtle/60 pb-4">
-          <h2 className="group-title">{t("app_mode")}</h2>
-          <SegmentedControl
-            label={t("app_mode")}
-            layoutId="app-mode-active"
-            value={appMode}
-            onChange={onAppModeChange}
-            options={[
-              { label: t("mode_image"), value: "image" },
-              { label: t("mode_text"), value: "text" },
-            ]}
-          />
-        </div>
-
-        <div className="space-y-4 border-b border-border-subtle/60 pb-4">
-          <LayoutFields
-            config={config}
-            onConfigChange={onConfigChange}
-            maxRows={maxRows}
-            maxCols={maxCols}
-            paperSizeInfo={paperSizeInfo}
-          />
-        </div>
-
-        {appMode === "image" ? (
-          <div className="space-y-3">
-            <h2 className="group-title flex items-center gap-2">
-              <UploadCloud className="h-4 w-4" /> {t("file_group")}
-            </h2>
-            <ImageFilesSection
-              imageItems={imageItems}
-              onFilesSelect={onFilesSelect}
-              onReorder={onReorder}
-              onItemCountChange={onItemCountChange}
+      <fieldset
+        disabled={isGenerating}
+        className="m-0 flex min-h-0 min-w-0 flex-1 flex-col border-0 p-0"
+      >
+        <div className="min-h-0 flex-1 space-y-5 p-4 scrollbar-hide lg:overflow-y-auto lg:p-5">
+          <div className="space-y-3 border-b border-border-subtle/60 pb-4">
+            <h2 className="group-title">{t("app_mode")}</h2>
+            <SegmentedControl
+              label={t("app_mode")}
+              layoutId="app-mode-active"
+              value={appMode}
+              onChange={onAppModeChange}
+              options={[
+                { label: t("mode_image"), value: "image" },
+                { label: t("mode_text"), value: "text" },
+              ]}
             />
           </div>
-        ) : (
-          <TextModeFields
-            textConfig={textConfig}
-            metrics={textOutputMetrics}
-            error={textOutputError}
-            onChange={onTextConfigChange}
-          />
-        )}
-      </div>
+
+          <div className="space-y-4 border-b border-border-subtle/60 pb-4">
+            <LayoutFields
+              config={config}
+              onConfigChange={onConfigChange}
+              maxRows={maxRows}
+              maxCols={maxCols}
+              paperSizeInfo={paperSizeInfo}
+            />
+          </div>
+
+          {appMode === "image" ? (
+            <div className="space-y-3">
+              <h2 className="group-title flex items-center gap-2">
+                <UploadCloud className="h-4 w-4" /> {t("file_group")}
+              </h2>
+              <ImageFilesSection
+                imageItems={imageItems}
+                onFilesSelect={onFilesSelect}
+                onReorder={onReorder}
+                onItemCountChange={onItemCountChange}
+              />
+              {imageOutputError && (
+                <p
+                  role="alert"
+                  className="text-sm text-red-700 dark:text-red-300"
+                >
+                  {imageOutputError}
+                </p>
+              )}
+            </div>
+          ) : (
+            <TextModeFields
+              textConfig={textConfig}
+              metrics={textOutputMetrics}
+              error={textOutputError}
+              onChange={onTextConfigChange}
+            />
+          )}
+        </div>
+      </fieldset>
 
       <div className="relative overflow-hidden border-t border-border-subtle p-1">
         <SmartButton

@@ -204,13 +204,19 @@ export function validateImageDimensions(
 export function validateImageLabelCount(
   items: Pick<ImageItem, "count">[],
 ): void {
-  const total = items.reduce((sum, item) => {
-    return sum + normalizeImageItemCount(item.count);
-  }, 0);
+  const total = getImageLabelCount(items);
 
   if (total > IMAGE_LIMITS.maxTotalLabels) {
     throw new AppError("image_error_label_count", {
       max: IMAGE_LIMITS.maxTotalLabels,
     });
   }
+}
+
+/** 计算图片模式下将要输出的标签总数，始终按归一化后的数量计数。 */
+export function getImageLabelCount(items: Pick<ImageItem, "count">[]): number {
+  return items.reduce(
+    (sum, item) => sum + normalizeImageItemCount(item.count),
+    0,
+  );
 }
