@@ -14,9 +14,11 @@ afterEach(() => {
 function TestModal({
   open = true,
   onDismiss = vi.fn(),
+  preventEscape = false,
 }: {
   open?: boolean;
   onDismiss?: () => void;
+  preventEscape?: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { handleKeyDown } = useModalFocus({
@@ -30,7 +32,14 @@ function TestModal({
       <div hidden>
         <button>hidden</button>
       </div>
-      <button data-testid="first">first</button>
+      <button
+        data-testid="first"
+        onKeyDown={
+          preventEscape ? (event) => event.preventDefault() : undefined
+        }
+      >
+        first
+      </button>
       <button data-testid="last">last</button>
     </div>
   );
@@ -69,5 +78,18 @@ describe("useModalFocus", () => {
     rerender(<TestModal open={false} onDismiss={onDismiss} />);
     expect(document.activeElement).toBe(trigger);
     trigger.remove();
+  });
+
+  it("does not dismiss when a focused control consumes Escape", () => {
+    const onDismiss = vi.fn();
+    const { getByTestId } = render(
+      <TestModal onDismiss={onDismiss} preventEscape />,
+    );
+
+    const first = getByTestId("first");
+    first.focus();
+    fireEvent.keyDown(first, { key: "Escape" });
+
+    expect(onDismiss).not.toHaveBeenCalled();
   });
 });

@@ -42,6 +42,40 @@ describe("theme contrast tokens", () => {
     ).toBeGreaterThanOrEqual(4.5);
   });
 
+  it.each([
+    ["danger-light", "#fafafa"],
+    ["warning-light", "#fafafa"],
+    ["success-light", "#fafafa"],
+    ["danger-dark", "#18181b"],
+    ["warning-dark", "#18181b"],
+    ["success-dark", "#18181b"],
+  ])(
+    "keeps semantic %s readable on its theme surface",
+    (foreground, background) => {
+      expect(
+        contrast(colorToken(foreground), background),
+      ).toBeGreaterThanOrEqual(4.5);
+    },
+  );
+
+  it.each([
+    ["success-surface", "on-status"],
+    ["danger-surface", "on-status"],
+  ])("keeps %s and %s at WCAG AA", (background, foreground) => {
+    expect(
+      contrast(colorToken(background), colorToken(foreground)),
+    ).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it.each([
+    ["tooltip-bg-light", "tooltip-text-light"],
+    ["tooltip-bg-dark", "tooltip-text-dark"],
+  ])("keeps %s and %s at WCAG AA", (background, foreground) => {
+    expect(
+      contrast(colorToken(background), colorToken(foreground)),
+    ).toBeGreaterThanOrEqual(4.5);
+  });
+
   it("uses theme-aware tokens for calibration ruler ticks", () => {
     expect(css).toContain("--calibration-ruler-tick: #18181b;");
     expect(css).toContain(

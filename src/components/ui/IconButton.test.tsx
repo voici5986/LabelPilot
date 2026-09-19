@@ -108,7 +108,7 @@ describe("IconButton", () => {
 
     const button = screen.getByRole("button", { name: "Dismiss success" });
     expect(button.className).toContain("h-[22px]");
-    expect(button.className).toContain("enabled:hover:bg-green-500/10");
+    expect(button.className).toContain("enabled:hover:bg-success/10");
     expect(
       button.className.split(" ").some((name) => name.startsWith("hover:")),
     ).toBe(false);

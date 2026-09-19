@@ -29,19 +29,20 @@ const sizeStyles = {
 } as const;
 
 const toneStyles = {
-  default: "text-text-main enabled:hover:bg-text-main/5",
+  default:
+    "text-text-main enabled:hover:bg-text-main/5 enabled:active:bg-text-main/10",
   neutral:
-    "text-text-muted enabled:hover:bg-text-main/5 enabled:hover:text-text-main",
+    "text-text-muted enabled:hover:bg-text-main/5 enabled:hover:text-text-main enabled:active:bg-text-main/10",
   brand:
-    "text-text-muted enabled:hover:bg-text-main/5 enabled:hover:text-brand-primary",
+    "text-text-muted enabled:hover:bg-text-main/5 enabled:hover:text-brand-primary enabled:active:bg-text-main/10",
   elevated:
-    "border border-border-subtle bg-elevated text-text-muted enabled:hover:text-brand-primary",
+    "border border-border-subtle bg-elevated text-text-muted enabled:hover:text-brand-primary enabled:active:bg-text-main/5",
   success:
-    "text-text-muted enabled:hover:bg-green-500/10 enabled:hover:text-text-main",
+    "text-text-muted enabled:hover:bg-success/10 enabled:hover:text-text-main enabled:active:bg-success/15",
   danger:
-    "text-text-muted enabled:hover:bg-red-500/10 enabled:hover:text-text-main",
+    "text-text-muted enabled:hover:bg-danger/10 enabled:hover:text-text-main enabled:active:bg-danger/15",
   warning:
-    "text-text-muted enabled:hover:bg-amber-500/10 enabled:hover:text-text-main",
+    "text-text-muted enabled:hover:bg-warning/10 enabled:hover:text-text-main enabled:active:bg-warning/15",
 } as const;
 
 const shapeStyles = {

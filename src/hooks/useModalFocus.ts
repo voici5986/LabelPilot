@@ -87,7 +87,7 @@ export function useModalFocus<T extends HTMLElement>({
   useEffect(() => {
     if (!open) return;
     const handleKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (event.key === "Escape") {
+      if (event.key === "Escape" && !event.defaultPrevented) {
         event.preventDefault();
         onDismiss();
       }

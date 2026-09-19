@@ -23,6 +23,8 @@ export const translations = {
     calib_env_note:
       "Suggested: press Ctrl+0 (100% browser zoom). When using 1:1 later, keep the browser zoom and monitor unchanged.",
     calib_reference_label: "Reference line length",
+    calib_reference_option: "{length} mm",
+    calib_ruler_label: "Ruler preview",
     calib_measure_label: "This {length} mm line measures (real mm)",
     calib_input_hint: "Usually close to {length} at 100% system scaling.",
     calib_result_k: "1 CSS mm = {k} real mm",
@@ -66,6 +68,8 @@ export const translations = {
     view_preview: "View Preview",
     edit_panel_toggle_size: "Toggle panel size",
     paper_size: "Paper Size",
+    paper_summary: "{label}, {width}×{height} mm",
+    unit_mm: "mm",
     paper_width: "Width (mm)",
     paper_height: "Height (mm)",
     paper_type_a4: "A4",
@@ -150,6 +154,8 @@ export const translations = {
     zoom_level: "Zoom level",
     language_toggle: "Switch language",
     close: "Close",
+    preview_label: "Label {index}",
+    ruler_length: "{length} mm",
   },
   zh: {
     window_title: "LabelPilot",
@@ -173,6 +179,8 @@ export const translations = {
     calib_env_note:
       "建议按 Ctrl+0（浏览器 100% 缩放）。之后使用 1:1 时，请保持浏览器缩放与当前显示器不变。",
     calib_reference_label: "参考线长度",
+    calib_reference_option: "{length}mm",
+    calib_ruler_label: "刻度尺预览",
     calib_measure_label: "这根 {length}mm 线量出来是（现实 mm）",
     calib_input_hint: "系统 100% 缩放下通常接近 {length}。",
     calib_result_k: "1 CSS mm = {k} 现实 mm",
@@ -213,6 +221,10 @@ export const translations = {
     view_preview: "查看预览",
     edit_panel_toggle_size: "切换面板高度",
     paper_size: "纸张尺寸",
+    // Keep the summary punctuation stable across the existing desktop and E2E
+    // surface; the label and dimensions remain fully localized.
+    paper_summary: "{label}, {width}×{height}mm",
+    unit_mm: "mm",
     paper_width: "纸张宽度 (mm)",
     paper_height: "纸张高度 (mm)",
     paper_type_a4: "A4",
@@ -290,5 +302,7 @@ export const translations = {
     zoom_level: "缩放级别",
     language_toggle: "切换语言",
     close: "关闭",
+    preview_label: "标签 {index}",
+    ruler_length: "{length}mm",
   },
 };
