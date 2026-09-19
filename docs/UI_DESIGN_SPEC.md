@@ -261,15 +261,15 @@ Tailwind 间距以 `0.25rem = 4px` 为基准：`1.5=6px`、`2=8px`、`3=12px`、
 
 建议按以下优先级演进：
 
-| 优先级     | 候选                              | 当前调用点/范围                                                     | 建议边界                                                                                  | 不应合并的部分                                                  |
-| ---------- | --------------------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| P0 已落地  | `StepperButton`                   | `NumberInput`、`ThumbnailItem`                                      | 统一 `40px` 移动端步进按钮、图标、禁用/焦点/按压状态和 aria 命名；支持水平/响应式布局变体 | 行列/毫米的数值解析、图片数量草稿与业务上限                     |
-| P1         | `FieldShell`                      | `NumberInput`、文本前缀、校准输入、设置输入                         | 管理 label、hint、error 与输入的 ID 关联，统一字段间距                                    | 数值解析、校验时机和文案；仅封装 `useId` 的 hook 收益不足       |
-| P1         | `InlineAlert`                     | 生成就绪错误、文本错误、校准普通错误                                | 首版只统一 danger tone、文字对比度和 `role`；有第二个 boxed 场景后再扩展形态              | Toast 的定位、生命周期、关闭动作和 live region 保持独立         |
-| P0         | `useModalFocus`                   | `EditSheet`、`CalibrationDialog`                                    | 统一首焦点、Escape、Tab 环回和关闭后焦点恢复；过滤不可聚焦项                              | `SettingsMenu` 背景可点击，等 popover/dialog 语义决定后单独处理 |
-| P0 已落地  | `IconButton`                      | Header 主题、Zoom reset、PageNavigator、Toast/ReloadPrompt 关闭按钮 | 统一有限尺寸变体、图标对齐、焦点和禁用反馈；提供明确名称，支持 ref 和原生事件             | 带文本按钮、生成状态机；拖拽把手和列表排序/删除暂未迁移         |
-| P1         | `ActionButton`                    | 校准保存/取消、查看预览、更新提示、错误页操作                       | 原生属性/ref + 少量 primary/secondary/quiet 变体，统一按压、焦点和禁用状态                | `SmartButton` 的生成/取消状态机                                 |
-| 已有待深化 | `SegmentedControl`、`SmartButton` | 模式/方向切换、桌面与移动生成入口                                   | `SegmentedControl` 内部生成唯一 layout ID，并评估校准参考长度的第 4 个调用点              | 不在调用方复制一套近似 class                                    |
+| 优先级     | 候选                              | 当前调用点/范围                                                     | 建议边界                                                                                  | 不应合并的部分                                            |
+| ---------- | --------------------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| P0 已落地  | `StepperButton`                   | `NumberInput`、`ThumbnailItem`                                      | 统一 `40px` 移动端步进按钮、图标、禁用/焦点/按压状态和 aria 命名；支持水平/响应式布局变体 | 行列/毫米的数值解析、图片数量草稿与业务上限               |
+| P1         | `FieldShell`                      | `NumberInput`、文本前缀、校准输入、设置输入                         | 管理 label、hint、error 与输入的 ID 关联，统一字段间距                                    | 数值解析、校验时机和文案；仅封装 `useId` 的 hook 收益不足 |
+| P1         | `InlineAlert`                     | 生成就绪错误、文本错误、校准普通错误                                | 首版只统一 danger tone、文字对比度和 `role`；有第二个 boxed 场景后再扩展形态              | Toast 的定位、生命周期、关闭动作和 live region 保持独立   |
+| P0 已落地  | `useModalFocus`                   | `EditSheet`、`CalibrationDialog`                                    | 统一首焦点、Escape、Tab 环回和关闭后焦点恢复；过滤不可聚焦项                              | `SettingsMenu` 背景可点击，仍单独处理 popover/dialog 语义 |
+| P0 已落地  | `IconButton`                      | Header 主题、Zoom reset、PageNavigator、Toast/ReloadPrompt 关闭按钮 | 统一有限尺寸变体、图标对齐、焦点和禁用反馈；提供明确名称，支持 ref 和原生事件             | 带文本按钮、生成状态机；拖拽把手和列表排序/删除暂未迁移   |
+| P1         | `ActionButton`                    | 校准保存/取消、查看预览、更新提示、错误页操作                       | 原生属性/ref + 少量 primary/secondary/quiet 变体，统一按压、焦点和禁用状态                | `SmartButton` 的生成/取消状态机                           |
+| 已有待深化 | `SegmentedControl`、`SmartButton` | 模式/方向切换、桌面与移动生成入口                                   | `SegmentedControl` 内部生成唯一 layout ID，并评估校准参考长度的第 4 个调用点              | 不在调用方复制一套近似 class                              |
 
 P0/P1 表示复用收益优先级，不代表生产故障等级。“已落地”只表示首批调用点已经迁移，不代表所有相似按钮都必须立刻迁移。
 
@@ -280,7 +280,7 @@ P0/P1 表示复用收益优先级，不代表生产故障等级。“已落地�
 - **字段容器与输入样式分工**：`FieldShell` 负责 label/hint/error 关联；基础输入外观继续复用 `input-base`。只包一层 input 并透传全部 class 的 Module 收益有限，暂不另建。
 - **提示语义由使用场景决定**：普通行内错误可以共享窄范围的 danger tone；Toast 和更新提示只共享状态色 token，不共享布局、生命周期、关闭动作或 live region。避免提示内部和外层同时建立 live region，造成重复播报。
 - **普通文字按钮可独立演进**：校准保存/取消、查看预览、更新按钮存在颜色与禁用样式重复，可直接评估少量 primary/secondary/quiet 变体，不依赖 IconButton；`SmartButton` 的生成/取消状态机保持独立。
-- **模态焦点与轻量浮层分开**：`EditSheet` 和 `CalibrationDialog` 的焦点逻辑已经形成两个真实调用点，可提取 `useModalFocus`；`SettingsMenu` 允许背景点击，不纳入首版默认策略。
+- **模态焦点与轻量浮层分开**：`EditSheet` 和 `CalibrationDialog` 已共享 `useModalFocus`，由模块统一首焦点、Escape、Tab 环回、关闭恢复和不可聚焦项过滤；`SettingsMenu` 允许背景点击，仍不纳入这个真正模态的默认策略。
 - **状态色和表面优先用 token/utility**：danger、warning、success 的前景/淡背景/边框可以集中；重复的 `border + bg-surface` 可评估 `surface-card` utility，不为此创建透传大量布局参数的 React `Surface`。
 - **分组标题先保留 utility**：`LayoutFields`、`TextModeFields`、图片分组共享 `group-title` 已有收益。仅标题加图标不必立即建组件；如需统一帮助入口或右侧摘要，再提取 SectionHeader，并允许调用方指定 h2/h3。
 - **暂不提取**：二维码开关仅一个使用场景；QR 原生 range 与预览竖向缩放条交互不同；上传入口有真实文件 input 覆盖层，不能直接替换成普通按钮；预设菜单和分段选择的键盘语义也不同。
@@ -365,14 +365,14 @@ UI 代码变更按影响范围完成以下检查；纯文档变更只需格式�
 
 ### 11.1 测试映射
 
-| UI 契约            | 主要回归位置                                                                    | 必须守护的内容                                                                            |
-| ------------------ | ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| 桌面控制面板滚动链 | `ControlPanel.test.tsx`                                                         | 已有 class 结构断言；真实滚动高度、按钮遮挡仍需浏览器验证                                 |
-| 图片队列与数量控件 | `ImageFilesSection.test.tsx`、`e2e/mobile-flow.spec.ts`                         | 文件名优先、排序可用、数量步进按钮为 `40px` 可见尺寸、上传入口不重复显示摘要              |
-| 移动编辑面板       | `EditSheet.test.tsx`、`e2e/mobile-flow.spec.ts`                                 | 已有折叠错误、面板高度和上传流程检查；完整焦点环回仍待补                                  |
-| 设置浮层           | `SettingsMenu.test.tsx`                                                         | 已有 modal 属性、外部点击焦点、打开首帧 Escape 检查；Tab/Shift+Tab 和隐藏项过滤未完整覆盖 |
-| 主题对比度         | `themeContrast.test.ts`                                                         | 两组品牌色组合的 4.5 阈值、刻度 token 字符串检查；并非完整界面对比度验收                  |
-| 预览/校准          | `PreviewPanel.test.tsx`、`ZoomControl.test.tsx`、`e2e/calibration-flow.spec.ts` | 缩放、分页、1:1 状态、环境失效后的回退                                                    |
+| UI 契约            | 主要回归位置                                                                        | 必须守护的内容                                                                                        |
+| ------------------ | ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| 桌面控制面板滚动链 | `ControlPanel.test.tsx`                                                             | 已有 class 结构断言；1440×420 浏览器验证 `clientHeight=301`、`scrollHeight=530`，生成按钮位于滚动区外 |
+| 图片队列与数量控件 | `ImageFilesSection.test.tsx`、`e2e/mobile-flow.spec.ts`                             | 文件名优先、排序可用、数量步进按钮为 `40px` 可见尺寸、上传入口不重复显示摘要                          |
+| 移动编辑面板       | `EditSheet.test.tsx`、`src/hooks/useModalFocus.test.tsx`、`e2e/mobile-flow.spec.ts` | 已有折叠错误、面板高度、上传流程和共享模态焦点环回检查；真实辅助技术仍待补                            |
+| 设置浮层           | `SettingsMenu.test.tsx`                                                             | 已有 modal 属性、外部点击焦点、打开首帧 Escape 检查；Tab/Shift+Tab 和隐藏项过滤未完整覆盖             |
+| 主题对比度         | `themeContrast.test.ts`                                                             | 两组品牌色组合的 4.5 阈值、刻度 token 字符串检查；并非完整界面对比度验收                              |
+| 预览/校准          | `PreviewPanel.test.tsx`、`ZoomControl.test.tsx`、`e2e/calibration-flow.spec.ts`     | 缩放、分页、1:1 状态、环境失效后的回退                                                                |
 
 涉及公共组件提取时，先为原调用点补相同的行为断言，再逐个迁移；禁止通过放宽现有尺寸或 aria 断言来“迁移通过”。
 
@@ -393,10 +393,10 @@ UI 代码变更按影响范围完成以下检查；纯文档变更只需格式�
 
 - **尺寸/命中**：图片数量边框已改为不占布局尺寸的内阴影，Chromium 360px 流程确认外框及两个步进按钮均为 40px 高，排序按钮间距也已避免扩展区重叠；紧凑控件在真实触屏设备上的误触率仍需 UAT。
 - **边界状态**：图片数量步进按钮已在 1/999 使用原生 disabled，同时保留业务归一化作为防御；仍需真实浏览器复核禁用反馈。
-- **焦点**：数量输入已恢复明确的 focus-visible 样式；弹层的隐藏控件过滤、背景交互、焦点返回和 reduced-motion 行为仍需补验证。
-- **公共组件**：`StepperButton` 与 `IconButton` 已完成首批迁移；下一批优先评估 `useModalFocus`、`SegmentedControl` 深化、`FieldShell` 和 `ActionButton`，行内提示保持窄范围。
+- **焦点**：数量输入已恢复明确的 focus-visible 样式；`useModalFocus` 已被 `EditSheet` 与 `CalibrationDialog` 共享，并覆盖首焦点、Escape、Tab/Shift+Tab 环回、关闭恢复及隐藏/禁用项过滤；真实辅助技术、背景 inert 语义和 reduced-motion 行为仍需补验证。
+- **公共组件**：`StepperButton`、`IconButton` 与 `useModalFocus` 已完成首批落地；下一批优先评估 `SegmentedControl` 深化、`FieldShell`、`ActionButton` 和 `InlineAlert`，行内提示保持窄范围。
 - 是否为间距、圆角和阴影建立更少量的命名 token，而不仅依赖 Tailwind utility；在出现第三个重复值前不急于扩展 token 表。
-- **浏览器覆盖**：360px Chromium 移动流程已通过；现有 Pixel 7、iPhone 14 配置、375px 项目仍待本轮复核，且均运行 Chromium（iPhone 配置不等于 Safari 实测）。视觉快照、低高度窗口和完整键盘覆盖仍待补。
+- **浏览器覆盖**：360px Chromium 移动流程、1440×420 低高度滚动、1023/1024px 断点切换均已通过；现有 Pixel 7、iPhone 14 配置、375px/320px 项目仍待复核，且均运行 Chromium（iPhone 配置不等于 Safari 实测）。1280×720、亮暗主题、视觉快照、真实触屏、Safari 和完整辅助技术覆盖仍待补。
 - 是否把 `SettingsMenu` 从 dialog 兼容例外迁移为真正的 popover；需要先决定背景鼠标交互和焦点策略，再改语义。
 - 历史审查报告和原型目前位于被忽略的归档目录，不作为本规范的运行时依赖。
 
@@ -421,8 +421,9 @@ UI 代码变更按影响范围完成以下检查；纯文档变更只需格式�
 - 桌面/移动应用框架：[`src/App.tsx`](../src/App.tsx)、[`src/components/ControlPanel.tsx`](../src/components/ControlPanel.tsx)、[`src/components/EditSheet.tsx`](../src/components/EditSheet.tsx)
 - 表单与分段控件：[`src/components/NumberInput.tsx`](../src/components/NumberInput.tsx)、[`src/components/SegmentedControl.tsx`](../src/components/SegmentedControl.tsx)
 - 公共按钮模块：[`src/components/ui/StepperButton.tsx`](../src/components/ui/StepperButton.tsx)、[`src/components/ui/IconButton.tsx`](../src/components/ui/IconButton.tsx)
+- 模态焦点模块：[`src/hooks/useModalFocus.ts`](../src/hooks/useModalFocus.ts)、[`src/hooks/useModalFocus.test.tsx`](../src/hooks/useModalFocus.test.tsx)
 - 图片队列：[`src/components/ImageFilesSection.tsx`](../src/components/ImageFilesSection.tsx)、[`src/components/ThumbnailItem.tsx`](../src/components/ThumbnailItem.tsx)
 - 主题对比度测试：[`src/utils/themeContrast.test.ts`](../src/utils/themeContrast.test.ts)
 - 关键交互回归：[`e2e/mobile-flow.spec.ts`](../e2e/mobile-flow.spec.ts)、[`e2e/calibration-flow.spec.ts`](../e2e/calibration-flow.spec.ts)、[`e2e/critical-flow.spec.ts`](../e2e/critical-flow.spec.ts)
 
-本文集中记录设计要求、实现快照和待落实项；`StepperButton` 与 `IconButton` 已完成首批实现，其余候选仍按优先级评估。修订时应保持三者清晰，避免以文档更新代替实现验收。
+本文集中记录设计要求、实现快照和待落实项；`StepperButton`、`IconButton` 与 `useModalFocus` 已完成首批实现，其余候选仍按优先级评估。修订时应保持三者清晰，避免以文档更新代替实现验收。
