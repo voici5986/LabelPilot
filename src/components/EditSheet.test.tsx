@@ -1,6 +1,12 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  createEvent,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useStore } from "../store/useStore";
@@ -63,5 +69,32 @@ describe("EditSheet image output errors", () => {
     expect(screen.getByRole("alert")).toBe(alert);
     expect(alert.closest(".hidden")).toBeNull();
     expect(alert.textContent).toContain("5000");
+  });
+
+  it("consumes Escape in the quantity field without closing the sheet", () => {
+    const onClose = vi.fn();
+    render(
+      <I18nProvider>
+        <EditSheet
+          open
+          full={false}
+          onClose={onClose}
+          onToggleFull={vi.fn()}
+          onFilesSelect={vi.fn()}
+        />
+      </I18nProvider>,
+    );
+
+    const input = screen.getByRole("textbox", {
+      name: "label-0.png 的数量",
+    });
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: "12" } });
+    const event = createEvent.keyDown(input, { key: "Escape", bubbles: true });
+    fireEvent(input, event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog", { name: "编辑" })).not.toBeNull();
   });
 });

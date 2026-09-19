@@ -11,6 +11,8 @@ import { ImageFilesSection } from "./ImageFilesSection";
 import { LayoutFields } from "./LayoutFields";
 import { SegmentedControl } from "./SegmentedControl";
 import { TextModeFields } from "./TextModeFields";
+import { ActionButton } from "./ui/ActionButton";
+import { InlineAlert } from "./ui/InlineAlert";
 
 interface EditSheetProps {
   open: boolean;
@@ -86,7 +88,7 @@ export function EditSheet({
             ref={panelRef}
             role="dialog"
             aria-modal="true"
-            aria-label={t("edit")}
+            aria-labelledby="edit-sheet-title"
             onKeyDown={handlePanelKeyDown}
             className={`absolute inset-x-0 bottom-0 flex flex-col rounded-t-2xl border-t border-border-subtle bg-elevated shadow-2xl ${full ? "h-full" : "h-[62dvh]"}`}
             initial={{ y: "100%" }}
@@ -94,6 +96,9 @@ export function EditSheet({
             exit={{ y: "100%" }}
             transition={{ duration: 0.18, ease: "easeOut" }}
           >
+            <h2 id="edit-sheet-title" className="sr-only">
+              {t("edit")}
+            </h2>
             {/* 面板头部：拖拽把手 + 档位切换（全屏时避让顶部安全区） */}
             <div
               role="button"
@@ -117,14 +122,16 @@ export function EditSheet({
 
             {/* 查看预览：位于面板顶部，62% 档位下也始终可达 */}
             <div className="shrink-0 px-4 pb-2">
-              <button
+              <ActionButton
                 type="button"
+                variant="primary"
                 onClick={onClose}
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-primary py-2.5 text-sm font-bold text-on-brand transition-[background-color] hover:brightness-110 active:brightness-95"
+                weight="bold"
+                className="w-full rounded-lg py-2.5 text-sm"
               >
                 <ChevronUp className="h-4 w-4" aria-hidden="true" />
                 {t("view_preview")}
-              </button>
+              </ActionButton>
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-[max(16px,env(safe-area-inset-bottom))]">
@@ -178,12 +185,9 @@ export function EditSheet({
                         />
                       </div>
                       {imageOutputError && (
-                        <p
-                          role="alert"
-                          className="mt-3 text-sm text-red-700 dark:text-red-300"
-                        >
+                        <InlineAlert className="mt-3 text-sm">
                           {imageOutputError}
-                        </p>
+                        </InlineAlert>
                       )}
                     </div>
                   ) : (

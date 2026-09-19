@@ -6,6 +6,7 @@ import { useRegisterSW } from "virtual:pwa-register/react";
 import { useStore } from "../store/useStore";
 import { useI18n } from "../utils/i18nContext";
 import type { ImageItem } from "../utils/layoutMath";
+import { ActionButton } from "./ui/ActionButton";
 import { IconButton } from "./ui/IconButton";
 
 export function ReloadPrompt() {
@@ -146,11 +147,13 @@ export function ReloadPrompt() {
             </IconButton>
           </div>
 
-          <button
+          <ActionButton
             type="button"
+            variant="primary"
             onClick={() => void applyUpdate()}
             disabled={isUpdating}
-            className="flex w-full items-center justify-center gap-2 rounded-md bg-brand-primary py-1.5 text-sm font-semibold text-on-brand transition-colors hover:bg-brand-primary/90 disabled:cursor-wait disabled:opacity-70"
+            disabledOpacity="visible"
+            className="w-full py-1.5 text-sm disabled:cursor-wait"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             {isUpdating
@@ -162,7 +165,7 @@ export function ReloadPrompt() {
                       ? "pwa_update_retry"
                       : "pwa_update_btn",
                 )}
-          </button>
+          </ActionButton>
         </motion.div>
       )}
     </AnimatePresence>

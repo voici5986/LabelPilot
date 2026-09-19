@@ -76,7 +76,8 @@ export function Header({
           <button
             type="button"
             onClick={() => void handleInstallClick()}
-            className="group flex items-center gap-1.5 rounded-md border border-brand-primary/20 bg-brand-primary/10 px-3 py-1.5 text-brand-primary transition-colors hover:bg-brand-primary/15"
+            aria-label={t("install_pwa")}
+            className="group flex items-center gap-1.5 rounded-md border border-brand-primary/20 bg-brand-primary/10 px-3 py-1.5 text-brand-primary transition-colors enabled:hover:bg-brand-primary/15 enabled:active:bg-brand-primary/20"
             title={t("install_pwa")}
           >
             <Download className="h-4 w-4" />
@@ -95,7 +96,7 @@ export function Header({
           type="button"
           onClick={() => setLanguage(language === "zh" ? "en" : "zh")}
           aria-label={t("language_toggle")}
-          className="flex items-center justify-center gap-1 rounded-md p-2 text-text-muted transition-colors hover:bg-text-main/5 hover:text-brand-primary"
+          className="hit-target flex items-center justify-center gap-1 rounded-md p-2 text-text-muted transition-colors enabled:hover:bg-text-main/5 enabled:hover:text-brand-primary enabled:active:bg-text-main/10 [--hit-target-inset:-4px]"
           title={t("language_toggle")}
         >
           <Globe className="h-5 w-5" />

@@ -18,6 +18,8 @@ import {
   isCalibrationStale,
 } from "../utils/screenCalibration";
 import { NumberInput } from "./NumberInput";
+import { FieldShell } from "./ui/FieldShell";
+import { IconButton } from "./ui/IconButton";
 
 const PAPER_SIZE_KEYS: Record<PaperSize, keyof Translations> = {
   A4: "paper_type_a4",
@@ -30,6 +32,39 @@ const PAPER_SIZE_KEYS: Record<PaperSize, keyof Translations> = {
 interface SettingsMenuProps {
   onOpenCalibration: () => void;
   disabled?: boolean;
+}
+
+const PANEL_FOCUSABLE_SELECTOR =
+  "button, input, select, textarea, a[href], [tabindex]";
+
+function getPanelFocusableElements(container: HTMLElement): HTMLElement[] {
+  return Array.from(
+    container.querySelectorAll<HTMLElement>(PANEL_FOCUSABLE_SELECTOR),
+  ).filter((element) => {
+    if (
+      element.hasAttribute("disabled") ||
+      element.getAttribute("aria-hidden") === "true" ||
+      element.hasAttribute("hidden") ||
+      element.tabIndex < 0
+    ) {
+      return false;
+    }
+    for (
+      let current: HTMLElement | null = element;
+      current;
+      current = current.parentElement
+    ) {
+      if (
+        current.hasAttribute("hidden") ||
+        current.getAttribute("aria-hidden") === "true" ||
+        (current.tagName === "FIELDSET" &&
+          (current as HTMLFieldSetElement).disabled)
+      ) {
+        return false;
+      }
+    }
+    return true;
+  });
 }
 
 export function SettingsMenu({
@@ -111,12 +146,28 @@ export function SettingsMenu({
 
   useEffect(() => {
     if (!isOpen) return;
+
+    const handleFocusOutside = (event: FocusEvent) => {
+      const target = event.target as Node;
+      if (
+        panelRef.current?.contains(target) ||
+        triggerRef.current?.contains(target)
+      ) {
+        return;
+      }
+      setIsOpen(false);
+      setIsPresetsOpen(false);
+    };
+
+    document.addEventListener("focusin", handleFocusOutside);
+    return () => document.removeEventListener("focusin", handleFocusOutside);
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
     const frame = requestAnimationFrame(() => {
-      panelRef.current
-        ?.querySelector<HTMLElement>(
-          'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
-        )
-        ?.focus();
+      const panel = panelRef.current;
+      if (panel) getPanelFocusableElements(panel)[0]?.focus();
     });
     return () => cancelAnimationFrame(frame);
   }, [isOpen]);
@@ -141,6 +192,7 @@ export function SettingsMenu({
 
   const handlePanelKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === "Escape") {
+      if (event.defaultPrevented) return;
       event.preventDefault();
       if (isPresetsOpen) {
         setIsPresetsOpen(false);
@@ -150,23 +202,6 @@ export function SettingsMenu({
         requestAnimationFrame(() => triggerRef.current?.focus());
       }
       return;
-    }
-
-    if (event.key !== "Tab" || !panelRef.current) return;
-    const focusable = Array.from(
-      panelRef.current.querySelectorAll<HTMLElement>(
-        'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
-      ),
-    );
-    if (focusable.length === 0) return;
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
     }
   };
 
@@ -197,33 +232,35 @@ export function SettingsMenu({
 
   return (
     <div className="relative" onKeyDown={handlePanelKeyDown}>
-      <button
+      <IconButton
         ref={triggerRef}
-        type="button"
         disabled={disabled}
         onClick={() => setIsOpen((open) => !open)}
         aria-label={t("settings")}
+        aria-haspopup="dialog"
         aria-expanded={isOpen}
         aria-controls="global-settings-panel"
-        className={`flex items-center justify-center gap-1 rounded-md p-2 text-text-muted transition-colors hover:bg-text-main/5 hover:text-brand-primary ${isOpen ? "bg-text-main/5 text-brand-primary" : ""}`}
+        size="lg"
+        tone="brand"
+        expandedHitArea
+        className={isOpen ? "bg-text-main/5 text-brand-primary" : ""}
         title={t("settings")}
       >
         <Settings className="h-5 w-5" />
-      </button>
+      </IconButton>
 
       <AnimatePresence>
         {isOpen && (
           <motion.div
             id="global-settings-panel"
             role="dialog"
-            aria-modal="true"
             aria-label={t("settings")}
             ref={panelRef}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 4 }}
             transition={{ duration: 0.18, ease: "easeOut" }}
-            className="fixed left-2 right-2 top-12 z-50 rounded-lg border border-border-subtle bg-elevated p-4 shadow-lg sm:absolute sm:left-auto sm:right-0 sm:w-80"
+            className="fixed left-2 right-2 top-12 z-50 max-h-[calc(100dvh-4rem)] overflow-y-auto rounded-lg border border-border-subtle bg-elevated p-4 shadow-lg sm:absolute sm:left-auto sm:right-0 sm:w-80"
           >
             <fieldset
               disabled={disabled}
@@ -241,7 +278,7 @@ export function SettingsMenu({
                         className={`flex flex-1 items-center justify-center gap-1 rounded-l-md border px-2 py-1.5 text-sm font-medium transition-colors ${
                           ["A4", "A3", "A5", "Letter"].includes(paperSize)
                             ? "border-brand-primary bg-brand-primary/10 text-brand-primary"
-                            : "border-border-subtle text-text-muted hover:border-brand-primary/50"
+                            : "border-border-subtle text-text-muted enabled:hover:border-brand-primary/50"
                         }`}
                       >
                         {t(PAPER_SIZE_KEYS[selectedPreset])}
@@ -256,7 +293,7 @@ export function SettingsMenu({
                         className={`flex items-center justify-center rounded-r-md border-y border-r px-1.5 py-1.5 transition-colors ${
                           ["A4", "A3", "A5", "Letter"].includes(paperSize)
                             ? "border-brand-primary bg-brand-primary/10 text-brand-primary"
-                            : "border-border-subtle text-text-muted hover:border-brand-primary/50"
+                            : "border-border-subtle text-text-muted enabled:hover:border-brand-primary/50"
                         }`}
                       >
                         <ChevronDown
@@ -286,7 +323,7 @@ export function SettingsMenu({
                                 aria-checked={paperSize === size}
                                 key={size}
                                 onClick={() => handlePaperSizeChange(size)}
-                                className={`w-full px-3 py-1.5 text-left text-sm transition-colors hover:bg-brand-primary/10 ${paperSize === size ? "bg-brand-primary/5 font-semibold text-brand-primary" : "text-text-main"}`}
+                                className={`w-full px-3 py-1.5 text-left text-sm transition-colors enabled:hover:bg-brand-primary/10 ${paperSize === size ? "bg-brand-primary/5 font-semibold text-brand-primary" : "text-text-main"}`}
                               >
                                 {t(PAPER_SIZE_KEYS[size])}
                               </button>
@@ -303,7 +340,7 @@ export function SettingsMenu({
                     className={`flex w-1/2 items-center justify-center rounded-md border px-3 py-1.5 text-sm font-medium transition-colors ${
                       paperSize === "Custom"
                         ? "border-brand-primary bg-brand-primary/10 text-brand-primary"
-                        : "border-border-subtle text-text-muted hover:border-brand-primary/50"
+                        : "border-border-subtle text-text-muted enabled:hover:border-brand-primary/50"
                     }`}
                   >
                     {t("paper_type_custom")}
@@ -335,32 +372,33 @@ export function SettingsMenu({
               </div>
 
               <div className="space-y-2 border-t border-border-subtle/50 pt-3">
-                <label
+                <FieldShell
+                  label={t("qr_content_prefix")}
                   htmlFor={qrPrefixId}
-                  className="ml-0.5 block text-sm font-medium tracking-wider text-text-muted"
-                >
-                  {t("qr_content_prefix")}
-                </label>
-                <input
-                  id={qrPrefixId}
-                  name="qr-content-prefix"
-                  type="text"
-                  value={textConfig.qrContentPrefix}
-                  maxLength={TEXT_CONFIG_LIMITS.qrContentPrefix.maxLength}
-                  aria-describedby={qrPrefixHintId}
-                  onChange={(event) =>
-                    onTextConfigChange({ qrContentPrefix: event.target.value })
+                  hintId={qrPrefixHintId}
+                  hint={
+                    <span className="block text-right">
+                      {textConfig.qrContentPrefix.length}/
+                      {TEXT_CONFIG_LIMITS.qrContentPrefix.maxLength}
+                    </span>
                   }
-                  className="input-base focus:input-base-focus w-full px-3 py-1.5 font-mono text-sm font-semibold"
-                  placeholder={t("qr_content_prefix_hint")}
-                />
-                <p
-                  id={qrPrefixHintId}
-                  className="text-right text-xs text-text-muted"
                 >
-                  {textConfig.qrContentPrefix.length}/
-                  {TEXT_CONFIG_LIMITS.qrContentPrefix.maxLength}
-                </p>
+                  <input
+                    id={qrPrefixId}
+                    name="qr-content-prefix"
+                    type="text"
+                    value={textConfig.qrContentPrefix}
+                    maxLength={TEXT_CONFIG_LIMITS.qrContentPrefix.maxLength}
+                    aria-describedby={qrPrefixHintId}
+                    onChange={(event) =>
+                      onTextConfigChange({
+                        qrContentPrefix: event.target.value,
+                      })
+                    }
+                    className="input-base focus:input-base-focus w-full px-3 py-1.5 font-mono text-sm font-semibold"
+                    placeholder={t("qr_content_prefix_hint")}
+                  />
+                </FieldShell>
               </div>
 
               <div className="space-y-2 border-t border-border-subtle/50 pt-3">
@@ -368,14 +406,14 @@ export function SettingsMenu({
                 <button
                   type="button"
                   onClick={handleCalibrationClick}
-                  className="hidden w-full items-center justify-between gap-2 rounded-md border border-border-subtle px-3 py-2 text-left text-sm font-medium text-text-main transition-colors hover:bg-text-main/5 lg:flex"
+                  className="hidden w-full items-center justify-between gap-2 rounded-md border border-border-subtle px-3 py-2 text-left text-sm font-medium text-text-main transition-colors enabled:hover:bg-text-main/5 enabled:active:bg-text-main/10 lg:flex"
                 >
                   <span className="flex items-center gap-2">
                     <Ruler className="h-4 w-4 text-brand-primary" />
                     {t("calib_item")}
                   </span>
                   <span
-                    className={`shrink-0 text-xs ${calibrationStale ? "text-amber-600 dark:text-amber-400" : "text-text-muted"}`}
+                    className={`shrink-0 text-xs ${calibrationStale ? "text-warning" : "text-text-muted"}`}
                   >
                     {!screenCalibration
                       ? t("calib_state_none")

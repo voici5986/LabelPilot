@@ -2,6 +2,7 @@ import { Component, type ErrorInfo, type ReactNode } from "react";
 
 import { resetPersistedSettings } from "../store/useStore";
 import { I18nContext } from "../utils/i18nContext";
+import { ActionButton } from "./ui/ActionButton";
 
 interface Props {
   children: ReactNode;
@@ -35,7 +36,7 @@ export class ErrorBoundary extends Component<Props, State> {
         this.props.fallback || (
           <div className="min-h-screen flex items-center justify-center p-6 bg-background">
             <div className="elevated-panel p-8 max-w-md w-full text-center space-y-4">
-              <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-danger/10 text-danger">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className="h-8 w-8"
@@ -59,23 +60,25 @@ export class ErrorBoundary extends Component<Props, State> {
                   ? t("error_desc")
                   : "抱歉，渲染过程中发生了一个未预料的错误。您可以尝试刷新页面恢复。"}
               </p>
-              <button
+              <ActionButton
                 type="button"
+                variant="primary"
                 onClick={() => window.location.reload()}
-                className="w-full rounded-md bg-brand-primary py-2.5 font-semibold text-on-brand transition-[filter] hover:brightness-110"
+                className="w-full py-2.5"
               >
                 {t ? t("error_reload") : "刷新页面"}
-              </button>
-              <button
+              </ActionButton>
+              <ActionButton
                 type="button"
+                variant="secondary"
                 onClick={() => {
                   resetPersistedSettings();
                   window.location.reload();
                 }}
-                className="w-full rounded-md border border-border-subtle py-2.5 font-semibold text-text-main transition-colors hover:bg-text-main/5"
+                className="w-full py-2.5"
               >
                 {t ? t("error_reset") : "重置设置并刷新"}
-              </button>
+              </ActionButton>
             </div>
           </div>
         )

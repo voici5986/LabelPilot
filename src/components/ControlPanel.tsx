@@ -13,6 +13,7 @@ import { LayoutFields } from "./LayoutFields";
 import { SegmentedControl } from "./SegmentedControl";
 import { SmartButton } from "./SmartButton";
 import { TextModeFields } from "./TextModeFields";
+import { InlineAlert } from "./ui/InlineAlert";
 
 interface ControlPanelProps {
   onFilesSelect: (files: File[]) => void | Promise<void>;
@@ -74,7 +75,7 @@ export function ControlPanel({
     const height = Math.round(info.pageHeightMm * 10) / 10;
     const label =
       paperSizeMode === "Custom" ? t("paper_type_custom") : paperSizeMode;
-    return `${label}, ${width}×${height}mm`;
+    return t("paper_summary", { label, width, height });
   }, [config, paperSizeMode, t]);
 
   return (
@@ -120,12 +121,9 @@ export function ControlPanel({
                 onItemCountChange={onItemCountChange}
               />
               {imageOutputError && (
-                <p
-                  role="alert"
-                  className="text-sm text-red-700 dark:text-red-300"
-                >
+                <InlineAlert className="text-sm">
                   {imageOutputError}
-                </p>
+                </InlineAlert>
               )}
             </div>
           ) : (

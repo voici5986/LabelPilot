@@ -14,6 +14,9 @@ import {
   verificationCssMm,
 } from "../utils/screenCalibration";
 import type { ScreenCalibration } from "../utils/screenCalibration";
+import { ActionButton } from "./ui/ActionButton";
+import { FieldShell } from "./ui/FieldShell";
+import { InlineAlert } from "./ui/InlineAlert";
 
 export type CalibrationDialogSource = "zoom" | "settings";
 
@@ -133,7 +136,7 @@ export function CalibrationDialog({
             ref={panelRef}
             role="dialog"
             aria-modal="true"
-            aria-label={t("calib_title")}
+            aria-labelledby="calibration-dialog-title"
             onKeyDown={handlePanelKeyDown}
             initial={{ opacity: 0, scale: 0.97, y: 8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -146,7 +149,10 @@ export function CalibrationDialog({
                 className="h-4 w-4 text-brand-primary"
                 aria-hidden="true"
               />
-              <h2 className="text-base font-bold text-text-main">
+              <h2
+                id="calibration-dialog-title"
+                className="text-base font-bold text-text-main"
+              >
                 {t("calib_title")}
               </h2>
             </div>
@@ -155,7 +161,7 @@ export function CalibrationDialog({
               {environmentMismatch && (
                 <p
                   role="alert"
-                  className="mb-3 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-300"
+                  className="mb-3 rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-sm"
                 >
                   {t("calib_stale_banner")}
                 </p>
@@ -178,17 +184,17 @@ export function CalibrationDialog({
                       className={`flex-1 rounded-md border px-3 py-2 text-sm font-semibold transition-colors ${
                         referenceMm === mm
                           ? "border-brand-primary bg-brand-primary/10 text-brand-primary"
-                          : "border-border-subtle text-text-muted hover:border-brand-primary/50"
+                          : "border-border-subtle text-text-muted enabled:hover:border-brand-primary/50 enabled:active:bg-brand-primary/10"
                       }`}
                     >
-                      {mm}mm
+                      {t("calib_reference_option", { length: mm })}
                     </button>
                   ))}
                 </div>
               </div>
 
               <div className="mt-5 space-y-2">
-                <h3 className="group-title">{t("calib_reference_label")}</h3>
+                <h3 className="group-title">{t("calib_ruler_label")}</h3>
                 <div className="overflow-x-auto">
                   <div
                     ref={rulerRef}
@@ -198,35 +204,38 @@ export function CalibrationDialog({
               </div>
 
               <div className="mt-5">
-                <label
+                <FieldShell
+                  label={t("calib_measure_label", { length: referenceMm })}
                   htmlFor="calib-measured"
-                  className="mb-1 block text-sm font-medium tracking-wider text-text-muted"
+                  hintId="calib-input-hint"
+                  hint={t("calib_input_hint", { length: referenceMm })}
                 >
-                  {t("calib_measure_label", { length: referenceMm })}
-                </label>
-                <input
-                  id="calib-measured"
-                  ref={inputRef}
-                  type="number"
-                  inputMode="decimal"
-                  step="0.1"
-                  min="1"
-                  value={measuredMm}
-                  onChange={(event) => setMeasuredMm(event.target.value)}
-                  aria-invalid={hardInvalid}
-                  aria-describedby={
-                    hardInvalid
-                      ? "calib-issue"
-                      : derived.issue !== "ok"
-                        ? "calib-soft"
-                        : undefined
-                  }
-                  className="input-base focus:input-base-focus w-full px-3 py-2 font-mono text-sm font-semibold text-text-main"
-                  placeholder={String(referenceMm)}
-                />
-                <p className="mt-1 text-xs text-text-muted">
-                  {t("calib_input_hint", { length: referenceMm })}
-                </p>
+                  <input
+                    id="calib-measured"
+                    ref={inputRef}
+                    type="number"
+                    inputMode="decimal"
+                    step="0.1"
+                    min="1"
+                    value={measuredMm}
+                    onChange={(event) => setMeasuredMm(event.target.value)}
+                    aria-invalid={hardInvalid}
+                    aria-describedby={
+                      [
+                        "calib-input-hint",
+                        hardInvalid
+                          ? "calib-issue"
+                          : derived.issue !== "ok"
+                            ? "calib-soft"
+                            : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ") || undefined
+                    }
+                    className="input-base focus:input-base-focus w-full px-3 py-2 font-mono text-sm font-semibold text-text-main"
+                    placeholder={String(referenceMm)}
+                  />
+                </FieldShell>
               </div>
 
               {measuredNum !== null && k !== null ? (
@@ -253,14 +262,15 @@ export function CalibrationDialog({
                   </div>
 
                   {issue !== "ok" && (
-                    <p
+                    <InlineAlert
                       id={hardInvalid ? "calib-issue" : "calib-soft"}
-                      className={`text-sm ${hardInvalid ? "text-red-700 dark:text-red-300" : "text-amber-700 dark:text-amber-300"}`}
+                      tone={hardInvalid ? "danger" : "warning"}
+                      className="text-sm"
                     >
                       {hardInvalid
                         ? t("calib_hard_error", { min: "0.2", max: "4.0" })
                         : t("calib_soft_warn", { k: k.toFixed(3) })}
-                    </p>
+                    </InlineAlert>
                   )}
                 </div>
               ) : null}
@@ -270,21 +280,18 @@ export function CalibrationDialog({
               <p className="mr-auto hidden text-xs text-text-muted sm:block">
                 {t("calib_notice")}
               </p>
-              <button
-                type="button"
-                onClick={onClose}
-                className="rounded-md px-4 py-2 text-sm font-semibold text-text-muted transition-colors hover:bg-text-main/5 hover:text-text-main"
-              >
+              <ActionButton type="button" variant="quiet" onClick={onClose}>
                 {t("calib_cancel")}
-              </button>
-              <button
+              </ActionButton>
+              <ActionButton
                 type="button"
+                variant="primary"
                 onClick={handleSave}
                 disabled={measuredNum === null || k === null || hardInvalid}
-                className="rounded-md bg-brand-primary px-4 py-2 text-sm font-bold text-on-brand transition-[background-color] hover:brightness-110 active:brightness-95 disabled:cursor-not-allowed disabled:opacity-40"
+                weight="bold"
               >
                 {source === "zoom" ? t("calib_save_actual") : t("calib_save")}
-              </button>
+              </ActionButton>
             </div>
           </motion.div>
         </div>

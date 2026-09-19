@@ -4,6 +4,7 @@ import type { GenerationStatus } from "../utils/generation";
 import { useI18n } from "../utils/i18nContext";
 import type { PdfProgressPhase } from "../utils/pdfProgress";
 import { SmartButton } from "./SmartButton";
+import { ActionButton } from "./ui/ActionButton";
 
 interface MobileActionBarProps {
   onOpenEdit: () => void;
@@ -31,17 +32,18 @@ export function MobileActionBar({
 
   return (
     <div className="flex shrink-0 items-center gap-2 border-t border-border-subtle bg-elevated px-3 pb-[max(12px,env(safe-area-inset-bottom))] pt-2 lg:hidden">
-      <button
+      <ActionButton
         type="button"
+        variant="secondary"
         onClick={onOpenEdit}
         disabled={editDisabled}
         aria-haspopup="dialog"
-        className="flex h-11 shrink-0 items-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-3 text-sm font-semibold text-text-main transition-colors hover:border-brand-primary/50 active:bg-text-main/10"
+        className="h-11 shrink-0 rounded-lg bg-surface px-3 text-sm"
       >
         <SlidersHorizontal className="h-4 w-4 text-brand-primary" />
         {t("edit")}
         <ChevronUp className="h-3.5 w-3.5 text-text-muted" aria-hidden="true" />
-      </button>
+      </ActionButton>
 
       <div className="min-w-0 flex-1">
         <SmartButton

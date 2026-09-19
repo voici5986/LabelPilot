@@ -59,6 +59,19 @@ describe("SettingsMenu", () => {
     expect(useStore.getState().paperSizeMode).toBe("A4");
   });
 
+  it("keeps the panel scrollable in short viewports", () => {
+    render(
+      <I18nProvider>
+        <SettingsMenu onOpenCalibration={vi.fn()} />
+      </I18nProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "全局设置" }));
+    const panel = screen.getByRole("dialog", { name: "全局设置" });
+    expect(panel.className).toContain("max-h-[calc(100dvh-4rem)]");
+    expect(panel.className).toContain("overflow-y-auto");
+  });
+
   it("opens the calibration flow from the display group and closes the menu", async () => {
     const onOpenCalibration = vi.fn();
     render(
@@ -76,7 +89,7 @@ describe("SettingsMenu", () => {
     );
   });
 
-  it("marks the menu as modal and restores trigger focus after an outside click", async () => {
+  it("uses non-modal popover semantics and restores trigger focus after a body click", async () => {
     render(
       <I18nProvider>
         <SettingsMenu onOpenCalibration={vi.fn()} />
@@ -88,8 +101,8 @@ describe("SettingsMenu", () => {
     expect(
       screen
         .getByRole("dialog", { name: "全局设置" })
-        .getAttribute("aria-modal"),
-    ).toBe("true");
+        .hasAttribute("aria-modal"),
+    ).toBe(false);
 
     fireEvent.mouseDown(document.body);
     await waitFor(() =>

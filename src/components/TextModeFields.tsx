@@ -6,6 +6,8 @@ import type { TextConfig } from "../utils/layoutMath";
 import { TEXT_CONFIG_LIMITS } from "../utils/layoutMath";
 import type { TextOutputMetrics } from "../utils/textValidation";
 import { NumberInput } from "./NumberInput";
+import { FieldShell } from "./ui/FieldShell";
+import { InlineAlert } from "./ui/InlineAlert";
 
 interface TextModeFieldsProps {
   textConfig: TextConfig;
@@ -32,13 +34,23 @@ export function TextModeFields({
       </h2>
 
       <div className="space-y-4">
-        <div className="flex-1 space-y-1.5">
-          <label
-            htmlFor={textPrefixId}
-            className="ml-0.5 text-sm font-medium text-text-muted"
-          >
-            {t("text_prefix")}
-          </label>
+        <FieldShell
+          label={t("text_prefix")}
+          htmlFor={textPrefixId}
+          hintId={textPrefixHintId}
+          hint={
+            <span className="flex justify-between gap-2">
+              <span>
+                {t("estimated_font_size", {
+                  size: metrics.fontSizePt.toFixed(1),
+                })}
+              </span>
+              <span>
+                {textConfig.prefix.length}/{TEXT_CONFIG_LIMITS.prefix.maxLength}
+              </span>
+            </span>
+          }
+        >
           <input
             id={textPrefixId}
             name="text-prefix"
@@ -50,20 +62,7 @@ export function TextModeFields({
             className="input-base focus:input-base-focus w-full px-3 py-1.5 font-mono text-sm font-semibold"
             placeholder="SN-"
           />
-          <div
-            id={textPrefixHintId}
-            className="flex justify-between gap-2 text-xs text-text-muted"
-          >
-            <span>
-              {t("estimated_font_size", {
-                size: metrics.fontSizePt.toFixed(1),
-              })}
-            </span>
-            <span>
-              {textConfig.prefix.length}/{TEXT_CONFIG_LIMITS.prefix.maxLength}
-            </span>
-          </div>
-        </div>
+        </FieldShell>
 
         <div className="grid grid-cols-2 gap-4">
           <NumberInput
@@ -105,12 +104,16 @@ export function TextModeFields({
               aria-checked={textConfig.showQrCode}
               aria-label={t("qr_enable")}
               onClick={() => onChange({ showQrCode: !textConfig.showQrCode })}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary/20 ${textConfig.showQrCode ? "bg-brand-primary" : "bg-text-main/10"}`}
+              className="relative flex h-11 w-11 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary"
               title={t("qr_enable")}
             >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${textConfig.showQrCode ? "translate-x-6" : "translate-x-1"}`}
-              />
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${textConfig.showQrCode ? "bg-brand-primary" : "bg-text-main/10"}`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${textConfig.showQrCode ? "translate-x-6" : "translate-x-1"}`}
+                />
+              </span>
             </button>
           </div>
         </div>
@@ -126,28 +129,27 @@ export function TextModeFields({
                 {Math.round(textConfig.qrSizeRatio * 100)}%
               </span>
             </div>
-            <input
-              id={qrSizeId}
-              name="qr-size"
-              aria-label={t("qr_size")}
-              type="range"
-              min="0.1"
-              max="0.6"
-              step="0.05"
-              value={textConfig.qrSizeRatio}
-              onChange={(event) =>
-                onChange({ qrSizeRatio: parseFloat(event.target.value) })
-              }
-              className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-text-main/10 accent-brand-primary"
-            />
+            <div className="relative flex h-10 items-center">
+              <div className="pointer-events-none absolute inset-x-0 h-1.5 rounded-lg bg-text-main/10" />
+              <input
+                id={qrSizeId}
+                name="qr-size"
+                aria-label={t("qr_size")}
+                type="range"
+                min="0.1"
+                max="0.6"
+                step="0.05"
+                value={textConfig.qrSizeRatio}
+                onChange={(event) =>
+                  onChange({ qrSizeRatio: parseFloat(event.target.value) })
+                }
+                className="range-control relative z-10 h-10 w-full rounded-lg"
+              />
+            </div>
           </div>
         )}
 
-        {error && (
-          <p role="alert" className="text-sm text-red-700 dark:text-red-300">
-            {error}
-          </p>
-        )}
+        {error && <InlineAlert className="text-sm">{error}</InlineAlert>}
       </div>
     </div>
   );
