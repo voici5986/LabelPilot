@@ -1,5 +1,6 @@
-import { ChevronUp, ChevronDown, Minus, Plus } from "lucide-react";
 import React, { useId, useState } from "react";
+
+import { StepperButton } from "./ui/StepperButton";
 
 interface NumberInputProps {
   label: string;
@@ -90,18 +91,6 @@ export function NumberInput({
     onChange(normalizeValue(value - step));
   };
 
-  const stepperClass = (enabled: boolean) =>
-    `group/btn flex w-10 shrink-0 items-center justify-center transition-colors active:bg-brand-primary/10 lg:w-auto lg:flex-1 ${
-      enabled
-        ? "text-text-muted hover:bg-brand-primary/10 hover:text-brand-primary"
-        : "cursor-not-allowed text-text-muted/40"
-    }`;
-
-  const chevronClass = (enabled: boolean) =>
-    `w-3.5 h-3.5 transition-transform ${
-      enabled ? "group-hover/btn:scale-110" : ""
-    }`;
-
   return (
     <div className="space-y-1.5 flex-1">
       <label
@@ -126,33 +115,23 @@ export function NumberInput({
           className="input-base focus:input-base-focus h-10 w-full py-1.5 pl-3 pr-20 font-mono text-sm font-semibold text-text-main lg:h-auto lg:pr-8"
         />
         <div className="absolute right-0 top-0 flex h-full w-20 flex-row overflow-hidden rounded-r-md border-l border-border-subtle/30 lg:w-8 lg:flex-col">
-          <button
-            type="button"
+          <StepperButton
+            direction="increment"
+            layout="responsive"
             onClick={increment}
             disabled={!canIncrement}
             aria-label={`${label}: +${step}`}
             aria-controls={inputId}
-            className={`${stepperClass(canIncrement)} order-2 lg:order-none`}
-          >
-            <Plus className="h-4 w-4 lg:hidden" />
-            <ChevronUp
-              className={`${chevronClass(canIncrement)} hidden lg:block`}
-            />
-          </button>
+          />
           <div className="order-1 h-full w-[1px] shrink-0 bg-border-subtle/30 lg:order-none lg:h-[1px] lg:w-full" />
-          <button
-            type="button"
+          <StepperButton
+            direction="decrement"
+            layout="responsive"
             onClick={decrement}
             disabled={!canDecrement}
             aria-label={`${label}: -${step}`}
             aria-controls={inputId}
-            className={`${stepperClass(canDecrement)} order-0 lg:order-none`}
-          >
-            <Minus className="h-4 w-4 lg:hidden" />
-            <ChevronDown
-              className={`${chevronClass(canDecrement)} hidden lg:block`}
-            />
-          </button>
+          />
         </div>
       </div>
     </div>

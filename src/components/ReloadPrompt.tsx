@@ -6,6 +6,7 @@ import { useRegisterSW } from "virtual:pwa-register/react";
 import { useStore } from "../store/useStore";
 import { useI18n } from "../utils/i18nContext";
 import type { ImageItem } from "../utils/layoutMath";
+import { IconButton } from "./ui/IconButton";
 
 export function ReloadPrompt() {
   const { t } = useI18n();
@@ -134,14 +135,15 @@ export function ReloadPrompt() {
                 </p>
               </div>
             </div>
-            <button
-              type="button"
+            <IconButton
               aria-label={t("close")}
               onClick={close}
-              className="rounded-full p-1 text-text-muted transition-colors hover:bg-text-main/5 hover:text-text-main"
+              size="sm"
+              shape="full"
+              expandedHitArea
             >
-              <X className="w-4 h-4" />
-            </button>
+              <X />
+            </IconButton>
           </div>
 
           <button

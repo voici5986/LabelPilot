@@ -23,6 +23,21 @@ function renderControl(zoomMode: "fit" | "manual" | "actual") {
 }
 
 describe("ZoomControl accessibility", () => {
+  it("keeps both desktop actions at a 44px non-overlapping hit target", () => {
+    renderControl("fit");
+
+    const reset = screen.getByRole("button", { name: "重置缩放" });
+    const actual = screen.getByRole("button", { name: "1:1 实际尺寸" });
+    const actionGroup = reset.parentElement;
+
+    expect(reset.className).toContain("[--hit-target-inset:-7px]");
+    expect(actual.className).toContain("h-9");
+    expect(actual.className).toContain("min-w-9");
+    expect(actual.className).toContain("hit-target");
+    expect(actual.className).toContain("[--hit-target-inset:-5px]");
+    expect(actionGroup?.className).toContain("gap-2.5");
+  });
+
   it("exposes actual size as 100% with descriptive value text", () => {
     renderControl("actual");
     const slider = screen.getByRole("slider");

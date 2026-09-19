@@ -8,11 +8,11 @@ import { I18nProvider } from "../utils/i18n";
 import type { ImageItem } from "../utils/layoutMath";
 import { ImageFilesSection } from "./ImageFilesSection";
 
-function makeItem(id: string): ImageItem {
+function makeItem(id: string, count = 1): ImageItem {
   return {
     id,
     file: new File([id], `${id}.png`, { type: "image/png" }),
-    count: 1,
+    count,
   };
 }
 
@@ -70,6 +70,12 @@ describe("ImageFilesSection ordering", () => {
     expect(lastDown.classList.contains("w-8")).toBe(true);
     expect(lastDown.classList.contains("hit-target")).toBe(true);
     expect(firstQuantityBox?.classList.contains("h-10")).toBe(true);
+    expect(firstQuantityBox?.classList.contains("input-base")).toBe(false);
+    expect(
+      firstQuantityBox?.classList.contains(
+        "shadow-[inset_0_0_0_1px_var(--color-border-subtle)]",
+      ),
+    ).toBe(true);
     expect(firstRow).not.toBeNull();
     expect(firstMoveRow).not.toBeNull();
     expect(firstRow?.contains(firstUp)).toBe(false);
@@ -78,10 +84,61 @@ describe("ImageFilesSection ordering", () => {
     expect(firstMoveRow?.contains(lastDown)).toBe(false);
     expect(firstQuantityDecrement.classList.contains("h-10")).toBe(true);
     expect(firstQuantityIncrement.classList.contains("h-10")).toBe(true);
+    expect(firstQuantityDecrement).toHaveProperty("disabled", true);
+    expect(firstQuantityIncrement).toHaveProperty("disabled", false);
+    expect(firstUp.parentElement?.classList.contains("gap-3")).toBe(true);
 
     fireEvent.click(screen.getByRole("button", { name: "将 b.png 上移" }));
 
     expect(onReorder).toHaveBeenCalledWith([items[1], items[0]]);
+  });
+
+  it("natively disables quantity steppers at both item-count boundaries", () => {
+    const onItemCountChange = vi.fn();
+    render(
+      <I18nProvider>
+        <ImageFilesSection
+          imageItems={[makeItem("min", 1), makeItem("max", 999)]}
+          onFilesSelect={vi.fn()}
+          onReorder={vi.fn()}
+          onItemCountChange={onItemCountChange}
+        />
+      </I18nProvider>,
+    );
+
+    const minimumDecrement = screen.getByRole("button", {
+      name: "min.png 的数量: -1",
+    });
+    const maximumIncrement = screen.getByRole("button", {
+      name: "max.png 的数量: +1",
+    });
+    expect(minimumDecrement).toHaveProperty("disabled", true);
+    expect(maximumIncrement).toHaveProperty("disabled", true);
+
+    fireEvent.click(minimumDecrement);
+    fireEvent.click(maximumIncrement);
+    expect(onItemCountChange).not.toHaveBeenCalled();
+  });
+
+  it("keeps count normalization as a business-level defense", () => {
+    const onItemCountChange = vi.fn();
+    render(
+      <I18nProvider>
+        <ImageFilesSection
+          imageItems={[makeItem("a", 5)]}
+          onFilesSelect={vi.fn()}
+          onReorder={vi.fn()}
+          onItemCountChange={onItemCountChange}
+        />
+      </I18nProvider>,
+    );
+
+    const input = screen.getByRole("textbox", { name: "a.png 的数量" });
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: "9999" } });
+    fireEvent.blur(input);
+
+    expect(onItemCountChange).toHaveBeenCalledWith("a", 999);
   });
 
   it("uses a compact add-more control once image cards are visible", () => {

@@ -15,6 +15,7 @@ import {
   MIN_SCALE,
 } from "../utils/zoomMath";
 import type { ZoomMode } from "../utils/zoomMath";
+import { IconButton } from "./ui/IconButton";
 
 interface ZoomControlProps {
   zoomMode: ZoomMode;
@@ -90,19 +91,20 @@ export function ZoomControl({
 
   return (
     <div
-      className="absolute bottom-2 left-2 z-20 flex flex-col items-center gap-1.5"
+      className="absolute bottom-2 left-2 z-20 flex flex-col items-center gap-2.5"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <button
-        type="button"
+      <IconButton
         aria-label={t("zoom_reset")}
         onClick={handleReset}
-        className="hit-target flex h-8 w-8 items-center justify-center rounded-md border border-border-subtle bg-elevated text-text-muted transition-colors hover:text-brand-primary"
+        size="md"
+        tone="elevated"
+        expandedHitArea
         title={t("zoom_reset")}
       >
-        <Maximize className="h-4 w-4" />
-      </button>
+        <Maximize />
+      </IconButton>
 
       {/* 1:1 实际尺寸（仅桌面断点显示，文字按钮更易识别） */}
       <button
@@ -110,10 +112,10 @@ export function ZoomControl({
         aria-label={t("zoom_actual")}
         aria-pressed={isActual}
         onClick={onRequestActual}
-        className={`hit-target hidden h-8 min-w-8 items-center justify-center rounded-md border px-1.5 text-xs font-bold transition-colors lg:flex ${
+        className={`hit-target hidden h-9 min-w-9 items-center justify-center rounded-md border px-1.5 text-xs font-bold transition-colors [--hit-target-inset:-5px] lg:flex ${
           isActual
             ? "border-brand-primary bg-brand-primary text-on-brand"
-            : "border-border-subtle bg-elevated text-text-muted hover:text-brand-primary"
+            : "border-border-subtle bg-elevated text-text-muted enabled:hover:text-brand-primary"
         }`}
         title={t("zoom_actual")}
       >

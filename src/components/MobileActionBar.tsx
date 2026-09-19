@@ -36,7 +36,7 @@ export function MobileActionBar({
         onClick={onOpenEdit}
         disabled={editDisabled}
         aria-haspopup="dialog"
-        className="hit-target flex h-11 shrink-0 items-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-3 text-sm font-semibold text-text-main transition-colors hover:border-brand-primary/50 active:bg-text-main/10"
+        className="flex h-11 shrink-0 items-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-3 text-sm font-semibold text-text-main transition-colors hover:border-brand-primary/50 active:bg-text-main/10"
       >
         <SlidersHorizontal className="h-4 w-4 text-brand-primary" />
         {t("edit")}

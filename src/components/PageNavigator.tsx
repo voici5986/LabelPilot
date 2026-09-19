@@ -2,6 +2,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
 
 import { useI18n } from "../utils/i18nContext";
+import { IconButton } from "./ui/IconButton";
 
 interface PageNavigatorProps {
   currentPage: number;
@@ -36,16 +37,18 @@ export function PageNavigator({
       })}
       className="absolute bottom-4 left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-md border border-border-subtle bg-elevated px-3 py-1.5"
     >
-      <button
-        type="button"
+      <IconButton
         aria-label={t("page_prev")}
         disabled={currentPage === 0}
         onClick={() => onPageChange(Math.max(0, currentPage - 1))}
-        className="hit-target flex h-9 w-9 items-center justify-center rounded transition-colors hover:bg-text-main/5 disabled:cursor-not-allowed disabled:opacity-30"
+        size="lg"
+        tone="default"
+        shape="sm"
+        expandedHitArea
         title={t("page_prev")}
       >
-        <ChevronLeft className="h-5 w-5 text-text-main" />
-      </button>
+        <ChevronLeft />
+      </IconButton>
 
       <div className="flex items-center justify-center gap-1.5 text-sm font-medium text-text-main">
         <input
@@ -69,16 +72,18 @@ export function PageNavigator({
         <span>/ {totalPages}</span>
       </div>
 
-      <button
-        type="button"
+      <IconButton
         aria-label={t("page_next")}
         disabled={currentPage === totalPages - 1}
         onClick={() => onPageChange(Math.min(totalPages - 1, currentPage + 1))}
-        className="hit-target flex h-9 w-9 items-center justify-center rounded transition-colors hover:bg-text-main/5 disabled:cursor-not-allowed disabled:opacity-30"
+        size="lg"
+        tone="default"
+        shape="sm"
+        expandedHitArea
         title={t("page_next")}
       >
-        <ChevronRight className="h-5 w-5 text-text-main" />
-      </button>
+        <ChevronRight />
+      </IconButton>
     </nav>
   );
 }

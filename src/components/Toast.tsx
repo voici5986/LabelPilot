@@ -3,6 +3,7 @@ import { CheckCircle, XCircle, AlertCircle, X } from "lucide-react";
 import { useEffect, useRef } from "react";
 
 import { useI18n } from "../utils/i18nContext";
+import { IconButton } from "./ui/IconButton";
 
 export type ToastType = "success" | "error" | "warning";
 
@@ -61,20 +62,22 @@ export function Toast({ message, type, isVisible, onClose }: ToastProps) {
               {message}
             </span>
 
-            <button
-              type="button"
+            <IconButton
               aria-label={t("close")}
               onClick={onClose}
-              className={`shrink-0 rounded-full p-1 text-text-muted transition-colors hover:text-text-main ${
+              size="compact"
+              tone={
                 type === "success"
-                  ? "hover:bg-green-500/10"
+                  ? "success"
                   : type === "error"
-                    ? "hover:bg-red-500/10"
-                    : "hover:bg-amber-500/10"
-              }`}
+                    ? "danger"
+                    : "warning"
+              }
+              shape="full"
+              expandedHitArea
             >
-              <X className="w-3.5 h-3.5" />
-            </button>
+              <X />
+            </IconButton>
           </motion.div>
         </div>
       )}

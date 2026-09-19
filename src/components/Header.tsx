@@ -6,6 +6,7 @@ import { useStore } from "../store/useStore";
 import { useI18n } from "../utils/i18nContext";
 import { LogoIcon } from "./LogoIcon";
 import { SettingsMenu } from "./SettingsMenu";
+import { IconButton } from "./ui/IconButton";
 
 interface HeaderProps {
   onOpenCalibration: () => void;
@@ -101,15 +102,16 @@ export function Header({
           <span className="text-sm font-semibold uppercase">{language}</span>
         </button>
 
-        <button
-          type="button"
+        <IconButton
           onClick={toggleTheme}
           aria-label={`${t("theme_toggle")}: ${theme}`}
-          className="flex items-center justify-center rounded-md p-2 text-text-muted transition-colors hover:bg-text-main/5 hover:text-brand-primary"
+          size="lg"
+          tone="brand"
+          expandedHitArea
           title={t("theme_toggle") || `Theme: ${theme}`}
         >
-          <ThemeIcon className="h-5 w-5" />
-        </button>
+          <ThemeIcon />
+        </IconButton>
       </div>
     </header>
   );

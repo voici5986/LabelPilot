@@ -5,8 +5,6 @@ import {
   ChevronUp,
   GripVertical,
   Image as ImageIcon,
-  Minus,
-  Plus,
   X,
 } from "lucide-react";
 import { useState } from "react";
@@ -14,8 +12,9 @@ import type { ChangeEvent, KeyboardEvent } from "react";
 
 import { useStore } from "../store/useStore";
 import { useI18n } from "../utils/i18nContext";
-import { normalizeImageItemCount } from "../utils/imageLimits";
+import { IMAGE_LIMITS, normalizeImageItemCount } from "../utils/imageLimits";
 import type { ImageItem } from "../utils/layoutMath";
+import { StepperButton } from "./ui/StepperButton";
 
 interface ThumbnailItemProps {
   item: ImageItem;
@@ -128,15 +127,13 @@ export function ThumbnailItem({
       </div>
 
       <div className="mt-2 flex items-center gap-2">
-        <div className="input-base flex h-10 shrink-0 items-center overflow-hidden">
-          <button
-            type="button"
+        <div className="flex h-10 shrink-0 items-center overflow-hidden rounded-md bg-surface shadow-[inset_0_0_0_1px_var(--color-border-subtle)]">
+          <StepperButton
+            direction="decrement"
             aria-label={`${t("image_quantity", { name: item.file.name })}: -1`}
             onClick={() => stepCount(item.count - 1)}
-            className="group/btn flex h-10 w-10 shrink-0 items-center justify-center text-text-muted transition-colors hover:bg-brand-primary/10 hover:text-brand-primary active:bg-brand-primary/10"
-          >
-            <Minus className="h-4 w-4" aria-hidden="true" />
-          </button>
+            disabled={item.count <= 1}
+          />
           <input
             name={`image-count-${item.id}`}
             aria-label={t("image_quantity", { name: item.file.name })}
@@ -150,19 +147,17 @@ export function ThumbnailItem({
               setCountDraft(String(item.count));
               e.target.select();
             }}
-            className="h-full w-9 shrink-0 border-x border-border-subtle/40 bg-transparent text-center font-mono text-sm font-semibold text-text-main focus:outline-none"
+            className="relative h-full w-9 shrink-0 border-x border-border-subtle/40 bg-transparent text-center font-mono text-sm font-semibold text-text-main focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-primary"
           />
-          <button
-            type="button"
+          <StepperButton
+            direction="increment"
             aria-label={`${t("image_quantity", { name: item.file.name })}: +1`}
             onClick={() => stepCount(item.count + 1)}
-            className="group/btn flex h-10 w-10 shrink-0 items-center justify-center text-text-muted transition-colors hover:bg-brand-primary/10 hover:text-brand-primary active:bg-brand-primary/10"
-          >
-            <Plus className="h-4 w-4" aria-hidden="true" />
-          </button>
+            disabled={item.count >= IMAGE_LIMITS.maxItemCount}
+          />
         </div>
 
-        <div className="flex shrink-0 gap-2">
+        <div className="flex shrink-0 gap-3">
           <button
             type="button"
             aria-label={t("move_image_up", { name: item.file.name })}

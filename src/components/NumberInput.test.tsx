@@ -43,12 +43,14 @@ describe("NumberInput", () => {
       />,
     );
 
-    expect(
-      (screen.getByLabelText("Rows: +1") as HTMLButtonElement).disabled,
-    ).toBe(true);
+    const increment = screen.getByLabelText("Rows: +1") as HTMLButtonElement;
+    expect(increment.disabled).toBe(true);
     expect(
       (screen.getByLabelText("Rows: -1") as HTMLButtonElement).disabled,
     ).toBe(false);
+
+    fireEvent.click(increment);
+    expect(onChange).not.toHaveBeenCalled();
   });
 
   it("disables the decrement stepper when already at min", () => {
@@ -91,5 +93,27 @@ describe("NumberInput", () => {
     expect(
       (screen.getByLabelText("Rows: -1") as HTMLButtonElement).disabled,
     ).toBe(false);
+  });
+
+  it("links both responsive stepper actions to the number field", () => {
+    render(
+      <NumberInput
+        label="Rows"
+        value={10}
+        onChange={vi.fn()}
+        min={1}
+        max={20}
+        isInteger
+      />,
+    );
+
+    const input = screen.getByLabelText("Rows");
+    const increment = screen.getByRole("button", { name: "Rows: +1" });
+    const decrement = screen.getByRole("button", { name: "Rows: -1" });
+
+    expect(increment.getAttribute("aria-controls")).toBe(input.id);
+    expect(decrement.getAttribute("aria-controls")).toBe(input.id);
+    expect(increment.querySelectorAll("svg")).toHaveLength(2);
+    expect(decrement.querySelectorAll("svg")).toHaveLength(2);
   });
 });
