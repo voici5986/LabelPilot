@@ -1,10 +1,10 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown, ChevronUp, Maximize2, UploadCloud } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-import type { KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useRef, useState } from "react";
 import { useShallow } from "zustand/shallow";
 
 import { useGenerationReadiness } from "../hooks/useGenerationReadiness";
+import { useModalFocus } from "../hooks/useModalFocus";
 import { useStore } from "../store/useStore";
 import { useI18n } from "../utils/i18nContext";
 import { ImageFilesSection } from "./ImageFilesSection";
@@ -38,60 +38,11 @@ export function EditSheet({
   const { t } = useI18n();
   const [filesCollapsed, setFilesCollapsed] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
-  const previousFocusRef = useRef<HTMLElement | null>(null);
-
-  // 打开时记录焦点来源并聚焦面板内首个控件；关闭后恢复焦点
-  useEffect(() => {
-    if (!open) return;
-    previousFocusRef.current = document.activeElement as HTMLElement | null;
-    const frame = requestAnimationFrame(() => {
-      panelRef.current
-        ?.querySelector<HTMLElement>(
-          'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
-        )
-        ?.focus();
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [open]);
-
-  useEffect(() => {
-    if (open) return;
-    previousFocusRef.current?.focus();
-    previousFocusRef.current = null;
-  }, [open]);
-
-  // Escape 关闭
-  useEffect(() => {
-    if (!open) return;
-    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [open, onClose]);
-
-  // Tab 焦点环回
-  const handlePanelKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== "Tab" || !panelRef.current) return;
-    const focusable = Array.from(
-      panelRef.current.querySelectorAll<HTMLElement>(
-        'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
-      ),
-    );
-    if (focusable.length === 0) return;
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
-    }
-  };
+  const { handleKeyDown: handlePanelKeyDown } = useModalFocus({
+    open,
+    containerRef: panelRef,
+    onDismiss: onClose,
+  });
   const {
     config,
     onConfigChange,
