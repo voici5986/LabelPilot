@@ -38,9 +38,13 @@ test("mobile shell: full preview + action bar, desktop panel hidden", async ({
   await page.getByRole("button", { name: "编辑" }).click();
   await expect(page.getByRole("dialog", { name: "编辑" })).toBeVisible();
   await page.setViewportSize({ width: 1024, height: 768 });
-  await expect(page.locator('[role="dialog"][aria-label="编辑"]')).toHaveCount(
-    0,
-  );
+  await expect(page.getByRole("dialog", { name: "编辑" })).toHaveCount(0);
+  // The desktop breakpoint hides the sheet from the accessibility tree before
+  // React has necessarily committed the state reset. Wait for the actual
+  // unmount before switching back to the mobile viewport.
+  await expect(
+    page.locator('[aria-labelledby="edit-sheet-title"]'),
+  ).toHaveCount(0);
   if (mobileViewport) await page.setViewportSize(mobileViewport);
   await expect(page.getByRole("dialog", { name: "编辑" })).toHaveCount(0);
 });
@@ -125,9 +129,58 @@ test("edit sheet switches to auto-number mode fields", async ({ page }) => {
   await expect(
     dialog.getByRole("textbox", { name: "前缀", exact: true }),
   ).toBeVisible();
-  await expect(
-    dialog.getByRole("switch", { name: "生成二维码" }),
-  ).toBeVisible();
+  const qrToggle = dialog.getByRole("switch", { name: "生成二维码" });
+  await expect(qrToggle).toBeVisible();
+  await qrToggle.click();
+  await expect(qrToggle).toHaveAttribute("aria-checked", "true");
+  const qrSlider = dialog.getByRole("slider", { name: "二维码大小" });
+  await qrSlider.scrollIntoViewIfNeeded();
+  await expect(qrSlider).toBeVisible();
+  expect(
+    await qrSlider.evaluate((element) =>
+      element.classList.contains("range-control"),
+    ),
+  ).toBe(true);
+  expect(
+    await page.evaluate(async () => {
+      const cssFromSheets = [
+        ...Array.from(document.styleSheets).flatMap((stylesheet) => {
+          try {
+            return Array.from(stylesheet.cssRules, (rule) => rule.cssText);
+          } catch {
+            return [];
+          }
+        }),
+        ...Array.from(
+          document.querySelectorAll("style"),
+          (style) => style.textContent ?? "",
+        ),
+      ];
+      // Chromium omits unsupported pseudo-elements such as ::-moz-range-thumb
+      // from CSSOM. Read same-origin linked CSS as a source fallback so the
+      // contract is checked in preview and in dev-server style injection.
+      const cssFromLinks = await Promise.all(
+        Array.from(
+          document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]'),
+        ).map(async (link) => {
+          try {
+            return await fetch(link.href).then((response) => response.text());
+          } catch {
+            return "";
+          }
+        }),
+      );
+      const css = [...cssFromSheets, ...cssFromLinks].join("\n");
+      return (
+        /(?:\.range-control|&)::-webkit-slider-thumb\s*\{[^}]*width:\s*16px[^}]*height:\s*16px/s.test(
+          css,
+        ) &&
+        /(?:\.range-control|&)::-moz-range-thumb\s*\{[^}]*width:\s*16px[^}]*height:\s*16px/s.test(
+          css,
+        )
+      );
+    }),
+  ).toBe(true);
   // 排版设置仍可用
   await expect(dialog.getByRole("group", { name: "纸张方向" })).toBeVisible();
 });

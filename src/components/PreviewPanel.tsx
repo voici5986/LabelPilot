@@ -110,7 +110,10 @@ export function PreviewPanel({
         >
           {layout.error ? (
             <div className="flex h-full w-full items-center justify-center p-8">
-              <div className="flex flex-col items-center gap-3 rounded-lg border border-red-200/50 bg-surface p-6 text-red-700 dark:border-red-800/50 dark:text-red-300">
+              <div
+                role="alert"
+                className="flex flex-col items-center gap-3 rounded-lg border border-danger/20 bg-surface p-6 text-danger"
+              >
                 <AlertCircle className="w-10 h-10" />
                 <div className="text-center">
                   <p className="font-medium text-lg">
@@ -175,7 +178,7 @@ export function PreviewPanel({
                     } else if (globalIdx < totalCount) {
                       content = (
                         <span className="text-[12px] text-text-muted font-medium select-none">
-                          Label {globalIdx + 1}
+                          {t("preview_label", { index: globalIdx + 1 })}
                         </span>
                       );
                     }
@@ -280,7 +283,7 @@ export function PreviewPanel({
             <div className="w-[1.5px] h-full bg-text-muted"></div>
           </div>
           <span className="text-[12px] text-text-muted font-semibold font-mono leading-none select-none">
-            50mm
+            {t("ruler_length", { length: 50 })}
           </span>
         </div>
 

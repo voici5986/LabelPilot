@@ -1,5 +1,6 @@
-import React, { useId, useState } from "react";
+import React, { useId, useRef, useState } from "react";
 
+import { FieldShell } from "./ui/FieldShell";
 import { StepperButton } from "./ui/StepperButton";
 
 interface NumberInputProps {
@@ -26,6 +27,7 @@ export function NumberInput({
   const inputId = useId();
   // A draft exists only while the user is editing an intermediate value such as "3.".
   const [draft, setDraft] = useState<string | null>(null);
+  const draftStartValue = useRef(value);
   const displayValue = draft ?? String(value);
 
   const normalizeValue = (candidate: number) => {
@@ -65,11 +67,24 @@ export function NumberInput({
     onChange(normalized);
   };
 
-  const handleBlur = () => {
-    setDraft(null);
+  const commitDraft = () => {
     const parsed = parseFloat(displayValue);
+    setDraft(null);
     if (!Number.isFinite(parsed)) return;
-    onChange(normalizeValue(parsed));
+    const normalized = normalizeValue(parsed);
+    draftStartValue.current = normalized;
+    onChange(normalized);
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      commitDraft();
+    } else if (event.key === "Escape" && draft !== null) {
+      event.preventDefault();
+      setDraft(null);
+      onChange(draftStartValue.current);
+    }
   };
 
   const step =
@@ -92,13 +107,7 @@ export function NumberInput({
   };
 
   return (
-    <div className="space-y-1.5 flex-1">
-      <label
-        htmlFor={inputId}
-        className="text-sm font-medium text-text-muted ml-0.5 tracking-wider"
-      >
-        {label}
-      </label>
+    <FieldShell label={label} htmlFor={inputId}>
       <div className="relative group">
         <input
           id={inputId}
@@ -107,8 +116,10 @@ export function NumberInput({
           inputMode={isInteger ? "numeric" : "decimal"}
           value={displayValue}
           onChange={handleChange}
-          onBlur={handleBlur}
+          onBlur={commitDraft}
+          onKeyDown={handleKeyDown}
           onFocus={(e) => {
+            draftStartValue.current = value;
             setDraft(String(value));
             e.currentTarget.select();
           }}
@@ -134,6 +145,6 @@ export function NumberInput({
           />
         </div>
       </div>
-    </div>
+    </FieldShell>
   );
 }

@@ -35,7 +35,7 @@ describe("ZoomControl accessibility", () => {
     expect(actual.className).toContain("min-w-9");
     expect(actual.className).toContain("hit-target");
     expect(actual.className).toContain("[--hit-target-inset:-5px]");
-    expect(actionGroup?.className).toContain("gap-2.5");
+    expect(actionGroup?.className).toContain("gap-3");
   });
 
   it("exposes actual size as 100% with descriptive value text", () => {
@@ -44,6 +44,9 @@ describe("ZoomControl accessibility", () => {
 
     expect(slider.getAttribute("aria-valuenow")).toBe("100");
     expect(slider.getAttribute("aria-valuetext")).toBe("1:1");
+    expect(slider.querySelector("div[style]")?.getAttribute("style")).toContain(
+      "bottom: 50%;",
+    );
   });
 
   it("uses the manual percentage for keyboard adjustments", () => {

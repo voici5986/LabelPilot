@@ -103,6 +103,19 @@ describe("PreviewPanel", () => {
     expect(screen.getByText("SN-001")).not.toBeNull();
   });
 
+  it("announces layout errors to assistive technology", () => {
+    useStore.setState({
+      config: {
+        ...defaultConfig,
+        marginMm: 200,
+      },
+    });
+
+    renderPanel();
+
+    expect(screen.getByRole("alert").textContent).toContain("布局错误");
+  });
+
   it("keeps the stored page index clamped when page count shrinks", () => {
     renderPanel();
 

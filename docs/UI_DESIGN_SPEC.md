@@ -202,7 +202,7 @@ Tailwind 间距以 `0.25rem = 4px` 为基准：`1.5=6px`、`2=8px`、`3=12px`、
 
 - 使用 `hit-target` 时，不要同时把所有次要图标按钮都做成可见 44×44px，否则会造成视觉拥挤。
 - 相邻命中区应互不重叠；可见边缘间距至少为两侧实际扩展量之和。排序按钮仍使用默认 6px 扩展，因此采用 `gap-3`（12px）；其他组合按自身尺寸和变量计算，不能固定套用一个间距。
-- Toast 的 22px 关闭按钮向外扩展 11px，前方 `gap-3` 为 12px；Chromium 命中测试确认扩展区只占用间隙、不覆盖消息文字。Zoom 的 reset 为 32px + 6px 扩展，桌面 `1:1` 为 36px + 4px 扩展，两者使用 10px 间距，命中区相接但不重叠。
+- Toast 的 22px 关闭按钮向外扩展 11px，前方 `gap-3` 为 12px；Chromium 命中测试确认扩展区只占用间隙、不覆盖消息文字。Zoom 的 reset 为 32px + 6px 扩展，桌面 `1:1` 为 36px + 4px 扩展，两者使用 `gap-3`（12px），命中区相接但不重叠。
 - 触控反馈使用 `active:*`；hover 只作为支持 hover 设备的增强反馈。
 - 键盘焦点使用全局 `focus-visible` 轮廓，不得通过 `outline-none` 抹掉而没有替代方案。
 
@@ -211,7 +211,7 @@ Tailwind 间距以 `0.25rem = 4px` 为基准：`1.5=6px`、`2=8px`、`3=12px`、
 - 标准输入使用 `input-base`，聚焦时使用 `input-base-focus`。
 - `NumberInput` 和图片数量控件在移动端采用相同的 40px 视觉高度、等宽步进按钮和 16px Lucide 图标。
 - 到达最小值/最大值时，步进按钮应禁用、降低对比度并取消 hover 反馈。
-- 输入草稿可以暂存中间态，但失焦、Enter、Escape 的行为必须明确且可测试。
+- 输入草稿可以暂存中间态：失焦和 Enter 提交并归一化，Escape 恢复进入编辑前的值；Enter 提交后的值成为下一轮 Escape 的基线，三种行为都必须可测试。
 
 `NumberInput` 和 `ThumbnailItem` 数量按钮均在数值边界使用原生 `disabled`；调用方仍须保留数值归一化作为业务防线。公共步进按钮和图标按钮的 hover 样式必须使用 `enabled:hover:*`，不能让禁用控件仅因指针经过而变色。
 
@@ -246,8 +246,8 @@ Tailwind 间距以 `0.25rem = 4px` 为基准：`1.5=6px`、`2=8px`、`3=12px`、
 
 ### 7.4 浮层、抽屉和提示
 
-- 对话框使用 `role="dialog"`、标题关联、Escape 关闭、Tab 环回和关闭后焦点恢复。
-- 设置菜单属于轻量浮层；背景操作、外部点击和焦点恢复行为要与其语义一致。
+- 真正模态对话框使用 `role="dialog" aria-modal="true"`、标题关联、Escape 关闭、Tab 环回和关闭后焦点恢复。
+- 设置菜单属于非模态 dialog/popover：使用 `aria-haspopup="dialog"`，允许背景操作、外部点击关闭和 Tab 离开；焦点进入菜单后仍应过滤隐藏/禁用项。
 - Toast、PWA 更新提示和错误页复用 `elevated` 表面，不使用组件私有白色/黑色背景。
 
 ### 7.5 公共组件提取原则
@@ -261,15 +261,15 @@ Tailwind 间距以 `0.25rem = 4px` 为基准：`1.5=6px`、`2=8px`、`3=12px`、
 
 建议按以下优先级演进：
 
-| 优先级     | 候选                              | 当前调用点/范围                                                     | 建议边界                                                                                  | 不应合并的部分                                            |
-| ---------- | --------------------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| P0 已落地  | `StepperButton`                   | `NumberInput`、`ThumbnailItem`                                      | 统一 `40px` 移动端步进按钮、图标、禁用/焦点/按压状态和 aria 命名；支持水平/响应式布局变体 | 行列/毫米的数值解析、图片数量草稿与业务上限               |
-| P1         | `FieldShell`                      | `NumberInput`、文本前缀、校准输入、设置输入                         | 管理 label、hint、error 与输入的 ID 关联，统一字段间距                                    | 数值解析、校验时机和文案；仅封装 `useId` 的 hook 收益不足 |
-| P1         | `InlineAlert`                     | 生成就绪错误、文本错误、校准普通错误                                | 首版只统一 danger tone、文字对比度和 `role`；有第二个 boxed 场景后再扩展形态              | Toast 的定位、生命周期、关闭动作和 live region 保持独立   |
-| P0 已落地  | `useModalFocus`                   | `EditSheet`、`CalibrationDialog`                                    | 统一首焦点、Escape、Tab 环回和关闭后焦点恢复；过滤不可聚焦项                              | `SettingsMenu` 背景可点击，仍单独处理 popover/dialog 语义 |
-| P0 已落地  | `IconButton`                      | Header 主题、Zoom reset、PageNavigator、Toast/ReloadPrompt 关闭按钮 | 统一有限尺寸变体、图标对齐、焦点和禁用反馈；提供明确名称，支持 ref 和原生事件             | 带文本按钮、生成状态机；拖拽把手和列表排序/删除暂未迁移   |
-| P1         | `ActionButton`                    | 校准保存/取消、查看预览、更新提示、错误页操作                       | 原生属性/ref + 少量 primary/secondary/quiet 变体，统一按压、焦点和禁用状态                | `SmartButton` 的生成/取消状态机                           |
-| 已有待深化 | `SegmentedControl`、`SmartButton` | 模式/方向切换、桌面与移动生成入口                                   | `SegmentedControl` 内部生成唯一 layout ID，并评估校准参考长度的第 4 个调用点              | 不在调用方复制一套近似 class                              |
+| 优先级     | 候选                              | 当前调用点/范围                                                     | 建议边界                                                                                                                   | 不应合并的部分                                            |
+| ---------- | --------------------------------- | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| P0 已落地  | `StepperButton`                   | `NumberInput`、`ThumbnailItem`                                      | 统一 `40px` 移动端步进按钮、图标、禁用/焦点/按压状态和 aria 命名；支持水平/响应式布局变体                                  | 行列/毫米的数值解析、图片数量草稿与业务上限               |
+| P0 已落地  | `FieldShell`                      | `NumberInput`、文本前缀、校准输入、设置输入                         | 管理 label、hint、error 与输入的 ID 关联，统一字段间距                                                                     | 数值解析、校验时机和文案；仅封装 `useId` 的 hook 收益不足 |
+| P0 已落地  | `InlineAlert`                     | 生成就绪错误、文本错误、校准普通错误                                | 统一 danger/warning tone、文字对比度和 `role`；Toast 的布局与生命周期保持独立                                              | Toast 的定位、关闭动作和 live region 保持独立             |
+| P0 已落地  | `useModalFocus`                   | `EditSheet`、`CalibrationDialog`                                    | 统一首焦点、Escape、Tab 环回和关闭后焦点恢复；过滤不可聚焦项                                                               | `SettingsMenu` 背景可点击，仍单独处理 popover/dialog 语义 |
+| P0 已落地  | `IconButton`                      | Header 主题、Zoom reset、PageNavigator、Toast/ReloadPrompt 关闭按钮 | 统一有限尺寸变体、图标对齐、焦点和禁用反馈；提供明确名称，支持 ref 和原生事件                                              | 带文本按钮、生成状态机；拖拽把手和列表排序/删除暂未迁移   |
+| P0 已落地  | `ActionButton`                    | 校准保存/取消、查看预览、更新提示、错误页操作                       | 原生属性/ref + 少量 primary/secondary/quiet 变体，统一按压、焦点和禁用状态；`weight` 与 `disabledOpacity` 处理明确层级差异 | `SmartButton` 的生成/取消状态机                           |
+| 已有待深化 | `SegmentedControl`、`SmartButton` | 模式/方向切换、桌面与移动生成入口                                   | `SegmentedControl` 默认内部生成唯一 layout ID；需要隔离动画实例时允许调用方传入前缀                                        | 不在调用方复制一套近似 class                              |
 
 P0/P1 表示复用收益优先级，不代表生产故障等级。“已落地”只表示首批调用点已经迁移，不代表所有相似按钮都必须立刻迁移。
 
@@ -277,13 +277,13 @@ P0/P1 表示复用收益优先级，不代表生产故障等级。“已落地�
 
 - **步进按钮先于整个数值输入**：`NumberInput` 在桌面是竖排箭头，移动端是横排加减；图片数量一直是横排。先共享按钮 Module，通过少量布局变体统一图标与尺寸，保留各自草稿提交和归一化行为。调用方提供已翻译名称、disabled 和事件；公共 Module 不导入 store 或业务上限。
 - **IconButton 的 Interface**：有限的 size/tone、必需的可访问名称，加原生 button 属性/ref。内部统一图标尺寸、默认 `type="button"`、focus-visible 和 disabled；不让每个调用点继续覆盖宽高。不默认给所有按钮套 `hit-target`，由布局决定不重叠的命中策略。
-- **字段容器与输入样式分工**：`FieldShell` 负责 label/hint/error 关联；基础输入外观继续复用 `input-base`。只包一层 input 并透传全部 class 的 Module 收益有限，暂不另建。
+- **字段容器与输入样式分工**：`FieldShell` 负责 label/hint/error 关联；基础输入外观继续复用 `input-base`。数值解析、提交时机和业务校验仍由调用方负责。
 - **提示语义由使用场景决定**：普通行内错误可以共享窄范围的 danger tone；Toast 和更新提示只共享状态色 token，不共享布局、生命周期、关闭动作或 live region。避免提示内部和外层同时建立 live region，造成重复播报。
-- **普通文字按钮可独立演进**：校准保存/取消、查看预览、更新按钮存在颜色与禁用样式重复，可直接评估少量 primary/secondary/quiet 变体，不依赖 IconButton；`SmartButton` 的生成/取消状态机保持独立。
-- **模态焦点与轻量浮层分开**：`EditSheet` 和 `CalibrationDialog` 已共享 `useModalFocus`，由模块统一首焦点、Escape、Tab 环回、关闭恢复和不可聚焦项过滤；`SettingsMenu` 允许背景点击，仍不纳入这个真正模态的默认策略。
-- **状态色和表面优先用 token/utility**：danger、warning、success 的前景/淡背景/边框可以集中；重复的 `border + bg-surface` 可评估 `surface-card` utility，不为此创建透传大量布局参数的 React `Surface`。
+- **普通文字按钮可独立演进**：校准保存/取消、查看预览、更新按钮和错误页操作已统一到 `ActionButton` 的少量 primary/secondary/quiet 变体；字重和禁用透明度通过 `weight`、`disabledOpacity` 接口表达，不在调用方叠加冲突 utility；`SmartButton` 的生成/取消状态机保持独立。
+- **模态焦点与轻量浮层分开**：`EditSheet` 和 `CalibrationDialog` 已共享 `useModalFocus`，由模块统一首焦点、Escape、Tab 环回、关闭恢复和不可聚焦项过滤；`SettingsMenu` 是非模态 dialog/popover，允许背景点击和 Tab 离开，并单独处理外部焦点关闭。
+- **状态色和表面优先用 token/utility**：danger、warning、success、tooltip 的前景/淡背景/边框已集中到主题 token；重复的 `border + bg-surface` 可评估 `surface-card` utility，不为此创建透传大量布局参数的 React `Surface`。
 - **分组标题先保留 utility**：`LayoutFields`、`TextModeFields`、图片分组共享 `group-title` 已有收益。仅标题加图标不必立即建组件；如需统一帮助入口或右侧摘要，再提取 SectionHeader，并允许调用方指定 h2/h3。
-- **暂不提取**：二维码开关仅一个使用场景；QR 原生 range 与预览竖向缩放条交互不同；上传入口有真实文件 input 覆盖层，不能直接替换成普通按钮；预设菜单和分段选择的键盘语义也不同。
+- **暂不提取**：二维码开关只有一个业务语义，QR range 与预览竖向缩放条交互不同；上传入口有真实文件 input 覆盖层，不能直接替换成普通按钮；预设菜单和分段选择的键盘语义也不同。
 - **继续复用已有模块**：`LayoutFields`、`TextModeFields`、`ImageFilesSection`、`SegmentedControl`、`SmartButton` 已在桌面/移动流程复用，不再创建两套近似实现。
 
 共享视觉 Module 可放在 `src/components/ui/`，业务组合留在现有目录；这是迁移建议，不为整理目录而移动无关文件。遵循 codebase-design 的小 Interface 原则：调用方只描述意图，尺寸、状态和关联复杂度集中在 Implementation；若移除 Module 后复杂度没有重新散落到调用点，就应重新评估提取价值。
@@ -298,27 +298,28 @@ P0/P1 表示复用收益优先级，不代表生产故障等级。“已落地�
 - 错误信息使用 `role="alert"`，输入关联错误时使用 `aria-describedby`。
 - 弹窗和抽屉打开后，焦点进入当前容器；关闭后回到触发控件。
 - 不把 hover 作为触摸或键盘用户发现操作的唯一途径。
-- 当前主题测试仅数值验证两组品牌背景/前景组合，并检查刻度 token 引用；普通文字、半透明状态色和完整界面的对比度仍需验证。
+- 当前主题测试数值验证品牌、状态与 tooltip token 的 WCAG AA 对比度，并检查刻度 token 引用；完整界面的对比度仍需真实主题截图复核。
 
 ### 8.1 状态矩阵
 
-| 状态           | 视觉要求                                                  | 行为要求                                                           |
-| -------------- | --------------------------------------------------------- | ------------------------------------------------------------------ |
-| 默认           | 使用语义表面、文字和边框 token                            | 可操作控件必须有明确名称和可见目的                                 |
-| Hover          | 只在支持 hover 的设备上增强背景/边框/文字                 | 不能是发现操作的唯一方式；不要造成布局位移                         |
-| Active/Pressed | 使用 `active:*` 或等效按压反馈                            | 触摸操作要有即时反馈；不改变业务值以外的布局                       |
-| Focus-visible  | 全局 `2px` 品牌色 outline，`2px` offset                   | 不用 `outline-none` 隐藏键盘焦点，除非有等价且可见的替代样式       |
-| Disabled       | 原生 `disabled`、低对比度、`cursor-not-allowed`（适用时） | 不响应点击、键盘、拖拽或 hover/active 反馈；不能只靠透明度判断原因 |
-| Generating     | 主要输入由 `fieldset[disabled]` 冻结，生成按钮变为取消    | 取消操作必须保持可用；进度同时有可见文案和 `aria-live`             |
-| Success/Error  | 使用明确的绿色/红色表面并配图标和文字                     | 状态不能只由颜色表达；应按流程自动恢复或提供下一步                 |
+| 状态           | 视觉要求                                                  | 行为要求                                                                              |
+| -------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| 默认           | 使用语义表面、文字和边框 token                            | 可操作控件必须有明确名称和可见目的                                                    |
+| Hover          | 只在支持 hover 的设备上增强背景/边框/文字                 | 不能是发现操作的唯一方式；不要造成布局位移                                            |
+| Active/Pressed | 使用 `active:*` 或等效按压反馈                            | 触摸操作要有即时反馈；不改变业务值以外的布局                                          |
+| Focus-visible  | 全局 `2px` 品牌色 outline，`2px` offset                   | 输入控件的 `input-base-focus` 可用等价的 `2px` brand box-shadow；其他控件不得隐藏焦点 |
+| Disabled       | 原生 `disabled`、低对比度、`cursor-not-allowed`（适用时） | 不响应点击、键盘、拖拽或 hover/active 反馈；不能只靠透明度判断原因                    |
+| Generating     | 主要输入由 `fieldset[disabled]` 冻结，生成按钮变为取消    | 取消操作必须保持可用；进度同时有可见文案和 `aria-live`                                |
+| Success/Error  | 使用明确的绿色/红色表面并配图标和文字                     | 状态不能只由颜色表达；应按流程自动恢复或提供下一步                                    |
 
 ### 8.2 组件语义契约
 
 - `SegmentedControl` 使用 `role="group"` + `aria-pressed`；不要用普通链接模拟互斥选择。
 - QR 开关使用 `role="switch"` + `aria-checked`；滑块必须提供 `role="slider"`、范围和当前值。
+- QR range 使用 `range-control` 自定义 thumb；`appearance: none` 时必须同时提供 Chromium/WebKit 与 Firefox 的 thumb/track 样式，不能仅依赖 `accent-color`。两端 thumb 外径统一为 `16px`，WebKit 通过 `margin-top: -5px` 对齐 6px 轨道，Gecko 保持轨道居中。
 - 图片列表的拖拽把手、上移/下移和删除必须分别可聚焦、可翻译命名；拖拽不是键盘排序的唯一入口。
-- `EditSheet` 和 `CalibrationDialog` 当前声明 `role="dialog" aria-modal="true"`，有遮罩、首焦点和 Tab 环回逻辑。模态验收还需检查隐藏/禁用控件过滤、背景不可操作和辅助技术行为，不能仅由 aria 声明判定完整合规；校准对话框首焦点当前为测量输入。
-- `SettingsMenu` 当前也使用 dialog 语义、Tab 环回和 Escape；它仍允许鼠标点击背景，因此这是现有兼容例外，不应复制到新的轻量 popover。若改成真正 popover，必须同步修改 `role`、背景交互和测试。
+- `EditSheet` 和 `CalibrationDialog` 声明 `role="dialog" aria-modal="true"`，有遮罩、标题关联、首焦点和 Tab 环回逻辑；校准对话框首焦点当前为测量输入。
+- `SettingsMenu` 使用非模态 dialog/popover 语义，保留背景点击、外部焦点关闭和 Escape；它不设置 `aria-modal`，不得把这套策略复制到真正模态对话框。
 - 错误提示使用 `role="alert"`；字段错误通过 `aria-describedby` 和 `aria-invalid` 关联到输入。
 
 ## 9. 动效
@@ -370,9 +371,10 @@ UI 代码变更按影响范围完成以下检查；纯文档变更只需格式�
 | 桌面控制面板滚动链 | `ControlPanel.test.tsx`                                                             | 已有 class 结构断言；1440×420 浏览器验证 `clientHeight=301`、`scrollHeight=530`，生成按钮位于滚动区外 |
 | 图片队列与数量控件 | `ImageFilesSection.test.tsx`、`e2e/mobile-flow.spec.ts`                             | 文件名优先、排序可用、数量步进按钮为 `40px` 可见尺寸、上传入口不重复显示摘要                          |
 | 移动编辑面板       | `EditSheet.test.tsx`、`src/hooks/useModalFocus.test.tsx`、`e2e/mobile-flow.spec.ts` | 已有折叠错误、面板高度、上传流程和共享模态焦点环回检查；真实辅助技术仍待补                            |
-| 设置浮层           | `SettingsMenu.test.tsx`                                                             | 已有 modal 属性、外部点击焦点、打开首帧 Escape 检查；Tab/Shift+Tab 和隐藏项过滤未完整覆盖             |
-| 主题对比度         | `themeContrast.test.ts`                                                             | 两组品牌色组合的 4.5 阈值、刻度 token 字符串检查；并非完整界面对比度验收                              |
-| 预览/校准          | `PreviewPanel.test.tsx`、`ZoomControl.test.tsx`、`e2e/calibration-flow.spec.ts`     | 缩放、分页、1:1 状态、环境失效后的回退                                                                |
+| 设置浮层           | `SettingsMenu.test.tsx`                                                             | 非模态语义、外部点击/焦点关闭、打开首帧 Escape、短视口滚动类和隐藏/禁用项过滤                         |
+| 主题对比度         | `themeContrast.test.ts`                                                             | 品牌色与状态/提示 token 的定义；完整界面对比度仍需视觉/辅助技术验收                                   |
+| 预览/校准          | `PreviewPanel.test.tsx`、`ZoomControl.test.tsx`、`e2e/calibration-flow.spec.ts`     | 缩放间距与实际模式滑块、分页、布局错误 alert、环境失效后的回退                                        |
+| 数值与字段模块     | `NumberInput.test.tsx`、相关组件测试                                                | 失焦/Enter 提交、Escape 恢复、FieldShell 的 label/hint 关联和边界 disabled                            |
 
 涉及公共组件提取时，先为原调用点补相同的行为断言，再逐个迁移；禁止通过放宽现有尺寸或 aria 断言来“迁移通过”。
 
@@ -389,15 +391,11 @@ UI 代码变更按影响范围完成以下检查；纯文档变更只需格式�
 
 ## 12. 当前待补齐事项
 
-以下为静态核对确认的差距或待验证项，不代表本次已修复：
+以下仅列仍需真实设备或更深辅助技术验收的事项；本轮已落地的行为与静态检查记录在上面的矩阵中：
 
-- **尺寸/命中**：图片数量边框已改为不占布局尺寸的内阴影，Chromium 360px 流程确认外框及两个步进按钮均为 40px 高，排序按钮间距也已避免扩展区重叠；紧凑控件在真实触屏设备上的误触率仍需 UAT。
-- **边界状态**：图片数量步进按钮已在 1/999 使用原生 disabled，同时保留业务归一化作为防御；仍需真实浏览器复核禁用反馈。
-- **焦点**：数量输入已恢复明确的 focus-visible 样式；`useModalFocus` 已被 `EditSheet` 与 `CalibrationDialog` 共享，并覆盖首焦点、Escape、Tab/Shift+Tab 环回、关闭恢复及隐藏/禁用项过滤；真实辅助技术、背景 inert 语义和 reduced-motion 行为仍需补验证。
-- **公共组件**：`StepperButton`、`IconButton` 与 `useModalFocus` 已完成首批落地；下一批优先评估 `SegmentedControl` 深化、`FieldShell`、`ActionButton` 和 `InlineAlert`，行内提示保持窄范围。
-- 是否为间距、圆角和阴影建立更少量的命名 token，而不仅依赖 Tailwind utility；在出现第三个重复值前不急于扩展 token 表。
-- **浏览器覆盖**：360px Chromium 移动流程、1440×420 低高度滚动、1023/1024px 断点切换均已通过；现有 Pixel 7、iPhone 14 配置、375px/320px 项目仍待复核，且均运行 Chromium（iPhone 配置不等于 Safari 实测）。1280×720、亮暗主题、视觉快照、真实触屏、Safari 和完整辅助技术覆盖仍待补。
-- 是否把 `SettingsMenu` 从 dialog 兼容例外迁移为真正的 popover；需要先决定背景鼠标交互和焦点策略，再改语义。
+- **真实触屏与窄屏**：Chromium 的 Pixel 7、iPhone 14 配置、375px 和 360px 流程已通过；真实触屏误触率、320px 内容宽度和 Safari 仍需 UAT（iPhone 配置不等于 Safari 实测）。
+- **辅助技术与视觉回归**：语义/焦点单测和 25 条 Playwright Chromium 流程已通过；真实读屏器、键盘之外的辅助技术、视觉快照及全量亮暗主题截图仍需补验。
+- **对比度验收**：状态和 tooltip token 已有静态阈值测试，完整界面对比度仍需真实主题截图复核。
 - 历史审查报告和原型目前位于被忽略的归档目录，不作为本规范的运行时依赖。
 
 ## 13. 决策与例外记录
@@ -417,13 +415,14 @@ UI 代码变更按影响范围完成以下检查；纯文档变更只需格式�
 
 当前规范主要对应以下实现：
 
-- 主题 token、共享 utility、焦点和 reduced-motion：[`src/index.css`](../src/index.css)
-- 桌面/移动应用框架：[`src/App.tsx`](../src/App.tsx)、[`src/components/ControlPanel.tsx`](../src/components/ControlPanel.tsx)、[`src/components/EditSheet.tsx`](../src/components/EditSheet.tsx)
+- 主题 token、共享 utility、焦点和 reduced-motion：[`src/index.css`](../src/index.css)、[`src/main.tsx`](../src/main.tsx)
+- 桌面/移动应用框架：[`src/App.tsx`](../src/App.tsx)、[`src/components/ControlPanel.tsx`](../src/components/ControlPanel.tsx)、[`src/components/EditSheet.tsx`](../src/components/EditSheet.tsx)、[`src/components/MobileActionBar.tsx`](../src/components/MobileActionBar.tsx)
 - 表单与分段控件：[`src/components/NumberInput.tsx`](../src/components/NumberInput.tsx)、[`src/components/SegmentedControl.tsx`](../src/components/SegmentedControl.tsx)
-- 公共按钮模块：[`src/components/ui/StepperButton.tsx`](../src/components/ui/StepperButton.tsx)、[`src/components/ui/IconButton.tsx`](../src/components/ui/IconButton.tsx)
+- 公共 UI 模块：[`src/components/ui/StepperButton.tsx`](../src/components/ui/StepperButton.tsx)、[`src/components/ui/IconButton.tsx`](../src/components/ui/IconButton.tsx)、[`src/components/ui/ActionButton.tsx`](../src/components/ui/ActionButton.tsx)、[`src/components/ui/FieldShell.tsx`](../src/components/ui/FieldShell.tsx)、[`src/components/ui/InlineAlert.tsx`](../src/components/ui/InlineAlert.tsx)
 - 模态焦点模块：[`src/hooks/useModalFocus.ts`](../src/hooks/useModalFocus.ts)、[`src/hooks/useModalFocus.test.tsx`](../src/hooks/useModalFocus.test.tsx)
-- 图片队列：[`src/components/ImageFilesSection.tsx`](../src/components/ImageFilesSection.tsx)、[`src/components/ThumbnailItem.tsx`](../src/components/ThumbnailItem.tsx)
-- 主题对比度测试：[`src/utils/themeContrast.test.ts`](../src/utils/themeContrast.test.ts)
+- 顶部与设置浮层：[`src/components/Header.tsx`](../src/components/Header.tsx)、[`src/components/SettingsMenu.tsx`](../src/components/SettingsMenu.tsx)、[`src/components/Toast.tsx`](../src/components/Toast.tsx)、[`src/components/ReloadPrompt.tsx`](../src/components/ReloadPrompt.tsx)
+- 图片队列与预览缩放：[`src/components/ImageFilesSection.tsx`](../src/components/ImageFilesSection.tsx)、[`src/components/ThumbnailItem.tsx`](../src/components/ThumbnailItem.tsx)、[`src/components/ZoomControl.tsx`](../src/components/ZoomControl.tsx)、[`src/components/PreviewPanel.tsx`](../src/components/PreviewPanel.tsx)
+- 翻译与主题对比度测试：[`src/utils/translations.ts`](../src/utils/translations.ts)、[`src/utils/themeContrast.test.ts`](../src/utils/themeContrast.test.ts)
 - 关键交互回归：[`e2e/mobile-flow.spec.ts`](../e2e/mobile-flow.spec.ts)、[`e2e/calibration-flow.spec.ts`](../e2e/calibration-flow.spec.ts)、[`e2e/critical-flow.spec.ts`](../e2e/critical-flow.spec.ts)
 
-本文集中记录设计要求、实现快照和待落实项；`StepperButton`、`IconButton` 与 `useModalFocus` 已完成首批实现，其余候选仍按优先级评估。修订时应保持三者清晰，避免以文档更新代替实现验收。
+本文集中记录设计要求、实现快照和待落实项；公共 UI 模块已经按小 Interface 原则落地，剩余工作主要是浏览器/UAT 覆盖和视觉回归。修订时应保持设计要求、实现快照和验证证据清晰，避免以文档更新代替实现验收。

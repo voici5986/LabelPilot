@@ -88,10 +88,11 @@ export function ZoomControl({
     ? t("zoom_actual_short")
     : `${Math.round(manualScale * 100)}%`;
   const ariaValueText = displayLabel;
+  const thumbScale = isActual ? 1 : manualScale;
 
   return (
     <div
-      className="absolute bottom-2 left-2 z-20 flex flex-col items-center gap-2.5"
+      className="absolute bottom-2 left-2 z-20 flex flex-col items-center gap-3"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -146,7 +147,7 @@ export function ZoomControl({
         className="relative flex h-40 w-10 flex-col items-center rounded-md border border-border-subtle bg-elevated p-1.5"
       >
         {(isHovered || isDragging) && (
-          <div className="pointer-events-none absolute left-10 top-1/2 z-30 -translate-y-1/2 whitespace-nowrap rounded bg-zinc-800 px-2 py-1 text-sm font-semibold text-white">
+          <div className="pointer-events-none absolute left-10 top-1/2 z-30 -translate-y-1/2 whitespace-nowrap rounded bg-tooltip px-2 py-1 text-sm font-semibold text-on-tooltip">
             {displayLabel}
           </div>
         )}
@@ -166,7 +167,7 @@ export function ZoomControl({
           <div
             className="pointer-events-none absolute left-1/2 h-4 w-4 -translate-x-1/2 rounded border-2 border-brand-primary bg-white transition-[bottom] duration-150"
             style={{
-              bottom: `${getThumbBottomPct(manualScale)}%`,
+              bottom: `${getThumbBottomPct(thumbScale)}%`,
               marginBottom: "-8px",
             }}
           />

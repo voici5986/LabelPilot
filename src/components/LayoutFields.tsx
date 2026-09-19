@@ -44,7 +44,7 @@ export function LayoutFields({
           <Grid className="h-4 w-4" /> {t("layout_group")}
         </h2>
         {paperSizeInfo ? (
-          <span className="text-xs font-medium text-text-muted">
+          <span className="min-w-0 truncate text-xs font-medium text-text-muted">
             {paperSizeInfo}
           </span>
         ) : null}
@@ -71,7 +71,7 @@ export function LayoutFields({
 
       <div className="grid grid-cols-2 gap-4">
         <NumberInput
-          label={`${t("margin")} (mm)`}
+          label={`${t("margin")} ${t("unit_mm")}`}
           value={config.marginMm}
           onChange={(value) => onConfigChange({ marginMm: value })}
           min={0}
@@ -80,7 +80,7 @@ export function LayoutFields({
           step={1}
         />
         <NumberInput
-          label={`${t("spacing")} (mm)`}
+          label={`${t("spacing")} ${t("unit_mm")}`}
           value={config.spacingMm}
           onChange={(value) => onConfigChange({ spacingMm: value })}
           min={0}

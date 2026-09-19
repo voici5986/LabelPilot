@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
+import { useId } from "react";
 
 interface Option<T> {
   label: string;
@@ -12,7 +13,7 @@ interface SegmentedControlProps<T extends string> {
   options: Option<T>[];
   value: T;
   onChange: (value: T) => void;
-  layoutId: string;
+  layoutId?: string;
   label: string;
   className?: string;
 }
@@ -25,6 +26,9 @@ export function SegmentedControl<T extends string>({
   label,
   className = "",
 }: SegmentedControlProps<T>) {
+  const generatedLayoutId = useId();
+  const resolvedLayoutId = layoutId ?? generatedLayoutId;
+
   return (
     <div
       role="group"
@@ -44,12 +48,12 @@ export function SegmentedControl<T extends string>({
             className={`relative z-0 flex min-h-10 flex-1 items-center justify-center gap-2 rounded-md px-1 py-1.5 text-sm font-medium transition-colors ${
               isActive
                 ? "text-brand-primary"
-                : "text-text-muted hover:text-text-main"
+                : "text-text-muted enabled:hover:text-text-main enabled:active:text-brand-primary"
             }`}
           >
             {isActive && (
               <motion.div
-                layoutId={layoutId}
+                layoutId={resolvedLayoutId}
                 className="absolute inset-0 -z-10 rounded-md border border-border-subtle bg-elevated"
                 transition={{ duration: 0.15, ease: "easeOut" }}
               />

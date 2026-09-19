@@ -30,6 +30,82 @@ describe("NumberInput", () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
+  it("commits a draft with Enter", () => {
+    const onChange = vi.fn();
+    render(
+      <NumberInput
+        label="Rows"
+        value={5}
+        onChange={onChange}
+        min={1}
+        max={20}
+        isInteger
+      />,
+    );
+
+    const input = screen.getByLabelText("Rows");
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: "12" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    expect(onChange).toHaveBeenLastCalledWith(12);
+  });
+
+  it("restores the value from before editing with Escape", () => {
+    const onChange = vi.fn();
+    render(
+      <NumberInput
+        label="Rows"
+        value={5}
+        onChange={onChange}
+        min={1}
+        max={20}
+        isInteger
+      />,
+    );
+
+    const input = screen.getByLabelText("Rows");
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: "12" } });
+    fireEvent.keyDown(input, { key: "Escape" });
+
+    expect(onChange).toHaveBeenLastCalledWith(5);
+    expect(input).toHaveProperty("value", "5");
+  });
+
+  it("uses the last Enter commit as the next Escape baseline", () => {
+    const onChange = vi.fn();
+    const { rerender } = render(
+      <NumberInput
+        label="Rows"
+        value={5}
+        onChange={onChange}
+        min={1}
+        max={20}
+        isInteger
+      />,
+    );
+
+    const input = screen.getByLabelText("Rows");
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: "12" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    rerender(
+      <NumberInput
+        label="Rows"
+        value={12}
+        onChange={onChange}
+        min={1}
+        max={20}
+        isInteger
+      />,
+    );
+    fireEvent.change(input, { target: { value: "13" } });
+    fireEvent.keyDown(input, { key: "Escape" });
+
+    expect(onChange).toHaveBeenLastCalledWith(12);
+  });
+
   it("disables the increment stepper when already at max", () => {
     const onChange = vi.fn();
     render(

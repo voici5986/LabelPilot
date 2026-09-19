@@ -68,6 +68,7 @@ export function ThumbnailItem({
     if (event.key === "Enter") {
       event.currentTarget.blur();
     } else if (event.key === "Escape") {
+      event.preventDefault();
       setCountDraft(null);
     }
   };
@@ -120,7 +121,7 @@ export function ThumbnailItem({
           type="button"
           aria-label={t("remove_image", { name: item.file.name })}
           onClick={onRemove}
-          className="hit-target flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-red-500/10 hover:text-red-600 active:bg-red-500/10 active:text-red-600"
+          className="hit-target flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-text-muted transition-colors enabled:hover:bg-danger/10 enabled:hover:text-danger enabled:active:bg-danger/10 enabled:active:text-danger"
         >
           <X className="h-4 w-4" />
         </button>
@@ -163,7 +164,7 @@ export function ThumbnailItem({
             aria-label={t("move_image_up", { name: item.file.name })}
             onClick={() => onMove("up")}
             disabled={!canMoveUp}
-            className="hit-target flex h-8 w-8 items-center justify-center rounded-md text-text-muted transition-colors hover:bg-brand-primary/10 hover:text-brand-primary active:bg-brand-primary/10 disabled:cursor-not-allowed disabled:opacity-30"
+            className="hit-target flex h-8 w-8 items-center justify-center rounded-md text-text-muted transition-colors enabled:hover:bg-brand-primary/10 enabled:hover:text-brand-primary enabled:active:bg-brand-primary/10 disabled:cursor-not-allowed disabled:opacity-30"
           >
             <ChevronUp className="h-4 w-4" aria-hidden="true" />
           </button>
@@ -172,7 +173,7 @@ export function ThumbnailItem({
             aria-label={t("move_image_down", { name: item.file.name })}
             onClick={() => onMove("down")}
             disabled={!canMoveDown}
-            className="hit-target flex h-8 w-8 items-center justify-center rounded-md text-text-muted transition-colors hover:bg-brand-primary/10 hover:text-brand-primary active:bg-brand-primary/10 disabled:cursor-not-allowed disabled:opacity-30"
+            className="hit-target flex h-8 w-8 items-center justify-center rounded-md text-text-muted transition-colors enabled:hover:bg-brand-primary/10 enabled:hover:text-brand-primary enabled:active:bg-brand-primary/10 disabled:cursor-not-allowed disabled:opacity-30"
           >
             <ChevronDown className="h-4 w-4" aria-hidden="true" />
           </button>

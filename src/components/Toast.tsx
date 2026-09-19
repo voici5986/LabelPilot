@@ -44,18 +44,18 @@ export function Toast({ message, type, isVisible, onClose }: ToastProps) {
             transition={{ duration: 0.18, ease: "easeOut" }}
             className={`pointer-events-auto flex w-max max-w-full items-start gap-3 rounded-md border bg-elevated px-4 py-3 shadow-md transition-colors duration-200 ${
               type === "success"
-                ? "border-green-500/20 text-green-700 dark:text-green-300"
+                ? "border-success/20 text-success"
                 : type === "error"
-                  ? "border-red-500/20 text-red-700 dark:text-red-300"
-                  : "border-amber-500/20 text-amber-800 dark:text-amber-300"
+                  ? "border-danger/20 text-danger"
+                  : "border-warning/20 text-warning"
             }`}
           >
             {type === "success" ? (
-              <CheckCircle className="w-5 h-5 text-green-500 shrink-0" />
+              <CheckCircle className="h-5 w-5 shrink-0 text-success" />
             ) : type === "error" ? (
-              <XCircle className="w-5 h-5 text-red-500 shrink-0" />
+              <XCircle className="h-5 w-5 shrink-0 text-danger" />
             ) : (
-              <AlertCircle className="w-5 h-5 text-amber-500 shrink-0" />
+              <AlertCircle className="h-5 w-5 shrink-0 text-warning" />
             )}
 
             <span className="min-w-0 break-words text-sm font-medium">

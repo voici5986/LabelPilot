@@ -69,11 +69,11 @@ export function SmartButton({
         className={`w-full py-3 px-4 rounded-lg font-bold text-sm flex items-center justify-center gap-2 relative overflow-hidden group transition-[background-color,color,box-shadow] duration-200
                 ${
                   genStatus === "success"
-                    ? "bg-green-700 text-white shadow-sm"
+                    ? "bg-success-surface text-on-status shadow-sm"
                     : genStatus === "error"
-                      ? "bg-red-600 text-white shadow-sm"
+                      ? "bg-danger-surface text-on-status shadow-sm"
                       : !disabled && genStatus === "idle"
-                        ? "bg-brand-primary text-on-brand shadow-[0_1px_2px_rgba(0,0,0,0.1)] active:shadow-none"
+                        ? "bg-brand-primary text-on-brand shadow-[0_1px_2px_rgba(0,0,0,0.1)] enabled:active:shadow-none"
                         : genStatus === "generating"
                           ? "bg-text-main/5 text-text-muted border border-border-subtle"
                           : "bg-text-main/10 text-text-muted cursor-not-allowed"
