@@ -130,7 +130,7 @@
   &::after {
     content: "";
     position: absolute;
-    inset: -6px;
+    inset: var(--hit-target-inset, -6px);
     border-radius: inherit;
   }
 }
