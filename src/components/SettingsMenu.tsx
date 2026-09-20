@@ -167,7 +167,13 @@ export function SettingsMenu({
     if (!isOpen) return;
     const frame = requestAnimationFrame(() => {
       const panel = panelRef.current;
-      if (panel) getPanelFocusableElements(panel)[0]?.focus();
+      if (!panel) return;
+      // 仅在焦点仍停留在触发按钮或页面根节点时自动聚焦；
+      // 若用户或自动化已在面板/别处建立焦点，不要抢走它。
+      const active = document.activeElement;
+      if (active === triggerRef.current || active === document.body) {
+        getPanelFocusableElements(panel)[0]?.focus();
+      }
     });
     return () => cancelAnimationFrame(frame);
   }, [isOpen]);

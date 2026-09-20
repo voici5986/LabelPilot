@@ -153,6 +153,31 @@ describe("SettingsMenu", () => {
     expect(document.activeElement).toBe(outsideButton);
   });
 
+  it("does not steal focus when a control inside the panel is focused before the pending rAF runs", () => {
+    // 模拟自动化/用户在 rAF 回调执行前把焦点放进面板输入框（CI 上的竞争场景）。
+    const pendingFrames: FrameRequestCallback[] = [];
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      pendingFrames.push(callback);
+      return pendingFrames.length;
+    });
+
+    render(
+      <I18nProvider>
+        <SettingsMenu onOpenCalibration={vi.fn()} />
+      </I18nProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "全局设置" }));
+    const qrPrefix = screen.getByRole("textbox", {
+      name: "二维码内容前缀",
+    });
+    qrPrefix.focus();
+
+    for (const frame of pendingFrames.splice(0)) frame(0);
+
+    expect(document.activeElement).toBe(qrPrefix);
+  });
+
   it("closes via Escape while focus is still on the trigger before the pending focus rAF runs", async () => {
     // 模拟真实浏览器：rAF 回调排队但不立即执行，打开菜单后焦点仍停留在触发按钮上。
     const pendingFrames: FrameRequestCallback[] = [];
