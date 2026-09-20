@@ -14,6 +14,7 @@ import { useStore } from "../store/useStore";
 import { useI18n } from "../utils/i18nContext";
 import { IMAGE_LIMITS, normalizeImageItemCount } from "../utils/imageLimits";
 import type { ImageItem } from "../utils/layoutMath";
+import { IconButton } from "./ui/IconButton";
 import { StepperButton } from "./ui/StepperButton";
 
 interface ThumbnailItemProps {
@@ -88,14 +89,16 @@ export function ThumbnailItem({
       title={item.file.name}
     >
       <div className="flex items-center gap-2.5">
-        <button
-          type="button"
+        <IconButton
+          size="md"
+          tone="neutral"
+          expandedHitArea
           aria-label={t("drag_to_reorder")}
           onPointerDown={(event) => dragControls.start(event)}
-          className="hit-target flex h-8 w-8 shrink-0 touch-none cursor-grab items-center justify-center rounded-md text-text-muted/60 transition-colors hover:text-text-main"
+          className="touch-none enabled:cursor-grab enabled:active:cursor-grabbing"
         >
           <GripVertical className="h-4 w-4" aria-hidden="true" />
-        </button>
+        </IconButton>
 
         <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border-subtle bg-elevated">
           {url ? (
@@ -117,14 +120,15 @@ export function ThumbnailItem({
           {item.file.name}
         </p>
 
-        <button
-          type="button"
+        <IconButton
+          size="md"
+          tone="danger"
+          expandedHitArea
           aria-label={t("remove_image", { name: item.file.name })}
           onClick={onRemove}
-          className="hit-target flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-text-muted transition-colors enabled:hover:bg-danger/10 enabled:hover:text-danger enabled:active:bg-danger/10 enabled:active:text-danger"
         >
           <X className="h-4 w-4" />
-        </button>
+        </IconButton>
       </div>
 
       <div className="mt-2 flex items-center gap-2">
@@ -148,7 +152,7 @@ export function ThumbnailItem({
               setCountDraft(String(item.count));
               e.target.select();
             }}
-            className="relative h-full w-9 shrink-0 border-x border-border-subtle/40 bg-transparent text-center font-mono text-sm font-semibold text-text-main focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-primary"
+            className="input-disabled relative h-full w-9 shrink-0 border-x border-border-subtle/40 bg-transparent text-center font-mono text-sm font-semibold text-text-main focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-primary"
           />
           <StepperButton
             direction="increment"
@@ -159,24 +163,26 @@ export function ThumbnailItem({
         </div>
 
         <div className="flex shrink-0 gap-3">
-          <button
-            type="button"
+          <IconButton
+            size="md"
+            tone="brand"
+            expandedHitArea
             aria-label={t("move_image_up", { name: item.file.name })}
             onClick={() => onMove("up")}
             disabled={!canMoveUp}
-            className="hit-target flex h-8 w-8 items-center justify-center rounded-md text-text-muted transition-colors enabled:hover:bg-brand-primary/10 enabled:hover:text-brand-primary enabled:active:bg-brand-primary/10 disabled:cursor-not-allowed disabled:opacity-30"
           >
             <ChevronUp className="h-4 w-4" aria-hidden="true" />
-          </button>
-          <button
-            type="button"
+          </IconButton>
+          <IconButton
+            size="md"
+            tone="brand"
+            expandedHitArea
             aria-label={t("move_image_down", { name: item.file.name })}
             onClick={() => onMove("down")}
             disabled={!canMoveDown}
-            className="hit-target flex h-8 w-8 items-center justify-center rounded-md text-text-muted transition-colors enabled:hover:bg-brand-primary/10 enabled:hover:text-brand-primary enabled:active:bg-brand-primary/10 disabled:cursor-not-allowed disabled:opacity-30"
           >
             <ChevronDown className="h-4 w-4" aria-hidden="true" />
-          </button>
+          </IconButton>
         </div>
 
         <span className="ml-auto min-w-0 flex-1 truncate text-right text-xs text-text-muted">

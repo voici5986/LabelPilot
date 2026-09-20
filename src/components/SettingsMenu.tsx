@@ -275,7 +275,8 @@ export function SettingsMenu({
                       <button
                         type="button"
                         onClick={() => handlePaperSizeChange(selectedPreset)}
-                        className={`flex flex-1 items-center justify-center gap-1 rounded-l-md border px-2 py-1.5 text-sm font-medium transition-colors ${
+                        aria-pressed={paperSize === selectedPreset}
+                        className={`choice-feedback flex flex-1 items-center justify-center gap-1 rounded-l-md border px-2 py-1.5 text-sm font-medium ${
                           ["A4", "A3", "A5", "Letter"].includes(paperSize)
                             ? "border-brand-primary bg-brand-primary/10 text-brand-primary"
                             : "border-border-subtle text-text-muted enabled:hover:border-brand-primary/50"
@@ -290,7 +291,7 @@ export function SettingsMenu({
                         aria-label={t("more_presets")}
                         aria-expanded={isPresetsOpen}
                         aria-controls="paper-preset-menu"
-                        className={`flex items-center justify-center rounded-r-md border-y border-r px-1.5 py-1.5 transition-colors ${
+                        className={`choice-feedback flex items-center justify-center rounded-r-md border-y border-r px-1.5 py-1.5 ${
                           ["A4", "A3", "A5", "Letter"].includes(paperSize)
                             ? "border-brand-primary bg-brand-primary/10 text-brand-primary"
                             : "border-border-subtle text-text-muted enabled:hover:border-brand-primary/50"
@@ -323,7 +324,7 @@ export function SettingsMenu({
                                 aria-checked={paperSize === size}
                                 key={size}
                                 onClick={() => handlePaperSizeChange(size)}
-                                className={`w-full px-3 py-1.5 text-left text-sm transition-colors enabled:hover:bg-brand-primary/10 ${paperSize === size ? "bg-brand-primary/5 font-semibold text-brand-primary" : "text-text-main"}`}
+                                className={`choice-feedback w-full px-3 py-1.5 text-left text-sm enabled:hover:bg-brand-primary/10 ${paperSize === size ? "bg-brand-primary/5 font-semibold text-brand-primary" : "text-text-main"}`}
                               >
                                 {t(PAPER_SIZE_KEYS[size])}
                               </button>
@@ -337,7 +338,8 @@ export function SettingsMenu({
                   <button
                     type="button"
                     onClick={() => handlePaperSizeChange("Custom")}
-                    className={`flex w-1/2 items-center justify-center rounded-md border px-3 py-1.5 text-sm font-medium transition-colors ${
+                    aria-pressed={paperSize === "Custom"}
+                    className={`choice-feedback flex w-1/2 items-center justify-center rounded-md border px-3 py-1.5 text-sm font-medium ${
                       paperSize === "Custom"
                         ? "border-brand-primary bg-brand-primary/10 text-brand-primary"
                         : "border-border-subtle text-text-muted enabled:hover:border-brand-primary/50"

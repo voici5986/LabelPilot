@@ -55,8 +55,24 @@ describe("SettingsMenu", () => {
     expect(screen.getAllByRole("button", { name: "自定义尺寸" })).toHaveLength(
       1,
     );
+    expect(
+      screen
+        .getByRole("button", { name: "自定义尺寸" })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(
+      screen.getByRole("button", { name: "A4" }).getAttribute("aria-pressed"),
+    ).toBe("false");
     fireEvent.click(screen.getByRole("button", { name: "A4" }));
     expect(useStore.getState().paperSizeMode).toBe("A4");
+    expect(
+      screen.getByRole("button", { name: "A4" }).getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(
+      screen
+        .getByRole("button", { name: "自定义尺寸" })
+        .getAttribute("aria-pressed"),
+    ).toBe("false");
   });
 
   it("keeps the panel scrollable in short viewports", () => {

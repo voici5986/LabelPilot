@@ -104,7 +104,7 @@ export function TextModeFields({
               aria-checked={textConfig.showQrCode}
               aria-label={t("qr_enable")}
               onClick={() => onChange({ showQrCode: !textConfig.showQrCode })}
-              className="relative flex h-11 w-11 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary"
+              className="choice-feedback relative flex h-11 w-11 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary"
               title={t("qr_enable")}
             >
               <span

@@ -35,7 +35,7 @@ export function PageNavigator({
         current: currentPage + 1,
         total: totalPages,
       })}
-      className="absolute bottom-4 left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-md border border-border-subtle bg-elevated px-3 py-1.5"
+      className="preview-controls absolute bottom-4 left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-md border border-border-subtle bg-elevated px-3 py-1.5"
     >
       <IconButton
         aria-label={t("page_prev")}
@@ -50,7 +50,7 @@ export function PageNavigator({
         <ChevronLeft />
       </IconButton>
 
-      <div className="flex items-center justify-center gap-1.5 text-sm font-medium text-text-main">
+      <div className="flex items-center justify-center gap-1.5 font-mono text-sm font-medium tabular-nums text-text-main">
         <input
           name="page-number"
           type="text"

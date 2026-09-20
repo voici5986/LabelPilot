@@ -198,11 +198,18 @@ describe("ControlPanel", () => {
   });
 
   it("keeps the cancel action enabled while inputs are locked", () => {
-    renderControlPanel({ isGenerating: true, genStatus: "generating" });
+    const onCancelPdf = vi.fn();
+    renderControlPanel({
+      isGenerating: true,
+      genStatus: "generating",
+      onCancelPdf,
+    });
 
     expect(
       screen.getByRole("button", { name: /取消生成/ }).getAttribute("disabled"),
     ).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /取消生成/ }));
+    expect(onCancelPdf).toHaveBeenCalledOnce();
   });
 
   it("keeps the desktop settings area in a flex scroll chain", () => {

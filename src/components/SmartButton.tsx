@@ -33,27 +33,19 @@ export function SmartButton({
   const phaseText = t(phaseKeys[genPhase]);
   const progressText =
     genPhase === "serializing" ? phaseText : `${phaseText} ${genProgress}%`;
+  const isInteractive =
+    (!disabled && genStatus === "idle") || genStatus === "generating";
 
   return (
     <>
       <motion.button
         type="button"
         layout
-        whileHover={
-          !disabled && genStatus === "idle"
-            ? { filter: "brightness(1.08)" }
-            : {}
-        }
-        whileTap={
-          !disabled && genStatus === "idle"
-            ? { filter: "brightness(0.92)" }
-            : {}
-        }
+        whileHover={isInteractive ? { filter: "brightness(1.08)" } : {}}
+        whileTap={isInteractive ? { filter: "brightness(0.92)" } : {}}
         initial={false}
         animate={
-          (!disabled && genStatus === "idle") ||
-          genStatus === "success" ||
-          genStatus === "error"
+          isInteractive || genStatus === "success" || genStatus === "error"
             ? {
                 opacity: 1,
                 filter: "grayscale(0%)",
@@ -75,7 +67,7 @@ export function SmartButton({
                       : !disabled && genStatus === "idle"
                         ? "bg-brand-primary text-on-brand shadow-[0_1px_2px_rgba(0,0,0,0.1)] enabled:active:shadow-none"
                         : genStatus === "generating"
-                          ? "bg-text-main/5 text-text-muted border border-border-subtle"
+                          ? "bg-elevated text-text-main border border-border-subtle enabled:hover:bg-text-main/5 enabled:active:bg-text-main/10"
                           : "bg-text-main/10 text-text-muted cursor-not-allowed"
                 }`}
       >
