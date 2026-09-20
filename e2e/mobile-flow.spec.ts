@@ -32,7 +32,10 @@ test("mobile shell: full preview + action bar, desktop panel hidden", async ({
   await expect(zoomSlider).toBeVisible();
   const zoomSliderBox = await zoomSlider.boundingBox();
   expect(zoomSliderBox?.width).toBeGreaterThanOrEqual(40);
-  await expect(page.getByText("50mm")).toBeVisible();
+  await expect(page.getByTestId("preview-ruler")).toBeVisible();
+  await expect(page.getByTestId("preview-ruler")).toHaveText(/^\d+(\.\d+)?mm$/);
+  const rulerBox = await page.getByTestId("preview-ruler").boundingBox();
+  expect(rulerBox!.width).toBeLessThanOrEqual(85);
 
   // 跨入桌面断点时重置移动端 Sheet，缩回后不应恢复旧面板
   await page.getByRole("button", { name: "编辑" }).click();

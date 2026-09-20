@@ -23,10 +23,22 @@ function renderControl(zoomMode: "fit" | "manual" | "actual") {
 }
 
 describe("ZoomControl accessibility", () => {
+  it("keeps the zoom readout visible without hover and explains its scale", () => {
+    renderControl("manual");
+    expect(screen.getByText("150%")).toBeTruthy();
+    const slider = screen.getByRole("slider");
+    const hint = document.getElementById(
+      slider.getAttribute("aria-describedby")!,
+    );
+    expect(hint?.textContent).toContain("100% 表示适应窗口");
+    fireEvent.focus(slider);
+    fireEvent.blur(slider);
+    expect(screen.getByText("150%")).toBeTruthy();
+  });
   it("keeps both desktop actions at a 44px non-overlapping hit target", () => {
     renderControl("fit");
 
-    const reset = screen.getByRole("button", { name: "重置缩放" });
+    const reset = screen.getByRole("button", { name: "适应窗口" });
     const actual = screen.getByRole("button", { name: "1:1 实际尺寸" });
     const actionGroup = reset.parentElement;
 
@@ -71,5 +83,71 @@ describe("ZoomControl accessibility", () => {
 
     expect(onManualScaleChange).toHaveBeenCalledWith(1.4);
     expect(onZoomModeChange).toHaveBeenCalledWith("manual");
+  });
+
+  it("supports pointer dragging from the full hit area without drag animation", () => {
+    const onZoomModeChange = vi.fn();
+    const onManualScaleChange = vi.fn();
+    const onInteractionChange = vi.fn();
+
+    render(
+      <I18nProvider>
+        <ZoomControl
+          zoomMode="manual"
+          manualScale={1}
+          onZoomModeChange={onZoomModeChange}
+          onManualScaleChange={onManualScaleChange}
+          onRequestActual={vi.fn()}
+          onInteractionChange={onInteractionChange}
+        />
+      </I18nProvider>,
+    );
+
+    const slider = screen.getByRole("slider");
+    const thumb = slider.querySelector("div[style]") as HTMLDivElement;
+    const track = thumb.parentElement as HTMLDivElement;
+    vi.spyOn(track, "getBoundingClientRect").mockReturnValue({
+      top: 0,
+      height: 100,
+      bottom: 100,
+      left: 0,
+      right: 6,
+      width: 6,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    } as DOMRect);
+    const setPointerCapture = vi.fn();
+    Object.defineProperty(slider, "setPointerCapture", {
+      configurable: true,
+      value: setPointerCapture,
+    });
+
+    fireEvent.pointerDown(slider, {
+      button: 0,
+      clientY: 50,
+      pointerId: 7,
+      pointerType: "mouse",
+    });
+
+    expect(setPointerCapture).toHaveBeenCalledWith(7);
+    expect(onInteractionChange).toHaveBeenNthCalledWith(1, true);
+    expect(slider.querySelector("div[style]")?.className).toContain(
+      "transition-none",
+    );
+
+    fireEvent.pointerMove(slider, {
+      clientY: 0,
+      pointerId: 7,
+      pointerType: "mouse",
+    });
+    fireEvent.pointerUp(slider, {
+      pointerId: 7,
+      pointerType: "mouse",
+    });
+
+    expect(onManualScaleChange).toHaveBeenCalledWith(3);
+    expect(onZoomModeChange).toHaveBeenCalledWith("manual");
+    expect(onInteractionChange).toHaveBeenLastCalledWith(false);
   });
 });

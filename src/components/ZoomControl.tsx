@@ -1,10 +1,9 @@
 import { Maximize } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useId, useRef, useState } from "react";
 import type {
   Dispatch,
-  MouseEvent as ReactMouseEvent,
+  PointerEvent as ReactPointerEvent,
   SetStateAction,
-  TouchEvent as ReactTouchEvent,
 } from "react";
 
 import { useI18n } from "../utils/i18nContext";
@@ -23,9 +22,8 @@ interface ZoomControlProps {
   onZoomModeChange: (mode: ZoomMode) => void;
   onManualScaleChange: Dispatch<SetStateAction<number>>;
   onRequestActual: () => void;
+  onInteractionChange?: (isDragging: boolean) => void;
 }
-
-type SliderEvent = ReactMouseEvent | ReactTouchEvent | MouseEvent | TouchEvent;
 
 export function ZoomControl({
   zoomMode,
@@ -33,11 +31,12 @@ export function ZoomControl({
   onZoomModeChange,
   onManualScaleChange,
   onRequestActual,
+  onInteractionChange,
 }: ZoomControlProps) {
   const { t } = useI18n();
   const trackRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
+  const zoomHintId = useId();
 
   const isActual = zoomMode === "actual";
 
@@ -51,33 +50,47 @@ export function ZoomControl({
   );
 
   const handleSliderChange = useCallback(
-    (event: SliderEvent) => {
+    (clientY: number) => {
       if (!trackRef.current) return;
       const rect = trackRef.current.getBoundingClientRect();
-      const clientY =
-        "touches" in event ? event.touches[0].clientY : event.clientY;
       const percentage = 1 - (clientY - rect.top) / rect.height;
       enterManual(mapPctToScale(percentage));
     },
     [enterManual],
   );
 
-  useEffect(() => {
-    if (!isDragging) return;
-    const handleMove = (event: MouseEvent | TouchEvent) =>
-      handleSliderChange(event);
-    const handleEnd = () => setIsDragging(false);
-    window.addEventListener("mousemove", handleMove);
-    window.addEventListener("mouseup", handleEnd);
-    window.addEventListener("touchmove", handleMove);
-    window.addEventListener("touchend", handleEnd);
-    return () => {
-      window.removeEventListener("mousemove", handleMove);
-      window.removeEventListener("mouseup", handleEnd);
-      window.removeEventListener("touchmove", handleMove);
-      window.removeEventListener("touchend", handleEnd);
-    };
-  }, [handleSliderChange, isDragging]);
+  const handlePointerDown = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      if (event.pointerType === "mouse" && event.button !== 0) return;
+      event.preventDefault();
+      event.stopPropagation();
+      event.currentTarget.setPointerCapture(event.pointerId);
+      setIsDragging(true);
+      onInteractionChange?.(true);
+      handleSliderChange(event.clientY);
+    },
+    [handleSliderChange, onInteractionChange],
+  );
+
+  const handlePointerMove = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      if (!isDragging) return;
+      event.preventDefault();
+      handleSliderChange(event.clientY);
+    },
+    [handleSliderChange, isDragging],
+  );
+
+  const handlePointerEnd = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      if (!isDragging) return;
+      event.preventDefault();
+      event.stopPropagation();
+      setIsDragging(false);
+      onInteractionChange?.(false);
+    },
+    [isDragging, onInteractionChange],
+  );
 
   const handleReset = () => {
     onManualScaleChange(1);
@@ -92,9 +105,8 @@ export function ZoomControl({
 
   return (
     <div
-      className="absolute bottom-2 left-2 z-20 flex flex-col items-center gap-3"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      className="preview-controls absolute bottom-2 left-2 z-20 flex flex-col items-center gap-3"
+      data-interacting={isDragging}
     >
       <IconButton
         aria-label={t("zoom_reset")}
@@ -113,12 +125,12 @@ export function ZoomControl({
         aria-label={t("zoom_actual")}
         aria-pressed={isActual}
         onClick={onRequestActual}
-        className={`hit-target hidden h-9 min-w-9 items-center justify-center rounded-md border px-1.5 text-xs font-bold transition-colors [--hit-target-inset:-5px] lg:flex ${
+        className={`hit-target hidden h-9 min-w-9 items-center justify-center rounded-md border px-1.5 font-mono text-xs font-bold tabular-nums transition-colors [--hit-target-inset:-5px] lg:flex ${
           isActual
             ? "border-brand-primary bg-brand-primary text-on-brand"
             : "border-border-subtle bg-elevated text-text-muted enabled:hover:text-brand-primary"
         }`}
-        title={t("zoom_actual")}
+        title={t("zoom_actual_hint")}
       >
         {t("zoom_actual_short")}
       </button>
@@ -132,6 +144,7 @@ export function ZoomControl({
         aria-valuemax={Math.round(MAX_SCALE * 100)}
         aria-valuenow={isActual ? 100 : Math.round(manualScale * 100)}
         aria-valuetext={ariaValueText}
+        aria-describedby={zoomHintId}
         onKeyDown={(event) => {
           if (event.key === "Home") enterManual(MIN_SCALE);
           else if (event.key === "End") enterManual(MAX_SCALE);
@@ -144,28 +157,18 @@ export function ZoomControl({
           }
           event.preventDefault();
         }}
-        className="relative flex h-40 w-10 flex-col items-center rounded-md border border-border-subtle bg-elevated p-1.5"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerEnd}
+        onPointerCancel={handlePointerEnd}
+        className="relative flex h-40 w-10 cursor-ns-resize touch-none flex-col items-center rounded-md border border-border-subtle bg-elevated p-1.5"
       >
-        {(isHovered || isDragging) && (
-          <div className="pointer-events-none absolute left-10 top-1/2 z-30 -translate-y-1/2 whitespace-nowrap rounded bg-tooltip px-2 py-1 text-sm font-semibold text-on-tooltip">
-            {displayLabel}
-          </div>
-        )}
-
         <div
           ref={trackRef}
-          className="relative h-full w-1.5 cursor-ns-resize rounded bg-text-main/10"
-          onMouseDown={(event) => {
-            setIsDragging(true);
-            handleSliderChange(event);
-          }}
-          onTouchStart={(event) => {
-            setIsDragging(true);
-            handleSliderChange(event);
-          }}
+          className="pointer-events-none relative h-full w-1.5 rounded bg-text-main/10"
         >
           <div
-            className="pointer-events-none absolute left-1/2 h-4 w-4 -translate-x-1/2 rounded border-2 border-brand-primary bg-white transition-[bottom] duration-150"
+            className={`pointer-events-none absolute left-1/2 h-4 w-4 -translate-x-1/2 rounded border-2 border-brand-primary bg-white ${isDragging ? "transition-none" : "transition-[bottom] duration-150"}`}
             style={{
               bottom: `${getThumbBottomPct(thumbScale)}%`,
               marginBottom: "-8px",
@@ -173,6 +176,16 @@ export function ZoomControl({
           />
         </div>
       </div>
+      <span
+        aria-hidden="true"
+        title={t(isActual ? "zoom_actual_hint" : "zoom_relative_hint")}
+        className="pointer-events-auto -mt-1 rounded bg-elevated px-1 py-0.5 font-mono text-xs font-semibold tabular-nums text-text-main"
+      >
+        {displayLabel}
+      </span>
+      <span id={zoomHintId} className="sr-only">
+        {t(isActual ? "zoom_actual_hint" : "zoom_relative_hint")}
+      </span>
     </div>
   );
 }

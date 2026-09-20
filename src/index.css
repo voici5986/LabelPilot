@@ -230,12 +230,42 @@
 }
 
 @utility input-base {
+  @apply input-disabled;
   background-color: var(--color-surface);
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-md);
   transition-property: border-color, background-color;
   transition-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
   transition-duration: 150ms;
+}
+
+@utility input-disabled {
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+  }
+}
+
+/* Selection controls retain their selected surface while sharing feedback. */
+@utility choice-feedback {
+  transition-property: color, background-color, border-color, filter;
+  transition-duration: 150ms;
+  transition-timing-function: ease-out;
+
+  @media (hover: hover) {
+    &:enabled:hover {
+      filter: brightness(1.08);
+    }
+  }
+
+  &:enabled:active {
+    filter: brightness(0.95);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+  }
 }
 
 @utility input-base-focus {
@@ -299,6 +329,25 @@
 @utility min-h-app {
   min-height: 100vh;
   min-height: 100dvh;
+}
+
+/* Shared idle treatment for preview overlays; touch/hybrid devices stay opaque. */
+@utility preview-controls {
+  opacity: 1;
+  transition: opacity 150ms ease-out;
+
+  @media (hover: hover) and (pointer: fine) and (not (any-pointer: coarse)) {
+    &:not(:hover):not(:focus-within):not(:active):not(
+        [data-interacting="true"]
+      ) {
+      opacity: 0.6;
+
+      /* Keep disabled icons at an effective 30%, rather than 60% × 30%. */
+      & button:disabled {
+        opacity: 0.5;
+      }
+    }
+  }
 }
 
 /* LabelPilot 字标样式 */

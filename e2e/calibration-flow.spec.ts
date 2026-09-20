@@ -73,7 +73,7 @@ test("slider leaves actual, reset returns to fit, calibration persists", async (
   await expect(actualButton).toHaveAttribute("aria-pressed", "false");
 
   // 重置回 fit
-  await page.getByRole("button", { name: "重置缩放" }).click();
+  await page.getByRole("button", { name: "适应窗口" }).click();
   await expect(actualButton).toHaveAttribute("aria-pressed", "false");
 
   // 刷新：校准保留，但预览从 fit 开始
@@ -83,6 +83,147 @@ test("slider leaves actual, reset returns to fit, calibration persists", async (
   // 设置入口显示已校准
   await page.getByRole("button", { name: "全局设置" }).click();
   await expect(page.getByText("已校准")).toBeVisible();
+});
+
+test("keeps the preview center focused when the slider zooms in", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.waitForTimeout(700);
+
+  const before = await page.evaluate(() => {
+    const viewport = [...document.querySelectorAll("div")].find(
+      (element) =>
+        typeof element.className === "string" &&
+        element.className.includes("overflow-auto") &&
+        element.className.includes("touch-none"),
+    );
+    const paper = viewport?.querySelector("div.absolute.left-0.top-0.bg-white");
+    if (!viewport || !paper) throw new Error("preview viewport not found");
+
+    const viewportRect = viewport.getBoundingClientRect();
+    const paperRect = paper.getBoundingClientRect();
+    const focusX = viewportRect.left + viewport.clientWidth / 2;
+    const focusY = viewportRect.top + viewport.clientHeight / 2;
+
+    return {
+      focusX,
+      focusY,
+      paperPointX: (focusX - paperRect.left) / paperRect.width,
+      paperPointY: (focusY - paperRect.top) / paperRect.height,
+    };
+  });
+
+  const slider = page.getByRole("slider", { name: "缩放级别" });
+  const sliderBox = await slider.boundingBox();
+  expect(sliderBox).not.toBeNull();
+
+  await page.mouse.move(sliderBox!.x + 2, sliderBox!.y + sliderBox!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(
+    sliderBox!.x + 2,
+    sliderBox!.y + sliderBox!.height * 0.25,
+  );
+  await page.mouse.up();
+  await page.waitForTimeout(250);
+
+  const after = await page.evaluate(
+    ({ paperPointX, paperPointY }) => {
+      const viewport = [...document.querySelectorAll("div")].find(
+        (element) =>
+          typeof element.className === "string" &&
+          element.className.includes("overflow-auto") &&
+          element.className.includes("touch-none"),
+      );
+      const paper = viewport?.querySelector(
+        "div.absolute.left-0.top-0.bg-white",
+      );
+      const slider = document.querySelector('[role="slider"]');
+      if (!viewport || !paper || !slider) {
+        throw new Error("preview zoom elements not found");
+      }
+
+      const viewportRect = viewport.getBoundingClientRect();
+      const paperRect = paper.getBoundingClientRect();
+      const focusX = paperRect.left + paperRect.width * paperPointX;
+      const focusY = paperRect.top + paperRect.height * paperPointY;
+
+      return {
+        scale: Number(slider.getAttribute("aria-valuenow")),
+        focusX,
+        focusY,
+        viewportFocusX: viewportRect.left + viewport.clientWidth / 2,
+        viewportFocusY: viewportRect.top + viewport.clientHeight / 2,
+      };
+    },
+    { paperPointX: before.paperPointX, paperPointY: before.paperPointY },
+  );
+
+  expect(after.scale).toBeGreaterThan(100);
+  expect(after.focusX).toBeCloseTo(after.viewportFocusX, 0);
+  expect(after.focusY).toBeCloseTo(after.viewportFocusY, 0);
+});
+
+test("centers fit and preserves a panned focus through continuous zoom and actual size", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const viewport = page.locator("div.touch-none.overflow-auto");
+  const paper = viewport.locator("div.absolute.left-0.top-0.bg-white");
+  const readFocus = () =>
+    paper.evaluate((element) => {
+      const viewport = element.closest(".overflow-auto")!;
+      const v = viewport.getBoundingClientRect();
+      const p = element.getBoundingClientRect();
+      return {
+        x: (v.left + viewport.clientWidth / 2 - p.left) / p.width,
+        y: (v.top + viewport.clientHeight / 2 - p.top) / p.height,
+      };
+    });
+  await expect.poll(async () => (await readFocus()).x).toBeCloseTo(0.5, 2);
+  await expect.poll(async () => (await readFocus()).y).toBeCloseTo(0.5, 2);
+
+  const slider = page.getByRole("slider", { name: "缩放级别" });
+  await slider.focus();
+  await page.keyboard.press("End");
+  // Move the view away from the paper center before starting another gesture.
+  const box = (await viewport.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(
+    box.x + box.width / 2 + 80,
+    box.y + box.height / 2 + 60,
+    { steps: 5 },
+  );
+  await page.mouse.up();
+  const focus = await readFocus();
+  expect(Math.abs(focus.x - 0.5)).toBeGreaterThan(0.01);
+
+  const track = (await slider.locator(":scope > div.relative").boundingBox())!;
+  await page.mouse.move(track.x + track.width / 2, track.y);
+  await page.mouse.down();
+  for (const progress of [0.9, 0.8, 0.7, 0.8, 0.95]) {
+    await page.mouse.move(
+      track.x + track.width / 2,
+      track.y + track.height * (1 - progress),
+      { steps: 8 },
+    );
+    // Check while the pointer is still held, not just after a deferred correction.
+    const current = await readFocus();
+    expect(current.x).toBeCloseTo(focus.x, 2);
+    expect(current.y).toBeCloseTo(focus.y, 2);
+  }
+  await page.mouse.up();
+  await page.getByRole("button", { name: "1:1 实际尺寸" }).click();
+  const dialog = page.getByRole("dialog", { name: "屏幕 1:1 校准" });
+  // k=0.5 keeps the actual paper larger than the viewport in both axes.
+  await dialog.getByLabel(/量出来是/).fill("50");
+  await dialog.getByRole("button", { name: "保存并查看 1:1" }).click();
+  await expect.poll(async () => (await readFocus()).x).toBeCloseTo(focus.x, 2);
+  await expect.poll(async () => (await readFocus()).y).toBeCloseTo(focus.y, 2);
+  await page.getByRole("button", { name: "适应窗口" }).click();
+  await expect.poll(async () => (await readFocus()).x).toBeCloseTo(0.5, 2);
+  await expect.poll(async () => (await readFocus()).y).toBeCloseTo(0.5, 2);
 });
 
 test("stale environment exits actual to fit (manual scale reset) and prompts re-calibration", async ({

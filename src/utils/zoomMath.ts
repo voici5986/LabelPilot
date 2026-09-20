@@ -4,6 +4,8 @@
 
 export const MIN_SCALE = 0.5;
 export const MAX_SCALE = 3.0;
+const MID_SCALE = 1.0;
+const MID_PROGRESS = 0.5;
 
 /**
  * 预览缩放三态：
@@ -15,18 +17,21 @@ export type ZoomMode = "fit" | "manual" | "actual";
 
 /**
  * Maps a slider percentage (0 to 1) to a scale value.
- * Uses a non-linear mapping where 1.0 (100%) is exactly at 0.5 (50%).
+ * Uses piecewise logarithmic mapping so that 1.0 (100%) is exactly at the
+ * slider midpoint while both halves change by a consistent scale ratio.
  */
 export function mapPctToScale(pct: number): number {
   const clampedPct = Math.max(0, Math.min(1, pct));
 
-  // Lower half: 0% -> 50% progress maps to 50% -> 100% scale (0.5 -> 1.0)
-  if (clampedPct <= 0.5) {
-    return 0.5 + (clampedPct / 0.5) * 0.5;
+  // Lower half: 0% -> 50% progress maps 50% -> 100% by a ratio of 2.
+  if (clampedPct <= MID_PROGRESS) {
+    const progress = clampedPct / MID_PROGRESS;
+    return MIN_SCALE * (MID_SCALE / MIN_SCALE) ** progress;
   }
 
-  // Upper half: 50% -> 100% progress maps to 100% -> 300% scale (1.0 -> 3.0)
-  return 1.0 + ((clampedPct - 0.5) / 0.5) * 2.0;
+  // Upper half: 50% -> 100% progress maps 100% -> 300% by a ratio of 3.
+  const progress = (clampedPct - MID_PROGRESS) / MID_PROGRESS;
+  return MID_SCALE * (MAX_SCALE / MID_SCALE) ** progress;
 }
 
 /**
@@ -34,15 +39,20 @@ export function mapPctToScale(pct: number): number {
  * Inverse of mapPctToScale.
  */
 export function mapScaleToPct(scale: number): number {
-  if (scale <= 1.0) {
-    // Scale 0.5 to 1.0 maps to bottom 0% to 50%
-    const s = Math.max(0.5, scale);
-    return ((s - 0.5) / 0.5) * 0.5;
+  if (scale <= MID_SCALE) {
+    // Scale 0.5 to 1.0 maps to bottom 0% to 50% by a ratio of 2.
+    const s = Math.max(MIN_SCALE, scale);
+    return (
+      (Math.log(s / MIN_SCALE) / Math.log(MID_SCALE / MIN_SCALE)) * MID_PROGRESS
+    );
   }
 
-  // Scale 1.0 to 3.0 maps to bottom 50% to 100%
+  // Scale 1.0 to 3.0 maps to bottom 50% to 100% by a ratio of 3.
   const s = Math.min(MAX_SCALE, scale);
-  return 0.5 + ((s - 1.0) / 2.0) * 0.5;
+  return (
+    MID_PROGRESS +
+    (Math.log(s / MID_SCALE) / Math.log(MAX_SCALE / MID_SCALE)) * MID_PROGRESS
+  );
 }
 
 /**
