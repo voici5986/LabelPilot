@@ -323,6 +323,8 @@ test("real worker generates multi-page Unicode and QR PDF", async ({
 
   await page.getByRole("button", { name: "全局设置" }).click();
   await qrPrefix.fill("");
+  // 先确认清空本身生效，失败时才能区分“输入未生效”与“QR 校验异常”。
+  await expect(qrPrefix).toHaveValue("");
   await page.keyboard.press("Escape");
   await expect(page.getByRole("alert")).toHaveCount(0);
 
