@@ -43,6 +43,9 @@ jobs:
       - name: Lint
         run: pnpm run lint
 
+      - name: Check docs links
+        run: pnpm run check:docs
+
       - name: Test
         run: pnpm test
 
