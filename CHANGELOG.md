@@ -1,3 +1,22 @@
+# [1.4.0](https://github.com/voici5986/LabelPilot/compare/v1.3.1...v1.4.0) (2026-09-25)
+
+### Bug Fixes
+
+- 统一输入草稿与 Escape 语义并修正缩放与滑块显示细节 ([d6ed5d3](https://github.com/voici5986/LabelPilot/commit/d6ed5d3030466eceadca79438eb18059b8f3b26d))
+- 修复 Toast 溢出、校准刻度暗色对比与缩放滑杆语义 ([de66d94](https://github.com/voici5986/LabelPilot/commit/de66d94eeef19eb34b918ab1da5287a5a2f33db4)), closes [#18181b](https://github.com/voici5986/LabelPilot/issues/18181b)
+- 修复并发上传丢图、累计标签上限与生成期输入冻结 ([dd89b68](https://github.com/voici5986/LabelPilot/commit/dd89b68a4fa4bd01930c038acd08a653fb6a3278))
+- **release:** 更新发版脚本以支持 PowerShell 7.6 及添加无代理选项 ([bbefe39](https://github.com/voici5986/LabelPilot/commit/bbefe39c2e247bf7b71095a23df3ca044f9f8356))
+- **settings:** 避免打开菜单时抢走面板内已有焦点 ([3d4666d](https://github.com/voici5986/LabelPilot/commit/3d4666d15231aba10cde166748d9849d094cf732))
+- **ui:** restore image quantity button height ([e1f2d56](https://github.com/voici5986/LabelPilot/commit/e1f2d567e7d9ae32d87cffdd56c4f686e87fdb7b))
+
+### Features
+
+- 图片队列支持上移/下移排序 ([b02d41d](https://github.com/voici5986/LabelPilot/commit/b02d41db2ca36c42ec0c760e385021cc224d9eeb))
+- **hooks:** 新增 useModalFocus 模态焦点管理 hook ([5433de8](https://github.com/voici5986/LabelPilot/commit/5433de803d8878fdd4c9a16798dc4e3a1c3de7f5))
+- **preview:** 缩放焦点保持、自适应标尺与常驻倍率读数 ([ce369d9](https://github.com/voici5986/LabelPilot/commit/ce369d91b8d6f16ff88f8d48877d0efccebcbde1))
+- **ui:** 新增 IconButton 与 StepperButton 公共组件 ([afebc5c](https://github.com/voici5986/LabelPilot/commit/afebc5cbf0a8859e1b3fa158d7a2d343eedd271f))
+- **ui:** 新增状态色 token、range 控件样式与公共 UI 模块 ([1a83836](https://github.com/voici5986/LabelPilot/commit/1a8383662c58fbe2d53d0e8d9d2f95c6e6a96176))
+
 ## [1.3.1](https://github.com/voici5986/LabelPilot/compare/v1.3.0...v1.3.1) (2026-08-28)
 
 ### Bug Fixes
