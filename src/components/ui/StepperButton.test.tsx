@@ -20,21 +20,21 @@ describe("StepperButton", () => {
     expect(button.querySelectorAll("svg")).toHaveLength(1);
   });
 
-  it("exposes mobile and desktop icons for the responsive layout", () => {
+  it("uses one horizontal icon and responsive dimensions for form fields", () => {
     render(
       <StepperButton
         aria-label="Decrease"
         direction="decrement"
-        layout="responsive"
+        variant="form"
       />,
     );
 
-    const icons = screen
-      .getByRole("button", { name: "Decrease" })
-      .querySelectorAll("svg");
-    expect(icons).toHaveLength(2);
-    expect(icons[0]?.classList.contains("lg:hidden")).toBe(true);
-    expect(icons[1]?.classList.contains("lg:block")).toBe(true);
+    const button = screen.getByRole("button", { name: "Decrease" });
+    expect(button.querySelectorAll("svg")).toHaveLength(1);
+    expect(button.classList.contains("h-10")).toBe(true);
+    expect(button.classList.contains("w-10")).toBe(true);
+    expect(button.classList.contains("lg:h-8")).toBe(true);
+    expect(button.classList.contains("lg:w-8")).toBe(true);
   });
 
   it("uses native disabled behavior and does not dispatch clicks", () => {
@@ -61,6 +61,8 @@ describe("StepperButton", () => {
     const classes = screen.getByRole("button", { name: "Increase" }).classList;
     expect(classes.contains("h-10")).toBe(true);
     expect(classes.contains("w-10")).toBe(true);
+    expect(classes.contains("lg:h-8")).toBe(false);
+    expect(classes.contains("lg:w-8")).toBe(false);
     expect(classes.contains("enabled:hover:bg-brand-primary/10")).toBe(true);
     expect(classes.contains("enabled:active:bg-brand-primary/10")).toBe(true);
     expect(classes.contains("focus-visible:outline-offset-[-2px]")).toBe(true);
