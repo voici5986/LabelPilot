@@ -46,8 +46,8 @@ export function Header({
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
     await deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === "accepted") setCanInstall(false);
+    await deferredPrompt.userChoice;
+    setCanInstall(false);
     setDeferredPrompt(null);
   };
 
