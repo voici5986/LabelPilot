@@ -112,7 +112,7 @@ describe("ControlPanel", () => {
     expect(useStore.getState().imageItems[0].count).toBe(9);
   });
 
-  it("uses the landscape row limit before updating the store", () => {
+  it("keeps an oversized row draft and applies the landscape limit on blur", () => {
     const setConfig = vi.fn();
     useStore.setState({ setConfig });
     render(
@@ -125,10 +125,17 @@ describe("ControlPanel", () => {
       </I18nProvider>,
     );
 
-    fireEvent.change(screen.getByLabelText("行数"), {
+    const rowsInput = screen.getByLabelText("行数");
+    fireEvent.focus(rowsInput);
+    fireEvent.change(rowsInput, {
       target: { value: "20" },
     });
 
+    expect(rowsInput).toHaveProperty("value", "20");
+    expect(setConfig).not.toHaveBeenCalled();
+    expect(useStore.getState().config.rows).toBe(2);
+
+    fireEvent.blur(rowsInput);
     expect(setConfig).toHaveBeenCalledWith({ rows: 10 });
   });
 
@@ -156,15 +163,20 @@ describe("ControlPanel", () => {
     });
   });
 
-  it("clamps an oversized digit count during input", () => {
+  it("keeps an oversized digit draft and clamps the count on blur", () => {
     useStore.setState({ appMode: "text" });
     renderControlPanel();
 
     const digitsInput = screen.getByDisplayValue("3");
+    fireEvent.focus(digitsInput);
     fireEvent.change(digitsInput, {
       target: { value: "999999999" },
     });
 
+    expect(digitsInput).toHaveProperty("value", "999999999");
+    expect(useStore.getState().textConfig.digits).toBe(3);
+
+    fireEvent.blur(digitsInput);
     expect(digitsInput).toHaveProperty("value", "10");
     expect(useStore.getState().textConfig.digits).toBe(10);
   });

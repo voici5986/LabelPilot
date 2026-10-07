@@ -129,6 +129,18 @@ test("portrait layout, theme, PWA, and accessible names remain usable", async ({
   ).toBeVisible();
   const stepButton = editDialog.getByRole("button", { name: "行数: +1" });
   await expect(stepButton).toBeVisible();
+  const rowsInput = editDialog.getByRole("textbox", {
+    name: "行数",
+    exact: true,
+  });
+  await rowsInput.fill("3");
+  await expect(rowsInput).toHaveValue("3");
+  await rowsInput.press("ArrowUp");
+  await expect(rowsInput).toHaveValue("4");
+  await rowsInput.press("ArrowDown");
+  await expect(rowsInput).toHaveValue("3");
+  await rowsInput.press("Tab");
+  await expect(rowsInput).toHaveValue("3");
   // 关闭编辑面板回到预览
   await editDialog.getByRole("button", { name: "查看预览" }).click();
   await expect(editDialog).toHaveCount(0);

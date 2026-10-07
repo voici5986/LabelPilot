@@ -12,6 +12,7 @@ interface NumberInputProps {
   isInteger?: boolean;
   decimalPlaces?: number;
   step?: number;
+  showStepper?: boolean;
 }
 
 export function NumberInput({
@@ -23,9 +24,10 @@ export function NumberInput({
   isInteger,
   decimalPlaces,
   step: propsStep,
+  showStepper = false,
 }: NumberInputProps) {
   const inputId = useId();
-  // A draft exists only while the user is editing an intermediate value such as "3.".
+  // Preserve the raw draft until commit, including intermediate out-of-range values.
   const [draft, setDraft] = useState<string | null>(null);
   const draftStartValue = useRef(value);
   const displayValue = draft ?? String(value);
@@ -62,15 +64,19 @@ export function NumberInput({
     const num = parseFloat(nextVal);
     if (!Number.isFinite(num)) return;
 
-    const normalized = normalizeValue(num);
-    setDraft(normalized === num ? nextVal : String(normalized));
-    onChange(normalized);
+    setDraft(nextVal);
+    if (num >= min && num <= max) {
+      onChange(normalizeValue(num));
+    }
   };
 
   const commitDraft = () => {
     const parsed = parseFloat(displayValue);
     setDraft(null);
-    if (!Number.isFinite(parsed)) return;
+    if (!Number.isFinite(parsed)) {
+      draftStartValue.current = value;
+      return;
+    }
     const normalized = normalizeValue(parsed);
     draftStartValue.current = normalized;
     onChange(normalized);
@@ -82,8 +88,18 @@ export function NumberInput({
       commitDraft();
     } else if (event.key === "Escape" && draft !== null) {
       event.preventDefault();
+      event.stopPropagation();
       setDraft(null);
       onChange(draftStartValue.current);
+    } else if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+      event.preventDefault();
+      const parsed = parseFloat(displayValue);
+      const current = Number.isFinite(parsed) ? parsed : value;
+      const next = normalizeValue(
+        current + (event.key === "ArrowUp" ? step : -step),
+      );
+      setDraft(String(next));
+      onChange(next);
     }
   };
 
@@ -108,7 +124,23 @@ export function NumberInput({
 
   return (
     <FieldShell label={label} htmlFor={inputId}>
-      <div className="relative group">
+      <div
+        className={
+          showStepper
+            ? "flex h-10 items-center overflow-hidden rounded-md bg-surface outline-1 outline-offset-[-1px] outline-border-subtle lg:h-8"
+            : ""
+        }
+      >
+        {showStepper && (
+          <StepperButton
+            direction="decrement"
+            variant="form"
+            onClick={decrement}
+            disabled={!canDecrement}
+            aria-label={`${label}: -${step}`}
+            aria-controls={inputId}
+          />
+        )}
         <input
           id={inputId}
           name={inputId}
@@ -123,27 +155,22 @@ export function NumberInput({
             setDraft(String(value));
             e.currentTarget.select();
           }}
-          className="input-base focus:input-base-focus h-10 w-full py-1.5 pl-3 pr-20 font-mono text-sm font-semibold text-text-main lg:h-auto lg:pr-8"
+          className={`font-mono text-sm font-semibold text-text-main ${
+            showStepper
+              ? "input-disabled relative h-full min-w-0 flex-1 border-x border-border-subtle/40 bg-transparent px-1 text-center focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-primary"
+              : "input-base focus:input-base-focus h-10 w-full px-3 py-1.5 text-left lg:h-8"
+          }`}
         />
-        <div className="absolute right-0 top-0 flex h-full w-20 flex-row overflow-hidden rounded-r-md border-l border-border-subtle/30 lg:w-8 lg:flex-col">
+        {showStepper && (
           <StepperButton
             direction="increment"
-            layout="responsive"
+            variant="form"
             onClick={increment}
             disabled={!canIncrement}
             aria-label={`${label}: +${step}`}
             aria-controls={inputId}
           />
-          <div className="order-1 h-full w-[1px] shrink-0 bg-border-subtle/30 lg:order-none lg:h-[1px] lg:w-full" />
-          <StepperButton
-            direction="decrement"
-            layout="responsive"
-            onClick={decrement}
-            disabled={!canDecrement}
-            aria-label={`${label}: -${step}`}
-            aria-controls={inputId}
-          />
-        </div>
+        )}
       </div>
     </FieldShell>
   );

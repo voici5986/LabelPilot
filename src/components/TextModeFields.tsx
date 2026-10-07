@@ -80,6 +80,7 @@ export function TextModeFields({
             min={1}
             max={10}
             isInteger
+            showStepper
           />
         </div>
 

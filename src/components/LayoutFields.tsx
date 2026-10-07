@@ -58,6 +58,7 @@ export function LayoutFields({
           min={1}
           max={effectiveMaxRows}
           isInteger
+          showStepper
         />
         <NumberInput
           label={t("cols")}
@@ -66,6 +67,7 @@ export function LayoutFields({
           min={1}
           max={effectiveMaxCols}
           isInteger
+          showStepper
         />
       </div>
 
