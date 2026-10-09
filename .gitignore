@@ -16,6 +16,7 @@ playwright-report
 blob-report
 dist-ssr
 *.local
+test-results-verify
 
 # Build Output
 dev-dist
