@@ -1,6 +1,8 @@
 import { AppError } from "./appError";
 import type { ImageItem } from "./layoutMath";
 
+export type ImageDimensions = { width: number; height: number };
+
 export const IMAGE_LIMITS = {
   maxFiles: 20,
   maxFileBytes: 10 * 1024 * 1024,
@@ -152,8 +154,6 @@ async function decodeImageDimensions(file: File): Promise<ImageDimensions> {
   }
 }
 
-type ImageDimensions = { width: number; height: number };
-
 // Files are immutable. Keep only successful validation results, never bitmaps
 // or pending/rejected promises; removed files can be garbage collected.
 const validatedDimensions = new WeakMap<File, ImageDimensions>();
@@ -162,7 +162,7 @@ export async function validateImageFileContents(
   files: File[],
 ): Promise<Map<File, ImageDimensions>> {
   const dimensions = new Map<File, ImageDimensions>();
-  let totalPixels = 0;
+  const pixelBudget = createImagePixelBudget();
   for (const file of files) {
     let decoded = validatedDimensions.get(file);
     if (!decoded) {
@@ -171,12 +171,7 @@ export async function validateImageFileContents(
       decoded = await decodeImageDimensions(file);
     }
     const { width, height } = decoded;
-    totalPixels = validateImageDimensions(
-      file.name,
-      width,
-      height,
-      totalPixels,
-    );
+    pixelBudget.add(file.name, decoded);
     validatedDimensions.set(file, decoded);
     dimensions.set(file, { width, height });
   }
@@ -213,6 +208,16 @@ export function validateImageDimensions(
     throw new AppError("image_error_total_pixels");
   }
   return totalPixels;
+}
+
+/** Each validation operation gets its own cumulative pixel budget. */
+export function createImagePixelBudget() {
+  let totalPixels = 0;
+  return {
+    add(name: string, { width, height }: ImageDimensions): void {
+      totalPixels = validateImageDimensions(name, width, height, totalPixels);
+    },
+  };
 }
 
 export function validateImageLabelCount(

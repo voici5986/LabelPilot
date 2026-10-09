@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { AppError } from "./appError";
 import {
   IMAGE_LIMITS,
+  createImagePixelBudget,
   detectImageMimeType,
   getImageLabelCount,
   normalizeImageItemCount,
@@ -199,6 +200,42 @@ describe("image resource limits", () => {
         validateImageDimensions("label.png", 1, 1, IMAGE_LIMITS.maxTotalPixels),
       "image_error_total_pixels",
     );
+  });
+
+  it("keeps pixel budgets independent and accepts the exact total boundary", () => {
+    const full = createImagePixelBudget();
+    const separate = createImagePixelBudget();
+    const size = { width: 5_000, height: 8_000 };
+    for (let index = 0; index < 4; index++) full.add("label.png", size);
+
+    expectCode(
+      () => full.add("extra.png", { width: 1, height: 1 }),
+      "image_error_total_pixels",
+    );
+    expect(() => separate.add("label.png", size)).not.toThrow();
+  });
+
+  it("rejects invalid images without consuming the remaining pixel budget", () => {
+    const budget = createImagePixelBudget();
+    expectCode(
+      () => budget.add("wide.png", { width: 10_001, height: 1 }),
+      "image_error_dimensions",
+    );
+    expectCode(
+      () => budget.add("huge.png", { width: 10_000, height: 5_000 }),
+      "image_error_pixel_count",
+    );
+    for (let index = 0; index < 3; index++) {
+      budget.add("label.png", { width: 5_000, height: 8_000 });
+    }
+    budget.add("almost-full.png", { width: 5_000, height: 7_999 });
+    expectCode(
+      () => budget.add("extra.png", { width: 5_001, height: 1 }),
+      "image_error_total_pixels",
+    );
+    expect(() =>
+      budget.add("boundary.png", { width: 5_000, height: 1 }),
+    ).not.toThrow();
   });
 
   it("rejects excessive output label count", () => {

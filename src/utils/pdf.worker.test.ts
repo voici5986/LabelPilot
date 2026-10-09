@@ -519,6 +519,54 @@ describe("pdf.worker", () => {
     );
   });
 
+  it("rejects cumulative pixels at the fifth image and starts the next request with a fresh budget", async () => {
+    const close = vi.fn();
+    const decode = vi.fn(async () => ({ width: 5_000, height: 7_000, close }));
+    vi.stubGlobal("createImageBitmap", decode);
+    const { postMessage, onmessage } = await setupWorker();
+    const imageItems = Array.from({ length: 5 }, (_, index) => ({
+      id: String(index),
+      count: 1,
+      name: `label-${index}.png`,
+      type: "image/png",
+      buffer: new ArrayBuffer(4),
+    }));
+    const data = {
+      config: createBaseConfig(),
+      imageItems,
+      appMode: "image",
+      textConfig: createTextConfig(),
+    };
+    onmessage({ data });
+    await vi.waitFor(() => {
+      expect(postMessage).toHaveBeenCalledWith({
+        type: "error",
+        data: expect.objectContaining({ code: "image_error_total_pixels" }),
+      });
+    });
+    expect(decode).toHaveBeenCalledTimes(5);
+    expect(close).toHaveBeenCalledTimes(5);
+    expect(mockJsPdfInstance.addImage).not.toHaveBeenCalled();
+    expect(
+      postMessage.mock.calls.filter(
+        ([message]) =>
+          message.type === "progress" && message.data.phase === "preparing",
+      ),
+    ).toHaveLength(4);
+
+    postMessage.mockClear();
+    onmessage({ data: { ...data, imageItems: imageItems.slice(0, 4) } });
+    await vi.waitFor(() => {
+      expect(postMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "complete" }),
+        expect.any(Array),
+      );
+    });
+    expect(decode).toHaveBeenCalledTimes(9);
+    expect(close).toHaveBeenCalledTimes(9);
+    expect(mockJsPdfInstance.addImage).toHaveBeenCalledTimes(4);
+  });
+
   it("rejects non-finite image counts before PDF loops", async () => {
     (
       globalThis as unknown as { createImageBitmap?: unknown }

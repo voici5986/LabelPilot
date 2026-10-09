@@ -2,7 +2,7 @@ import jsPDF from "jspdf";
 
 import { AppError, serializeAppError, type AppErrorCode } from "./appError";
 import {
-  validateImageDimensions,
+  createImagePixelBudget,
   validateImageFiles,
   validateImageLabelCount,
   normalizeImageItemCount,
@@ -531,7 +531,7 @@ ctx.onmessage = async (event: MessageEvent<unknown>) => {
       );
       validateImageLabelCount(imageItems);
 
-      let totalPixels = 0;
+      const pixelBudget = createImagePixelBudget();
       for (let idx = 0; idx < imageItems.length; idx++) {
         const item = imageItems[idx];
         const prepared = await prepareImageForPdf(
@@ -539,12 +539,10 @@ ctx.onmessage = async (event: MessageEvent<unknown>) => {
           item.type,
           item.name,
         );
-        totalPixels = validateImageDimensions(
-          item.name,
-          prepared.sourceWidth,
-          prepared.sourceHeight,
-          totalPixels,
-        );
+        pixelBudget.add(item.name, {
+          width: prepared.sourceWidth,
+          height: prepared.sourceHeight,
+        });
 
         loadedImages.push({
           ...item,
