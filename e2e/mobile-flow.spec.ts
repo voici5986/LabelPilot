@@ -123,6 +123,37 @@ test("edit sheet: open, size toggle, files collapse, upload enables generate", a
   await expect(dialog).toHaveCount(0);
 });
 
+test("empty image quantity commits preserve the count in the edit sheet", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "编辑" }).click();
+  const dialog = page.getByRole("dialog", { name: "编辑" });
+  await dialog.getByLabel("点击上传标签图片").setInputFiles({
+    name: "label.png",
+    mimeType: "image/png",
+    buffer: LABEL_PNG,
+  });
+  const quantity = dialog.getByRole("textbox", { name: "label.png 的数量" });
+  await expect(quantity).toHaveValue("9");
+
+  await quantity.fill("");
+  await quantity.press("Tab");
+  await expect(quantity).toHaveValue("9");
+  await quantity.fill("");
+  await quantity.press("Enter");
+  await expect(quantity).toHaveValue("9");
+
+  await quantity.fill("12");
+  await quantity.press("Tab");
+  await expect(quantity).toHaveValue("12");
+  // Remounting the sheet checks the stored count, beyond the local draft.
+  await dialog.getByRole("button", { name: "查看预览" }).click();
+  await expect(dialog).toHaveCount(0);
+  await page.getByRole("button", { name: "编辑" }).click();
+  await expect(quantity).toHaveValue("12");
+});
+
 test("edit sheet switches to auto-number mode fields", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "编辑" }).click();

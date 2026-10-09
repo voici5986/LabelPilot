@@ -85,6 +85,33 @@ test("slider leaves actual, reset returns to fit, calibration persists", async (
   await expect(page.getByText("已校准")).toBeVisible();
 });
 
+test("keyboard zoom leaves actual size from 100% after manual 300%", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const slider = page.getByRole("slider", { name: "缩放级别" });
+  await slider.press("End");
+  await expect(slider).toHaveAttribute("aria-valuenow", "300");
+
+  const actualButton = page.getByRole("button", { name: "1:1 实际尺寸" });
+  await actualButton.click();
+  const dialog = page.getByRole("dialog", { name: "屏幕 1:1 校准" });
+  await dialog.getByLabel(/量出来是/).fill("100");
+  await dialog.getByRole("button", { name: "保存并查看 1:1" }).click();
+  await expect(actualButton).toHaveAttribute("aria-pressed", "true");
+  await expect(slider).toHaveAttribute("aria-valuenow", "100");
+
+  await slider.press("ArrowDown");
+
+  await expect(actualButton).toHaveAttribute("aria-pressed", "false");
+  await expect(slider).toHaveAttribute("aria-valuenow", "90");
+  await expect(slider).toHaveAttribute("aria-valuetext", "90%");
+  await expect(slider).toBeFocused();
+  // The next key must continue from the newly committed manual scale.
+  await slider.press("ArrowDown");
+  await expect(slider).toHaveAttribute("aria-valuenow", "80");
+});
+
 test("keeps the preview center focused when the slider zooms in", async ({
   page,
 }) => {

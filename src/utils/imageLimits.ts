@@ -154,19 +154,33 @@ async function decodeImageDimensions(file: File): Promise<ImageDimensions> {
 
 type ImageDimensions = { width: number; height: number };
 
-export async function validateImageFileContents(files: File[]): Promise<void> {
+// Files are immutable. Keep only successful validation results, never bitmaps
+// or pending/rejected promises; removed files can be garbage collected.
+const validatedDimensions = new WeakMap<File, ImageDimensions>();
+
+export async function validateImageFileContents(
+  files: File[],
+): Promise<Map<File, ImageDimensions>> {
+  const dimensions = new Map<File, ImageDimensions>();
   let totalPixels = 0;
   for (const file of files) {
-    const signature = await file.slice(0, 8).arrayBuffer();
-    validateImageSignature(file, new Uint8Array(signature));
-    const { width, height } = await decodeImageDimensions(file);
+    let decoded = validatedDimensions.get(file);
+    if (!decoded) {
+      const signature = await file.slice(0, 8).arrayBuffer();
+      validateImageSignature(file, new Uint8Array(signature));
+      decoded = await decodeImageDimensions(file);
+    }
+    const { width, height } = decoded;
     totalPixels = validateImageDimensions(
       file.name,
       width,
       height,
       totalPixels,
     );
+    validatedDimensions.set(file, decoded);
+    dimensions.set(file, { width, height });
   }
+  return dimensions;
 }
 
 export function validateImageDimensions(

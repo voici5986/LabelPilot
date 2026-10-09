@@ -17,6 +17,7 @@ import type { GenerationStatus } from "./utils/generation";
 import { useI18n } from "./utils/i18nContext";
 import type { Translations } from "./utils/i18nContext";
 import {
+  validateImageDimensions,
   validateImageFileContents,
   validateImageFiles,
 } from "./utils/imageLimits";
@@ -200,26 +201,51 @@ function App() {
 
   const handleFilesSelect = async (files: File[]) => {
     try {
-      validateImageFiles([...imageItems.map((item) => item.file), ...files]);
-      await validateImageFileContents(files);
-      // Validation is asynchronous. Read the store only after it completes so
-      // two quick selections cannot both append to the same stale snapshot.
-      const latestState = useStore.getState();
       validateImageFiles([
-        ...latestState.imageItems.map((item) => item.file),
+        ...useStore.getState().imageItems.map((item) => item.file),
         ...files,
       ]);
+      const dimensions = await validateImageFileContents(files);
+      while (true) {
+        const latestState = useStore.getState();
+        const queuedFiles = latestState.imageItems.map((item) => item.file);
+        const missingDimensions = queuedFiles.filter(
+          (file) => !dimensions.has(file),
+        );
+        if (missingDimensions.length > 0) {
+          const queuedDimensions =
+            await validateImageFileContents(missingDimensions);
+          for (const [file, size] of queuedDimensions)
+            dimensions.set(file, size);
+          // Another selection, removal or edit may have completed while decoding.
+          continue;
+        }
 
-      const defaultCount = latestState.config.rows * latestState.config.cols;
-      const newItems = files.map((file) => ({
-        id:
-          typeof crypto !== "undefined" && "randomUUID" in crypto
-            ? crypto.randomUUID()
-            : Math.random().toString(36).slice(2, 11),
-        file,
-        count: defaultCount,
-      }));
-      latestState.setImageItems([...latestState.imageItems, ...newItems]);
+        // Check and append the same current queue without yielding in between.
+        const combinedFiles = [...queuedFiles, ...files];
+        validateImageFiles(combinedFiles);
+        let totalPixels = 0;
+        for (const file of combinedFiles) {
+          const { width, height } = dimensions.get(file)!;
+          totalPixels = validateImageDimensions(
+            file.name,
+            width,
+            height,
+            totalPixels,
+          );
+        }
+        const defaultCount = latestState.config.rows * latestState.config.cols;
+        const newItems = files.map((file) => ({
+          id:
+            typeof crypto !== "undefined" && "randomUUID" in crypto
+              ? crypto.randomUUID()
+              : Math.random().toString(36).slice(2, 11),
+          file,
+          count: defaultCount,
+        }));
+        latestState.setImageItems([...latestState.imageItems, ...newItems]);
+        break;
+      }
     } catch (error) {
       showToast(getLocalizedError(error), "error");
     }

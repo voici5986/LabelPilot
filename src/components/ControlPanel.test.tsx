@@ -1,6 +1,12 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -110,6 +116,46 @@ describe("ControlPanel", () => {
     fireEvent.blur(input);
 
     expect(useStore.getState().imageItems[0].count).toBe(9);
+  });
+
+  it.each(["blur", "Enter"])(
+    "restores an empty image quantity draft on %s without updating the count",
+    (commit) => {
+      const file = new File(["image"], "label.png", { type: "image/png" });
+      useStore.getState().setImageItems([{ id: "img-1", file, count: 9 }]);
+      const updateCount = vi.spyOn(useStore.getState(), "updateItemCount");
+      renderControlPanel();
+      const input = screen.getByRole("textbox", { name: "label.png 的数量" });
+      // Real focus lets Enter exercise the input's native blur handler.
+      act(() => input.focus());
+      fireEvent.change(input, { target: { value: "" } });
+      expect(input).toHaveProperty("value", "");
+
+      if (commit === "Enter") fireEvent.keyDown(input, { key: "Enter" });
+      else fireEvent.blur(input);
+
+      expect(input).toHaveProperty("value", "9");
+      expect(useStore.getState().imageItems[0].count).toBe(9);
+      expect(updateCount).not.toHaveBeenCalled();
+      updateCount.mockRestore();
+    },
+  );
+
+  it.each([
+    ["0", 1],
+    ["1000", 999],
+  ])("clamps a nonempty image quantity draft %s to %s", (draft, expected) => {
+    const file = new File(["image"], "label.png", { type: "image/png" });
+    useStore.getState().setImageItems([{ id: "img-1", file, count: 9 }]);
+    renderControlPanel();
+    const input = screen.getByRole("textbox", { name: "label.png 的数量" });
+    fireEvent.change(input, { target: { value: draft } });
+    expect(useStore.getState().imageItems[0].count).toBe(9);
+
+    fireEvent.blur(input);
+
+    expect(input).toHaveProperty("value", String(expected));
+    expect(useStore.getState().imageItems[0].count).toBe(expected);
   });
 
   it("keeps an oversized row draft and applies the landscape limit on blur", () => {

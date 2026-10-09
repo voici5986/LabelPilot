@@ -331,12 +331,12 @@
   min-height: 100dvh;
 }
 
-/* Shared idle treatment for preview overlays; touch/hybrid devices stay opaque. */
+/* Dim when the primary pointer supports hover and precision, even with secondary touch. */
 @utility preview-controls {
   opacity: 1;
   transition: opacity 150ms ease-out;
 
-  @media (hover: hover) and (pointer: fine) and (not (any-pointer: coarse)) {
+  @media (hover: hover) and (pointer: fine) {
     &:not(:hover):not(:focus-within):not(:active):not(
         [data-interacting="true"]
       ) {

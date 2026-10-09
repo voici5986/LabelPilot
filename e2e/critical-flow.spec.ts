@@ -95,6 +95,107 @@ test.beforeEach(async ({ page }) => {
   await resetForE2e(page);
 });
 
+test("preview controls dim for a primary mouse with secondary touch", async ({
+  browser,
+}, testInfo) => {
+  // Blink's real device settings preserve a fine primary pointer while adding
+  // coarse secondary input; touch emulation alone changes the primary pointer.
+  const hybridBrowser = await browser.browserType().launch({
+    channel: testInfo.project.use.channel,
+    args: [
+      "--blink-settings=availablePointerTypes=6,primaryPointerType=4,availableHoverTypes=2,primaryHoverType=2",
+    ],
+  });
+  try {
+    const context = await hybridBrowser.newContext({
+      baseURL: testInfo.project.use.baseURL,
+      viewport: { width: 1280, height: 720 },
+    });
+    const page = await context.newPage();
+    await resetForE2e(page);
+    await page.goto("/");
+    const pointerMedia = () =>
+      page.evaluate(() => ({
+        hover: matchMedia("(hover: hover)").matches,
+        fine: matchMedia("(pointer: fine)").matches,
+        coarse: matchMedia("(any-pointer: coarse)").matches,
+      }));
+    expect(await pointerMedia()).toEqual({
+      hover: true,
+      fine: true,
+      coarse: true,
+    });
+
+    await switchToTextMode(page);
+    const quantity = page.getByRole("textbox", { name: "总数量" });
+    await quantity.fill("10");
+    await expect(quantity).toHaveValue("10");
+    await quantity.press("Tab");
+    const zoom = page.locator(".preview-controls").filter({
+      has: page.getByRole("slider", { name: "缩放级别" }),
+    });
+    const navigator = page.locator("nav.preview-controls");
+    await expect(zoom).toBeVisible();
+    await expect(navigator).toBeVisible();
+    const moveAway = async () => {
+      await quantity.focus();
+      await page.mouse.move(640, 20);
+    };
+    await moveAway();
+    await expect(zoom).toHaveCSS("opacity", "0.6");
+    await expect(navigator).toHaveCSS("opacity", "0.6");
+    await expect(navigator.getByRole("button", { name: "上一页" })).toHaveCSS(
+      "opacity",
+      "0.5",
+    );
+
+    for (const controls of [zoom, navigator]) {
+      await controls.hover();
+      await expect(controls).toHaveCSS("opacity", "1");
+      await moveAway();
+      await expect(controls).toHaveCSS("opacity", "0.6");
+      await controls
+        .locator("button:enabled, input, [role='slider']")
+        .first()
+        .focus();
+      await expect(controls).toHaveCSS("opacity", "1");
+      await moveAway();
+      await expect(controls).toHaveCSS("opacity", "0.6");
+    }
+
+    const slider = page.getByRole("slider", { name: "缩放级别" });
+    const sliderBox = await slider.boundingBox();
+    expect(sliderBox).not.toBeNull();
+    await page.mouse.move(
+      sliderBox!.x + sliderBox!.width / 2,
+      sliderBox!.y + sliderBox!.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(640, 20);
+    await expect(zoom).toHaveAttribute("data-interacting", "true");
+    await expect(zoom).toHaveCSS("opacity", "1");
+    await page.mouse.up();
+    await expect(zoom).toHaveAttribute("data-interacting", "false");
+    await moveAway();
+    await expect(zoom).toHaveCSS("opacity", "0.6");
+
+    const session = await context.newCDPSession(page);
+    await session.send("Emulation.setTouchEmulationEnabled", {
+      enabled: true,
+      maxTouchPoints: 10,
+    });
+    expect(await pointerMedia()).toEqual({
+      hover: false,
+      fine: false,
+      coarse: true,
+    });
+    await expect(zoom).toHaveCSS("opacity", "1");
+    await expect(navigator).toHaveCSS("opacity", "1");
+  } finally {
+    await hybridBrowser.close();
+  }
+});
+
 test("portrait layout, theme, PWA, and accessible names remain usable", async ({
   page,
 }) => {

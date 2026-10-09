@@ -16,7 +16,8 @@ import { I18nProvider } from "./utils/i18n";
 const validateImageFiles = vi.hoisted(() => vi.fn());
 const validateImageFileContents = vi.hoisted(() => vi.fn());
 
-vi.mock("./utils/imageLimits", () => ({
+vi.mock("./utils/imageLimits", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./utils/imageLimits")>()),
   IMAGE_LIMITS: { maxTotalLabels: 5_000 },
   getImageLabelCount: (items: Array<{ count: number }>) =>
     items.reduce((sum, item) => {
@@ -77,6 +78,10 @@ beforeEach(() => {
   localStorage.clear();
   validateImageFiles.mockReset();
   validateImageFileContents.mockReset();
+  validateImageFileContents.mockImplementation(
+    async (files: File[]) =>
+      new Map(files.map((file) => [file, { width: 320, height: 180 }])),
+  );
   vi.stubGlobal("URL", {
     createObjectURL: vi.fn(() => "blob:preview"),
     revokeObjectURL: vi.fn(),
@@ -105,8 +110,18 @@ describe("App image upload concurrency", () => {
     const first = deferred();
     const second = deferred();
     validateImageFileContents
-      .mockReturnValueOnce(first.promise)
-      .mockReturnValueOnce(second.promise);
+      .mockImplementationOnce(async (files: File[]) => {
+        await first.promise;
+        return new Map(
+          files.map((file) => [file, { width: 320, height: 180 }]),
+        );
+      })
+      .mockImplementationOnce(async (files: File[]) => {
+        await second.promise;
+        return new Map(
+          files.map((file) => [file, { width: 320, height: 180 }]),
+        );
+      });
 
     render(
       <I18nProvider>

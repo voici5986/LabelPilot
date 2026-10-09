@@ -149,9 +149,9 @@ export function ZoomControl({
           if (event.key === "Home") enterManual(MIN_SCALE);
           else if (event.key === "End") enterManual(MAX_SCALE);
           else if (event.key === "ArrowUp" || event.key === "ArrowRight") {
-            enterManual(manualScale + 0.1);
+            enterManual(thumbScale + 0.1);
           } else if (event.key === "ArrowDown" || event.key === "ArrowLeft") {
-            enterManual(manualScale - 0.1);
+            enterManual(thumbScale - 0.1);
           } else {
             return;
           }

@@ -60,6 +60,10 @@ export function ThumbnailItem({
   };
 
   const commitCountDraft = () => {
+    if (displayedCount === "") {
+      setCountDraft(null);
+      return;
+    }
     const next = normalizeImageItemCount(Number(displayedCount));
     setCountDraft(null);
     if (next !== item.count) onCountChange(next);

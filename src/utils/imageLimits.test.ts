@@ -122,13 +122,70 @@ describe("image resource limits", () => {
       { type: "image/png" },
     );
     const fullFileRead = vi.spyOn(file, "arrayBuffer");
+    const signatureRead = vi.spyOn(file, "slice");
 
-    await expect(validateImageFileContents([file])).resolves.toBeUndefined();
+    await expect(validateImageFileContents([file])).resolves.toEqual(
+      new Map([[file, { width: 320, height: 180 }]]),
+    );
     expect(fullFileRead).not.toHaveBeenCalled();
     expect(createImageBitmap).toHaveBeenCalledWith(file, {
       imageOrientation: "from-image",
     });
     expect(close).toHaveBeenCalledOnce();
+    const dimensions = await validateImageFileContents([file]);
+    dimensions.get(file)!.width = 10_001;
+    await expect(validateImageFileContents([file])).resolves.toEqual(
+      new Map([[file, { width: 320, height: 180 }]]),
+    );
+    expect(createImageBitmap).toHaveBeenCalledOnce();
+    expect(signatureRead).toHaveBeenCalledOnce();
+  });
+
+  it("retries failed decoding and invalid dimensions instead of caching failures", async () => {
+    const close = vi.fn();
+    const decode = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("decode failed"))
+      .mockResolvedValueOnce({ width: 10_001, height: 1, close })
+      .mockResolvedValueOnce({ width: 320, height: 180, close });
+    vi.stubGlobal("createImageBitmap", decode);
+    const file = new File(
+      [new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])],
+      "retry.png",
+      { type: "image/png" },
+    );
+    await expect(validateImageFileContents([file])).rejects.toMatchObject({
+      code: "image_error_decode",
+    });
+    await expect(validateImageFileContents([file])).rejects.toMatchObject({
+      code: "image_error_dimensions",
+    });
+    await expect(validateImageFileContents([file])).resolves.toEqual(
+      new Map([[file, { width: 320, height: 180 }]]),
+    );
+    expect(decode).toHaveBeenCalledTimes(3);
+    expect(close).toHaveBeenCalledTimes(2);
+  });
+
+  it("counts cached dimensions again when validating the total pixels", async () => {
+    vi.stubGlobal(
+      "createImageBitmap",
+      vi.fn(async () => ({ width: 5_000, height: 8_000, close: vi.fn() })),
+    );
+    const file = new File(
+      [new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])],
+      "cached.png",
+      { type: "image/png" },
+    );
+    await expect(
+      validateImageFileContents(Array(4).fill(file)),
+    ).resolves.toEqual(new Map([[file, { width: 5_000, height: 8_000 }]]));
+    await expect(
+      validateImageFileContents(Array(5).fill(file)),
+    ).rejects.toMatchObject({
+      code: "image_error_total_pixels",
+    });
+    expect(createImageBitmap).toHaveBeenCalledOnce();
   });
 
   it("rejects oversized image dimensions and cumulative pixels", () => {

@@ -61,6 +61,34 @@ describe("ZoomControl accessibility", () => {
     );
   });
 
+  it.each([
+    ["ArrowUp", 1.1],
+    ["ArrowRight", 1.1],
+    ["ArrowDown", 0.9],
+    ["ArrowLeft", 0.9],
+  ])("adjusts actual size from the visible scale with %s", (key, expected) => {
+    const onZoomModeChange = vi.fn();
+    const onManualScaleChange = vi.fn();
+    render(
+      <I18nProvider>
+        <ZoomControl
+          zoomMode="actual"
+          manualScale={3}
+          onZoomModeChange={onZoomModeChange}
+          onManualScaleChange={onManualScaleChange}
+          onRequestActual={vi.fn()}
+        />
+      </I18nProvider>,
+    );
+    const slider = screen.getByRole("slider");
+    expect(slider.getAttribute("aria-valuenow")).toBe("100");
+
+    fireEvent.keyDown(slider, { key });
+
+    expect(onManualScaleChange).toHaveBeenCalledExactlyOnceWith(expected);
+    expect(onZoomModeChange).toHaveBeenCalledExactlyOnceWith("manual");
+  });
+
   it("uses the manual percentage for keyboard adjustments", () => {
     const onZoomModeChange = vi.fn();
     const onManualScaleChange = vi.fn();
