@@ -18,12 +18,6 @@ const validateImageFileContents = vi.hoisted(() => vi.fn());
 
 vi.mock("./utils/imageLimits", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./utils/imageLimits")>()),
-  IMAGE_LIMITS: { maxTotalLabels: 5_000 },
-  getImageLabelCount: (items: Array<{ count: number }>) =>
-    items.reduce((sum, item) => {
-      const count = Number.isFinite(item.count) ? Math.trunc(item.count) : 1;
-      return sum + Math.min(999, Math.max(1, count));
-    }, 0),
   validateImageFiles,
   validateImageFileContents,
 }));

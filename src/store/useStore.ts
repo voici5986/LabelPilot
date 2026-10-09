@@ -1,7 +1,12 @@
 import { create, type StoreApi, type UseBoundStore } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 
-import { normalizeImageItemCount } from "../utils/imageLimits";
+import {
+  createImagePixelBudget,
+  normalizeImageItemCount,
+  validateImageFileContents,
+  validateImageFiles,
+} from "../utils/imageLimits";
 import type {
   HelperLayoutConfig,
   ImageItem,
@@ -48,6 +53,7 @@ export interface AppState {
   setTheme: (theme: "system" | "light" | "dark") => void;
   setPaperSizeMode: (mode: PaperSize) => void;
   setImageItems: (items: ImageItem[]) => void;
+  addImageFiles: (files: File[]) => Promise<void>;
   updateItemCount: (id: string, count: number) => void;
   setScreenCalibration: (value: ScreenCalibration | null) => void;
 }
@@ -116,7 +122,7 @@ function normalizePaperState(
 
 export const useStore = create<AppState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       config: DEFAULT_LAYOUT_CONFIG,
       textConfig: DEFAULT_TEXT_CONFIG,
       appMode: "image",
@@ -168,6 +174,51 @@ export const useStore = create<AppState>()(
             ),
           };
         }),
+
+      addImageFiles: async (files) => {
+        // Reject cheap metadata violations before decoding selected files.
+        validateImageFiles([
+          ...get().imageItems.map((item) => item.file),
+          ...files,
+        ]);
+        const dimensions = await validateImageFileContents(files);
+        while (true) {
+          const latestState = get();
+          const queuedFiles = latestState.imageItems.map((item) => item.file);
+          const missingDimensions = queuedFiles.filter(
+            (file) => !dimensions.has(file),
+          );
+          if (missingDimensions.length > 0) {
+            const queuedDimensions =
+              await validateImageFileContents(missingDimensions);
+            for (const [file, size] of queuedDimensions)
+              dimensions.set(file, size);
+            // Another selection, removal or edit may have completed while decoding.
+            continue;
+          }
+
+          // Recheck metadata against the current queue to guard concurrent selections.
+          // Check and append this same queue without yielding in between.
+          const combinedFiles = [...queuedFiles, ...files];
+          validateImageFiles(combinedFiles);
+          const pixelBudget = createImagePixelBudget();
+          for (const file of combinedFiles) {
+            pixelBudget.add(file.name, dimensions.get(file)!);
+          }
+          const defaultCount =
+            latestState.config.rows * latestState.config.cols;
+          const newItems = files.map((file) => ({
+            id:
+              typeof crypto !== "undefined" && "randomUUID" in crypto
+                ? crypto.randomUUID()
+                : Math.random().toString(36).slice(2, 11),
+            file,
+            count: defaultCount,
+          }));
+          latestState.setImageItems([...latestState.imageItems, ...newItems]);
+          break;
+        }
+      },
 
       setImageItems: (items) =>
         set((state) => {

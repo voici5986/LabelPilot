@@ -1,10 +1,70 @@
 // @vitest-environment jsdom
 
+import { File as BrowserFile } from "node:buffer";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 afterEach(() => {
   localStorage.clear();
   vi.resetModules();
+  vi.unstubAllGlobals();
+});
+
+describe("useStore image uploads", () => {
+  it("validates direct uploads and appends with the latest default count and URL lifecycle", async () => {
+    vi.stubGlobal("File", BrowserFile);
+    const close = vi.fn();
+    let finishDecode!: () => void;
+    const decodeGate = new Promise<void>((resolve) => {
+      finishDecode = resolve;
+    });
+    const decode = vi.fn(async () => {
+      await decodeGate;
+      return { width: 320, height: 180, close };
+    });
+    vi.stubGlobal("createImageBitmap", decode);
+    const createObjectURL = vi.fn(() => "blob:upload");
+    const revokeObjectURL = vi.fn();
+    const { useStore } = await import("./useStore");
+    vi.stubGlobal("URL", { createObjectURL, revokeObjectURL });
+    await expect(
+      useStore
+        .getState()
+        .addImageFiles([new File(["bad"], "bad.gif", { type: "image/gif" })]),
+    ).rejects.toMatchObject({ code: "image_error_type" });
+    expect(decode).not.toHaveBeenCalled();
+    expect(useStore.getState().imageItems).toEqual([]);
+    expect(useStore.getState().imageUrlMap.size).toBe(0);
+    expect(createObjectURL).not.toHaveBeenCalled();
+    const file = new File(
+      [new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])],
+      "label.png",
+      { type: "image/png" },
+    );
+    const upload = useStore.getState().addImageFiles([file]);
+    useStore.getState().setConfig({ rows: 2, cols: 3 });
+    finishDecode();
+    await upload;
+
+    const [item] = useStore.getState().imageItems;
+    expect(item).toMatchObject({ file, count: 6 });
+    expect(item.id).toBeTruthy();
+    expect(useStore.getState().imageUrlMap.get(item.id)).toBe("blob:upload");
+    expect(createObjectURL).toHaveBeenCalledExactlyOnceWith(file);
+    expect(close).toHaveBeenCalledOnce();
+
+    await expect(
+      useStore
+        .getState()
+        .addImageFiles([new File(["bad"], "bad.gif", { type: "image/gif" })]),
+    ).rejects.toMatchObject({ code: "image_error_type" });
+    expect(useStore.getState().imageItems).toEqual([item]);
+    expect(createObjectURL).toHaveBeenCalledOnce();
+    expect(decode).toHaveBeenCalledOnce();
+
+    useStore.getState().setImageItems([]);
+    expect(revokeObjectURL).toHaveBeenCalledExactlyOnceWith("blob:upload");
+  });
 });
 
 describe("useStore text configuration", () => {
