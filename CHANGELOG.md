@@ -1,3 +1,18 @@
+# [1.5.0](https://github.com/voici5986/LabelPilot/compare/v1.4.0...v1.5.0) (2026-10-11)
+
+### Bug Fixes
+
+- 安装提示消费后隐藏安装按钮 ([a0b9bd4](https://github.com/voici5986/LabelPilot/commit/a0b9bd48762438f61b6201366c2fc5943b6ea150))
+- 统一无障碍语义与提示行为 ([b9f0b99](https://github.com/voici5986/LabelPilot/commit/b9f0b99e9ef19dbadf2849dbda98dc569579edba))
+
+### Features
+
+- 改善预览渲染性能与数值边界 ([352a36e](https://github.com/voici5986/LabelPilot/commit/352a36e50e381ed9154ddedf348efd6211d2da90))
+- 强化 PDF 渲染契约与 worker 请求协议 ([2d1cbb2](https://github.com/voici5986/LabelPilot/commit/2d1cbb27ee0d3cb737120e980248066350e29edb))
+- 数值输入支持方向键步进并按字段启用步进按钮 ([75ac286](https://github.com/voici5986/LabelPilot/commit/75ac28659cdce4c0c71c33a21125c33b25b55f4f))
+- 校验预缓存完整性并将 jsPDF 可选依赖替换为显式桩 ([889e1ab](https://github.com/voici5986/LabelPilot/commit/889e1ab9f4cac0a6c4d7f9fb47568b4b8e23b548))
+- 新增图片上传流程与多项功能改进 ([1037fd0](https://github.com/voici5986/LabelPilot/commit/1037fd0c621b7d8f262fabfc51c76bb5d75bb845))
+
 # [1.4.0](https://github.com/voici5986/LabelPilot/compare/v1.3.1...v1.4.0) (2026-09-25)
 
 ### Bug Fixes

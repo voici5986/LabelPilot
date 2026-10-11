@@ -4,8 +4,8 @@
 
 <!-- semantic-release:current-release:start -->
 
-当前发布标签：`v1.4.0`
-`package.json` 版本：`1.4.0`
+当前发布标签：`v1.5.0`
+`package.json` 版本：`1.5.0`
 
 <!-- semantic-release:current-release:end -->
 
