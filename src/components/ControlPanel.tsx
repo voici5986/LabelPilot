@@ -2,13 +2,14 @@ import { UploadCloud } from "lucide-react";
 import { useMemo } from "react";
 import { useShallow } from "zustand/shallow";
 
-import { useGenerationReadiness } from "../hooks/useGenerationReadiness";
+import type { GenerationReadiness } from "../hooks/useGenerationReadiness";
 import { useStore } from "../store/useStore";
 import type { GenerationStatus } from "../utils/generation";
 import { useI18n } from "../utils/i18nContext";
 import { getPaperSizeInfo } from "../utils/layoutMath";
 import type { PdfProgressPhase } from "../utils/pdfProgress";
 import { ImageFilesSection } from "./ImageFilesSection";
+import { ImageOutputHint } from "./ImageOutputHint";
 import { LayoutFields } from "./LayoutFields";
 import { SegmentedControl } from "./SegmentedControl";
 import { SmartButton } from "./SmartButton";
@@ -16,31 +17,30 @@ import { TextModeFields } from "./TextModeFields";
 import { InlineAlert } from "./ui/InlineAlert";
 
 interface ControlPanelProps {
+  readiness: GenerationReadiness;
   onFilesSelect: (files: File[]) => void | Promise<void>;
   onGeneratePdf: () => void;
   onCancelPdf?: () => void;
   genStatus?: GenerationStatus;
   genProgress?: number;
   genPhase?: PdfProgressPhase;
-  maxRows?: number;
-  maxCols?: number;
   /** 生成期间冻结会影响当前 PDF 的输入，取消按钮仍保持可用。 */
   isGenerating?: boolean;
 }
 
 export function ControlPanel({
+  readiness,
   onFilesSelect,
   onGeneratePdf,
   onCancelPdf,
   genStatus = "idle",
   genProgress = 0,
   genPhase = "preparing",
-  maxRows,
-  maxCols,
   isGenerating = false,
 }: ControlPanelProps) {
   const {
     config,
+    gridPreferences,
     onConfigChange,
     imageItems,
     onReorder,
@@ -53,6 +53,7 @@ export function ControlPanel({
   } = useStore(
     useShallow((state) => ({
       config: state.config,
+      gridPreferences: state.gridPreferences,
       onConfigChange: state.setConfig,
       imageItems: state.imageItems,
       onReorder: state.setImageItems,
@@ -66,8 +67,13 @@ export function ControlPanel({
   );
   const { t } = useI18n();
 
-  const { textOutputMetrics, textOutputError, imageOutputError, canGenerate } =
-    useGenerationReadiness(config, appMode, imageItems, textConfig);
+  const {
+    textOutputMetrics,
+    textOutputError,
+    imageOutputError,
+    imageCellWarning,
+    canGenerate,
+  } = readiness;
 
   const paperSizeInfo = useMemo(() => {
     const info = getPaperSizeInfo(config);
@@ -102,9 +108,8 @@ export function ControlPanel({
           <div className="space-y-4 border-b border-border-subtle/60 pb-4">
             <LayoutFields
               config={config}
+              gridPreferences={gridPreferences}
               onConfigChange={onConfigChange}
-              maxRows={maxRows}
-              maxCols={maxCols}
               paperSizeInfo={paperSizeInfo}
             />
           </div>
@@ -120,8 +125,14 @@ export function ControlPanel({
                 onReorder={onReorder}
                 onItemCountChange={onItemCountChange}
               />
+              <ImageOutputHint imageItems={imageItems} />
+              {imageCellWarning && (
+                <InlineAlert tone="warning" className="mt-3 text-sm">
+                  {imageCellWarning}
+                </InlineAlert>
+              )}
               {imageOutputError && (
-                <InlineAlert className="text-sm">
+                <InlineAlert role="alert" className="text-sm">
                   {imageOutputError}
                 </InlineAlert>
               )}

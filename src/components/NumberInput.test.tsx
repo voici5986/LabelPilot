@@ -1,12 +1,20 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render as renderWithOptions,
+  screen,
+} from "@testing-library/react";
 import { useState, type ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { I18nProvider } from "../utils/i18n";
 import { NumberInput } from "./NumberInput";
 
 afterEach(cleanup);
+const render = (ui: React.ReactNode) =>
+  renderWithOptions(ui, { wrapper: I18nProvider });
 
 function ControlledNumberInput({
   onChange,
@@ -36,6 +44,69 @@ function ControlledNumberInput({
 }
 
 describe("NumberInput", () => {
+  it.each(["Enter", "blur"])(
+    "does not publish an untouched field on %s",
+    (commit) => {
+      const onChange = vi.fn();
+      render(<ControlledNumberInput onChange={onChange} />);
+      const input = screen.getByLabelText("Custom width");
+      fireEvent.focus(input);
+      if (commit === "Enter") fireEvent.keyDown(input, { key: "Enter" });
+      fireEvent.blur(input);
+      expect(onChange).not.toHaveBeenCalled();
+      expect(input).toHaveProperty("value", "300");
+    },
+  );
+
+  it("reports the raw draft and boundaries without advertising the old committed value", () => {
+    const { container } = render(<ControlledNumberInput onChange={vi.fn()} />);
+    const input = screen.getByRole("spinbutton", { name: "Custom width" });
+    expect(input.getAttribute("aria-valuemin")).toBe("50");
+    expect(input.getAttribute("aria-valuemax")).toBe("1000");
+    expect(input.getAttribute("aria-valuenow")).toBe("300");
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: "2" } });
+    expect(input.getAttribute("aria-valuenow")).toBe("2");
+    expect(input.getAttribute("aria-valuetext")).toBe("Custom width: 2");
+    expect(input.getAttribute("aria-invalid")).toBe("true");
+    expect(container.querySelector('[aria-live="polite"]')?.textContent).toBe(
+      "",
+    );
+    fireEvent.change(input, { target: { value: "" } });
+    expect(input.hasAttribute("aria-valuenow")).toBe(false);
+    fireEvent.keyDown(input, { key: "Escape" });
+    expect(input.getAttribute("aria-valuenow")).toBe("300");
+    expect(input.hasAttribute("aria-invalid")).toBe(false);
+  });
+
+  it.each(["Enter", "blur"])(
+    "announces a localized clamp only after %s commits",
+    (commit) => {
+      const { container } = render(
+        <ControlledNumberInput onChange={vi.fn()} label="纸张宽度 (mm)" />,
+      );
+      const input = screen.getByRole("spinbutton", { name: "纸张宽度 (mm)" });
+      const announcement = container.querySelector('[aria-live="polite"]');
+      fireEvent.focus(input);
+      fireEvent.change(input, { target: { value: "210" } });
+      expect(announcement?.textContent).toBe("");
+      expect(input.getAttribute("aria-valuetext")).toContain("mm");
+      fireEvent.change(input, { target: { value: "2" } });
+      expect(announcement?.textContent).toBe("");
+      if (commit === "Enter") fireEvent.keyDown(input, { key: "Enter" });
+      else fireEvent.blur(input);
+      expect(input.getAttribute("aria-valuenow")).toBe("50");
+      expect(input.hasAttribute("aria-invalid")).toBe(false);
+      expect(announcement?.textContent).toBe(
+        "纸张宽度 (mm) 已调整为 50，以保持在允许范围内。",
+      );
+      fireEvent.change(input, { target: { value: "80" } });
+      expect(announcement?.textContent).toBe("");
+      fireEvent.keyDown(input, { key: "Enter" });
+      expect(announcement?.textContent).toBe("");
+    },
+  );
+
   it("uses a plain left-aligned input without stepper space by default", () => {
     render(<ControlledNumberInput onChange={vi.fn()} />);
     const input = screen.getByLabelText("Custom width");
@@ -139,7 +210,7 @@ describe("NumberInput", () => {
     fireEvent.focus(input);
     expect(fireEvent.keyDown(input, { key })).toBe(false);
     expect(input).toHaveProperty("value", String(initialValue));
-    expect(onChange).toHaveBeenLastCalledWith(initialValue);
+    expect(onChange).not.toHaveBeenCalled();
   });
 
   it.each(["Enter", "blur"])(

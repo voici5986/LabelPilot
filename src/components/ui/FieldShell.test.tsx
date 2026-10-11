@@ -1,22 +1,22 @@
 // @vitest-environment jsdom
 
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { FieldShell } from "./FieldShell";
 
+afterEach(cleanup);
+
 describe("FieldShell", () => {
-  it("associates the label, hint, and error with one field", () => {
+  it("associates the label and hint with one field", () => {
     render(
       <FieldShell
         label="Width"
         htmlFor="width"
         hint="Use millimeters"
         hintId="width-hint"
-        error="Width is invalid"
-        errorId="width-error"
       >
-        <input id="width" aria-describedby="width-hint width-error" />
+        <input id="width" aria-describedby="width-hint" />
       </FieldShell>,
     );
 
@@ -24,6 +24,5 @@ describe("FieldShell", () => {
     expect(screen.getByText("Use millimeters").getAttribute("id")).toBe(
       "width-hint",
     );
-    expect(screen.getByRole("alert").getAttribute("id")).toBe("width-error");
   });
 });

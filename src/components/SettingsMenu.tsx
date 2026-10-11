@@ -10,6 +10,7 @@ import type { Translations } from "../utils/i18nContext";
 import {
   A4_HEIGHT_MM,
   A4_WIDTH_MM,
+  LAYOUT_CONFIG_LIMITS,
   TEXT_CONFIG_LIMITS,
 } from "../utils/layoutMath";
 import type { PaperSize } from "../utils/layoutMath";
@@ -363,8 +364,8 @@ export function SettingsMenu({
                       onChange={(value) =>
                         onConfigChange({ pageWidthMm: value })
                       }
-                      min={50}
-                      max={1000}
+                      min={LAYOUT_CONFIG_LIMITS.pageSizeMm.min}
+                      max={LAYOUT_CONFIG_LIMITS.pageSizeMm.max}
                     />
                     <NumberInput
                       label={t("paper_height")}
@@ -372,8 +373,8 @@ export function SettingsMenu({
                       onChange={(value) =>
                         onConfigChange({ pageHeightMm: value })
                       }
-                      min={50}
-                      max={1000}
+                      min={LAYOUT_CONFIG_LIMITS.pageSizeMm.min}
+                      max={LAYOUT_CONFIG_LIMITS.pageSizeMm.max}
                     />
                   </div>
                 )}

@@ -10,17 +10,21 @@ import {
   getCurrentScreenEnvironment,
   isFinitePositive,
   isReference,
+  K_HARD_MIN,
+  K_HARD_MAX,
+  REFERENCE_OPTIONS,
   kIssue,
   verificationCssMm,
 } from "../utils/screenCalibration";
-import type { ScreenCalibration } from "../utils/screenCalibration";
+import type {
+  CalibrationReferenceMm,
+  ScreenCalibration,
+} from "../utils/screenCalibration";
 import { ActionButton } from "./ui/ActionButton";
 import { FieldShell } from "./ui/FieldShell";
 import { InlineAlert } from "./ui/InlineAlert";
 
 export type CalibrationDialogSource = "zoom" | "settings";
-
-const REFERENCE_OPTIONS = [50, 100] as const;
 
 interface CalibrationDialogProps {
   open: boolean;
@@ -69,7 +73,7 @@ export function CalibrationDialog({
   // 环境不匹配（重校场景）时不预填旧测量值，避免旧 k 配上新环境被误认为有效。
   const previousCalibration = useStore((state) => state.screenCalibration);
   const hasPrevious = !environmentMismatch && previousCalibration !== null;
-  const [referenceMm, setReferenceMm] = useState<50 | 100>(
+  const [referenceMm, setReferenceMm] = useState<CalibrationReferenceMm>(
     hasPrevious ? previousCalibration.referenceMm : 100,
   );
   const [measuredMm, setMeasuredMm] = useState(
@@ -248,13 +252,22 @@ export function CalibrationDialog({
                     <p className="mb-1 text-xs font-medium text-text-muted">
                       {t("calib_verify_label")}
                     </p>
-                    <div className="flex items-center gap-0">
-                      <div className="h-4 w-px bg-text-main" />
-                      <div
-                        className="h-1 bg-brand-primary"
-                        style={{ width: `${verificationCssMm(k)}mm` }}
-                      />
-                      <div className="h-4 w-px bg-text-main" />
+                    <div
+                      className="overflow-x-auto"
+                      data-testid="calibration-verification-scroll"
+                    >
+                      <div className="flex w-max items-center gap-0">
+                        <div className="h-4 w-px shrink-0 bg-text-main" />
+                        <div
+                          data-testid="calibration-verification-line"
+                          className="h-1 shrink-0 bg-brand-primary"
+                          style={{ width: `${verificationCssMm(k)}mm` }}
+                        />
+                        <div
+                          data-testid="calibration-verification-end"
+                          className="h-4 w-px shrink-0 bg-text-main"
+                        />
+                      </div>
                     </div>
                     <p className="mt-1 text-xs text-text-muted">
                       {t("calib_verify_hint")}
@@ -263,12 +276,16 @@ export function CalibrationDialog({
 
                   {issue !== "ok" && (
                     <InlineAlert
+                      role={hardInvalid ? "alert" : "status"}
                       id={hardInvalid ? "calib-issue" : "calib-soft"}
                       tone={hardInvalid ? "danger" : "warning"}
                       className="text-sm"
                     >
                       {hardInvalid
-                        ? t("calib_hard_error", { min: "0.2", max: "4.0" })
+                        ? t("calib_hard_error", {
+                            min: K_HARD_MIN.toFixed(1),
+                            max: K_HARD_MAX.toFixed(1),
+                          })
                         : t("calib_soft_warn", { k: k.toFixed(3) })}
                     </InlineAlert>
                   )}

@@ -3,11 +3,11 @@ export type Language = "en" | "zh";
 export const translations = {
   en: {
     window_title: "LabelPilot",
-    main_title: "LabelPilot",
     file_group: "LABEL IMAGE",
     layout_group: "LAYOUT SETTINGS",
     browse_btn: "Click to upload image",
-    browse_hint: "PNG/JPG · up to 20 files · 10 MB each / 50 MB total",
+    browse_hint:
+      "PNG/JPG · up to {maxFiles} files · {maxFileMb} MB each / {maxTotalMb} MB total",
     rows: "Rows",
     cols: "Columns",
     margin: "Margin",
@@ -15,6 +15,13 @@ export const translations = {
     orientation: "Page Orientation",
     portrait: "Portrait",
     landscape: "Landscape",
+    orientation_grid_adjusted:
+      "Changing orientation temporarily adjusted the grid from {oldRows}×{oldCols} to {rows}×{cols}. Your preferred grid is saved and will return when the orientation allows it.",
+    text_raster_quality_warning:
+      "Chinese / non-ASCII text will be rasterized at {dpi} DPI (target: {target}). Smaller label cells can improve resolution.",
+    image_normalization_hint:
+      "JPEG images that need orientation correction may be re-encoded. During correction, images over {max} million pixels are resized.",
+    image_error_no_files: "Select at least one image before generating a PDF.",
     generate_btn: "Generate PDF",
     zoom_reset: "Fit to Window",
     zoom_relative_hint:
@@ -49,12 +56,9 @@ export const translations = {
     calib_stale_toast: "Display or browser zoom changed; please re-calibrate.",
     calib_stale_banner:
       "The monitor or browser zoom differs from the last calibration; please measure again.",
-    calib_1x1_short: "1:1",
     gen_success: "PDF Generated! Downloading...",
     gen_success_short: "PDF generated",
     gen_failed: "Failed to generate PDF",
-    files_selected: "{n} images selected",
-    generating_pdf: "Generating PDF... {p}%",
     cancel_generation: "Cancel generation",
     generation_cancelled: "PDF generation cancelled",
     generation_timeout: "PDF generation timed out. Try fewer labels.",
@@ -73,6 +77,9 @@ export const translations = {
     paper_size: "Paper Size",
     paper_summary: "{label}, {width}×{height} mm",
     unit_mm: "mm",
+    number_clamped:
+      "{label} adjusted to {value} to stay within the allowed range.",
+    preview_region: "Page preview",
     paper_width: "Width (mm)",
     paper_height: "Height (mm)",
     paper_type_a4: "A4",
@@ -100,9 +107,6 @@ export const translations = {
     text_start_number: "Start Number",
     text_digits: "Minimum Digits",
     text_count: "Total Count",
-    orientation_tip_title: "Please Rotate Your Device",
-    orientation_tip_desc:
-      "For the best label design experience, please use landscape mode.",
     install_pwa: "Install app for better experience",
     install_btn: "Install App",
     qr_enable: "Show QR Code",
@@ -134,6 +138,8 @@ export const translations = {
       "{name} exceeds {maxWidth}×{maxHeight} pixels or has invalid dimensions.",
     image_error_pixel_count: "{name} has too many pixels.",
     image_error_total_pixels: "The selected images contain too many pixels.",
+    image_cell_warning:
+      "Image cells are {width} × {height} mm. A shortest side of at least {min} mm is recommended for print readability; you can still generate the PDF.",
     image_error_label_count:
       "Generate no more than {max} image labels at once.",
     text_error_too_small:
@@ -144,6 +150,10 @@ export const translations = {
     unicode_render_unsupported:
       "This browser cannot render Unicode text into the PDF.",
     unicode_render_failed: "Unicode text could not be rendered into the PDF.",
+    pdf_worker_busy:
+      "The PDF renderer is busy. Please try again when it finishes.",
+    pdf_worker_version_mismatch:
+      "The PDF renderer version is incompatible. Refresh the page and retry.",
     pdf_generation_failed:
       "The PDF renderer encountered an error. Check the inputs and try again.",
     pdf_worker_protocol_error:
@@ -162,11 +172,11 @@ export const translations = {
   },
   zh: {
     window_title: "LabelPilot",
-    main_title: "LabelPilot",
     file_group: "标签图片",
     layout_group: "排版设置",
     browse_btn: "点击上传标签图片",
-    browse_hint: "PNG/JPG · 最多 20 张 · 单张 10 MB / 总计 50 MB",
+    browse_hint:
+      "PNG/JPG · 最多 {maxFiles} 张 · 单张 {maxFileMb} MB / 总计 {maxTotalMb} MB",
     rows: "行数",
     cols: "列数",
     margin: "边距",
@@ -174,6 +184,13 @@ export const translations = {
     orientation: "纸张方向",
     portrait: "纵向",
     landscape: "横向",
+    orientation_grid_adjusted:
+      "切换方向后，网格已从 {oldRows}×{oldCols} 临时调整为 {rows}×{cols}。行列偏好已保留，方向允许时会恢复。",
+    text_raster_quality_warning:
+      "中文/非ASCII文本会以 {dpi} DPI 栅格化输出，目标 {target} DPI；缩小标签单元格可提高分辨率。",
+    image_normalization_hint:
+      "需要纠正方向的 JPEG 图片可能会重新编码；纠正时超过 {max} 百万像素的图片会缩小。",
+    image_error_no_files: "请至少选择一张图片后再生成 PDF。",
     generate_btn: "生成 PDF 文档",
     zoom_reset: "适应窗口",
     zoom_relative_hint: "100% 表示适应窗口，不代表物理实际尺寸。",
@@ -204,12 +221,9 @@ export const translations = {
     calib_notice: "校准只对校准时所在的显示器和浏览器缩放负责。",
     calib_stale_toast: "显示器或浏览器缩放已变化，请重新校准。",
     calib_stale_banner: "显示器或浏览器缩放与上次校准时不同，请重新测量校准。",
-    calib_1x1_short: "1:1",
     gen_success: "PDF 已生成！正在开始下载...",
     gen_success_short: "PDF 已生成",
     gen_failed: "生成 PDF 失败",
-    files_selected: "已选择 {n} 张图片",
-    generating_pdf: "正在生成 PDF... {p}%",
     cancel_generation: "取消生成",
     generation_cancelled: "已取消生成 PDF",
     generation_timeout: "生成 PDF 超时，请减少标签数量后重试。",
@@ -230,6 +244,8 @@ export const translations = {
     // surface; the label and dimensions remain fully localized.
     paper_summary: "{label}, {width}×{height}mm",
     unit_mm: "mm",
+    number_clamped: "{label} 已调整为 {value}，以保持在允许范围内。",
+    preview_region: "纸张预览",
     paper_width: "纸张宽度 (mm)",
     paper_height: "纸张高度 (mm)",
     paper_type_a4: "A4",
@@ -256,8 +272,6 @@ export const translations = {
     text_start_number: "起始编号",
     text_digits: "编号位数",
     text_count: "总数量",
-    orientation_tip_title: "请旋转屏幕",
-    orientation_tip_desc: "为了获得最佳的标签设计体验，请使用横屏浏览。",
     install_pwa: "安装应用以获得更好体验",
     install_btn: "安装应用",
     qr_enable: "生成二维码",
@@ -288,6 +302,8 @@ export const translations = {
       "{name} 超过 {maxWidth}×{maxHeight} 像素或尺寸无效。",
     image_error_pixel_count: "{name} 的像素总量过大。",
     image_error_total_pixels: "所选图片的总像素量过大。",
+    image_cell_warning:
+      "图片单元格为 {width} × {height} mm，打印后图案可能难以辨认。建议最短边至少 {min} mm，并先试印；仍可生成 PDF。",
     image_error_label_count: "单次最多生成 {max} 个图片标签。",
     text_error_too_small:
       "预计字号仅 {size} pt；请减少行列数或缩短前缀（最低 {min} pt）。",
@@ -296,6 +312,8 @@ export const translations = {
       "二维码模块仅 {size} mm；请缩短内容或放大二维码（最低 {min} mm）。",
     unicode_render_unsupported: "当前浏览器无法将 Unicode 文本写入 PDF。",
     unicode_render_failed: "无法将 Unicode 文本渲染到 PDF。",
+    pdf_worker_busy: "PDF 渲染器正在忙碌，请等待完成后重试。",
+    pdf_worker_version_mismatch: "PDF 渲染器版本不兼容，请刷新页面后重试。",
     pdf_generation_failed: "PDF 渲染发生错误，请检查输入后重试。",
     pdf_worker_protocol_error: "PDF 渲染器返回了无效消息，请重试。",
     remove_image: "移除 {name}",

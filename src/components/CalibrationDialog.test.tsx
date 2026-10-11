@@ -5,6 +5,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useStore } from "../store/useStore";
 import { I18nProvider } from "../utils/i18n";
+import {
+  K_HARD_MIN,
+  K_HARD_MAX,
+  REFERENCE_OPTIONS,
+} from "../utils/screenCalibration";
 import { CalibrationDialog } from "./CalibrationDialog";
 import type { CalibrationDialogSource } from "./CalibrationDialog";
 
@@ -59,6 +64,20 @@ function renderDialog(
 }
 
 describe("CalibrationDialog", () => {
+  it.each(REFERENCE_OPTIONS)(
+    "saves a measurement using the %s mm reference",
+    (referenceMm) => {
+      const { onSaved } = renderDialog();
+      fireEvent.click(screen.getByRole("button", { name: `${referenceMm}mm` }));
+      fireEvent.change(screen.getByLabelText(/量出来是/), {
+        target: { value: String(referenceMm) },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "保存并查看 1:1" }));
+      expect(onSaved).toHaveBeenCalledWith(
+        expect.objectContaining({ referenceMm, measuredMm: referenceMm, k: 1 }),
+      );
+    },
+  );
   it("computes k live and saves from the zoom source", () => {
     const { onSaved } = renderDialog();
 
@@ -120,22 +139,63 @@ describe("CalibrationDialog", () => {
     expect(useStore.getState().screenCalibration).toEqual(savedCalibration);
   });
 
-  it("disables save for out-of-range input and explains the reason", () => {
-    renderDialog();
+  it.each(["10", "9999"])(
+    "disables save for out-of-range input %s and explains the reason",
+    (value) => {
+      renderDialog();
 
-    fireEvent.change(screen.getByLabelText(/量出来是/), {
-      target: { value: "9999" },
-    });
+      fireEvent.change(screen.getByLabelText(/量出来是/), {
+        target: { value },
+      });
 
-    expect(
-      (
-        screen.getByRole("button", {
-          name: "保存并查看 1:1",
-        }) as HTMLButtonElement
-      ).disabled,
-    ).toBe(true);
-    expect(screen.getByText(/超出合理范围/)).toBeTruthy();
-  });
+      expect(
+        (
+          screen.getByRole("button", {
+            name: "保存并查看 1:1",
+          }) as HTMLButtonElement
+        ).disabled,
+      ).toBe(true);
+      expect(screen.getByRole("alert").textContent).toContain("超出合理范围");
+      expect(screen.getByRole("alert").textContent).toContain(
+        K_HARD_MIN.toFixed(1),
+      );
+      expect(screen.getByRole("alert").textContent).toContain(
+        K_HARD_MAX.toFixed(1),
+      );
+      expect(
+        screen.getByLabelText(/量出来是/).getAttribute("aria-invalid"),
+      ).toBe("true");
+
+      fireEvent.change(screen.getByLabelText(/量出来是/), {
+        target: { value: "100" },
+      });
+      expect(screen.queryByRole("alert")).toBeNull();
+      expect(
+        screen.getByRole("button", { name: "保存并查看 1:1" }),
+      ).toHaveProperty("disabled", false);
+    },
+  );
+
+  it.each(["30", "300"])(
+    "announces a soft calibration warning politely and allows saving %s mm",
+    (value) => {
+      const { onSaved } = renderDialog();
+      fireEvent.change(screen.getByLabelText(/量出来是/), {
+        target: { value },
+      });
+      expect(
+        screen.getByRole("status").classList.contains("text-warning"),
+      ).toBe(true);
+      expect(screen.queryByRole("alert")).toBeNull();
+      expect(
+        screen.getByLabelText(/量出来是/).getAttribute("aria-invalid"),
+      ).toBe("false");
+      const save = screen.getByRole("button", { name: "保存并查看 1:1" });
+      expect(save).toHaveProperty("disabled", false);
+      fireEvent.click(save);
+      expect(onSaved).toHaveBeenCalledOnce();
+    },
+  );
 
   it("focuses the measurement input when opened", () => {
     renderDialog();

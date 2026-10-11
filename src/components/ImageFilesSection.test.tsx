@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useStore } from "../store/useStore";
 import { I18nProvider } from "../utils/i18n";
+import { IMAGE_LIMITS } from "../utils/imageLimits";
 import type { ImageItem } from "../utils/layoutMath";
 import { ImageFilesSection } from "./ImageFilesSection";
 
@@ -31,6 +32,29 @@ afterEach(() => {
 });
 
 describe("ImageFilesSection ordering", () => {
+  it.each(["zh", "en"])(
+    "renders upload limits without unresolved placeholders (%s)",
+    (language) => {
+      localStorage.setItem("label_printer_lang", language);
+      render(
+        <I18nProvider>
+          <ImageFilesSection
+            imageItems={[]}
+            onFilesSelect={vi.fn()}
+            onReorder={vi.fn()}
+            onItemCountChange={vi.fn()}
+          />
+        </I18nProvider>,
+      );
+      const fileMb = IMAGE_LIMITS.maxFileBytes / 1024 / 1024;
+      const totalMb = IMAGE_LIMITS.maxTotalBytes / 1024 / 1024;
+      const hint =
+        language === "en"
+          ? `PNG/JPG · up to ${IMAGE_LIMITS.maxFiles} files · ${fileMb} MB each / ${totalMb} MB total`
+          : `PNG/JPG · 最多 ${IMAGE_LIMITS.maxFiles} 张 · 单张 ${fileMb} MB / 总计 ${totalMb} MB`;
+      expect(screen.getByText(hint)).toBeTruthy();
+    },
+  );
   it("supports keyboard-friendly up/down movement and disables edge actions", () => {
     const items = [makeItem("a"), makeItem("b")];
     const onReorder = vi.fn();
@@ -155,6 +179,7 @@ describe("ImageFilesSection ordering", () => {
 
     expect(screen.getByText("继续添加图片")).toBeTruthy();
     expect(screen.queryByText("已选择 2 张图片")).toBeNull();
-    expect(screen.getByLabelText("点击上传标签图片")).toBeTruthy();
+    expect(screen.getByLabelText("继续添加图片")).toBeTruthy();
+    expect(screen.queryByLabelText("点击上传标签图片")).toBeNull();
   });
 });

@@ -4,6 +4,7 @@ import { useId } from "react";
 import type { ChangeEvent } from "react";
 
 import { useI18n } from "../utils/i18nContext";
+import { IMAGE_LIMITS } from "../utils/imageLimits";
 import type { ImageItem } from "../utils/layoutMath";
 import { ThumbnailItem } from "./ThumbnailItem";
 
@@ -79,7 +80,7 @@ export function ImageFilesSection({
           multiple
           accept="image/png, image/jpeg, image/jpg"
           onChange={(event) => void handleFileChange(event)}
-          aria-label={t("browse_btn")}
+          aria-label={t(hasImages ? "add_more_images" : "browse_btn")}
           className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
         />
         {hasImages ? (
@@ -101,7 +102,13 @@ export function ImageFilesSection({
                 <p className="w-full truncate text-sm font-semibold text-text-main">
                   {t("browse_btn")}
                 </p>
-                <p className="text-xs text-text-muted">{t("browse_hint")}</p>
+                <p className="text-xs text-text-muted">
+                  {t("browse_hint", {
+                    maxFiles: IMAGE_LIMITS.maxFiles,
+                    maxFileMb: IMAGE_LIMITS.maxFileBytes / 1024 / 1024,
+                    maxTotalMb: IMAGE_LIMITS.maxTotalBytes / 1024 / 1024,
+                  })}
+                </p>
               </div>
             </div>
           </>

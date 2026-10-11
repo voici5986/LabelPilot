@@ -4,6 +4,7 @@ import { useId } from "react";
 import { useI18n } from "../utils/i18nContext";
 import type { TextConfig } from "../utils/layoutMath";
 import { TEXT_CONFIG_LIMITS } from "../utils/layoutMath";
+import { PDF_RASTER_TARGET_DPI } from "../utils/pdfRendering";
 import type { TextOutputMetrics } from "../utils/textValidation";
 import { NumberInput } from "./NumberInput";
 import { FieldShell } from "./ui/FieldShell";
@@ -69,16 +70,16 @@ export function TextModeFields({
             label={t("text_start_number")}
             value={textConfig.startNumber}
             onChange={(value) => onChange({ startNumber: value })}
-            min={0}
-            max={999999}
+            min={TEXT_CONFIG_LIMITS.startNumber.min}
+            max={TEXT_CONFIG_LIMITS.startNumber.max}
             isInteger
           />
           <NumberInput
             label={t("text_digits")}
             value={textConfig.digits}
             onChange={(value) => onChange({ digits: value })}
-            min={1}
-            max={10}
+            min={TEXT_CONFIG_LIMITS.digits.min}
+            max={TEXT_CONFIG_LIMITS.digits.max}
             isInteger
             showStepper
           />
@@ -90,8 +91,8 @@ export function TextModeFields({
               label={t("text_count")}
               value={textConfig.count}
               onChange={(value) => onChange({ count: value })}
-              min={1}
-              max={500}
+              min={TEXT_CONFIG_LIMITS.count.min}
+              max={TEXT_CONFIG_LIMITS.count.max}
               isInteger
             />
           </div>
@@ -136,9 +137,10 @@ export function TextModeFields({
                 id={qrSizeId}
                 name="qr-size"
                 aria-label={t("qr_size")}
+                aria-valuetext={`${Math.round(textConfig.qrSizeRatio * 100)}%`}
                 type="range"
-                min="0.1"
-                max="0.6"
+                min={TEXT_CONFIG_LIMITS.qrSizeRatio.min}
+                max={TEXT_CONFIG_LIMITS.qrSizeRatio.max}
                 step="0.05"
                 value={textConfig.qrSizeRatio}
                 onChange={(event) =>
@@ -150,7 +152,20 @@ export function TextModeFields({
           </div>
         )}
 
-        {error && <InlineAlert className="text-sm">{error}</InlineAlert>}
+        {error && (
+          <InlineAlert role="alert" className="text-sm">
+            {error}
+          </InlineAlert>
+        )}
+        {metrics.rasterDpi !== undefined &&
+          metrics.rasterDpi < PDF_RASTER_TARGET_DPI - 0.5 && (
+            <InlineAlert tone="warning" className="text-sm">
+              {t("text_raster_quality_warning", {
+                dpi: Math.round(metrics.rasterDpi),
+                target: PDF_RASTER_TARGET_DPI,
+              })}
+            </InlineAlert>
+          )}
       </div>
     </div>
   );

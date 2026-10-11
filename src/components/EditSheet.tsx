@@ -3,11 +3,12 @@ import { ChevronDown, ChevronUp, Maximize2, UploadCloud } from "lucide-react";
 import { useRef, useState } from "react";
 import { useShallow } from "zustand/shallow";
 
-import { useGenerationReadiness } from "../hooks/useGenerationReadiness";
+import type { GenerationReadiness } from "../hooks/useGenerationReadiness";
 import { useModalFocus } from "../hooks/useModalFocus";
 import { useStore } from "../store/useStore";
 import { useI18n } from "../utils/i18nContext";
 import { ImageFilesSection } from "./ImageFilesSection";
+import { ImageOutputHint } from "./ImageOutputHint";
 import { LayoutFields } from "./LayoutFields";
 import { SegmentedControl } from "./SegmentedControl";
 import { TextModeFields } from "./TextModeFields";
@@ -15,6 +16,7 @@ import { ActionButton } from "./ui/ActionButton";
 import { InlineAlert } from "./ui/InlineAlert";
 
 interface EditSheetProps {
+  readiness: GenerationReadiness;
   open: boolean;
   full: boolean;
   onClose: () => void;
@@ -30,6 +32,7 @@ interface EditSheetProps {
  * 滚动容器按实际面板高度计算，62% 档底部内容可完整滚动到可视区。
  */
 export function EditSheet({
+  readiness,
   open,
   full,
   onClose,
@@ -47,6 +50,7 @@ export function EditSheet({
   });
   const {
     config,
+    gridPreferences,
     onConfigChange,
     imageItems,
     onReorder,
@@ -58,6 +62,7 @@ export function EditSheet({
   } = useStore(
     useShallow((state) => ({
       config: state.config,
+      gridPreferences: state.gridPreferences,
       onConfigChange: state.setConfig,
       imageItems: state.imageItems,
       onReorder: state.setImageItems,
@@ -69,8 +74,12 @@ export function EditSheet({
     })),
   );
 
-  const { textOutputMetrics, textOutputError, imageOutputError } =
-    useGenerationReadiness(config, appMode, imageItems, textConfig);
+  const {
+    textOutputMetrics,
+    textOutputError,
+    imageOutputError,
+    imageCellWarning,
+  } = readiness;
 
   return (
     <AnimatePresence>
@@ -104,6 +113,7 @@ export function EditSheet({
               role="button"
               tabIndex={0}
               aria-label={t("edit_panel_toggle_size")}
+              aria-pressed={full}
               onClick={onToggleFull}
               onKeyDown={(event) => {
                 if (event.key === "Enter" || event.key === " ") {
@@ -184,8 +194,14 @@ export function EditSheet({
                           onItemCountChange={onItemCountChange}
                         />
                       </div>
+                      <ImageOutputHint imageItems={imageItems} />
+                      {imageCellWarning && (
+                        <InlineAlert tone="warning" className="mt-3 text-sm">
+                          {imageCellWarning}
+                        </InlineAlert>
+                      )}
                       {imageOutputError && (
-                        <InlineAlert className="mt-3 text-sm">
+                        <InlineAlert role="alert" className="mt-3 text-sm">
                           {imageOutputError}
                         </InlineAlert>
                       )}
@@ -205,6 +221,7 @@ export function EditSheet({
                   <div className="rounded-xl border border-border-subtle bg-surface p-3">
                     <LayoutFields
                       config={config}
+                      gridPreferences={gridPreferences}
                       onConfigChange={onConfigChange}
                       layoutIdPrefix="sheet-orientation-active"
                     />

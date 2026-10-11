@@ -1,11 +1,14 @@
 import React, { useId, useRef, useState } from "react";
 
+import { useI18n } from "../utils/i18nContext";
 import { FieldShell } from "./ui/FieldShell";
 import { StepperButton } from "./ui/StepperButton";
 
 interface NumberInputProps {
   label: string;
   value: number;
+  /** Logical value to restore when the displayed value is temporarily constrained. */
+  rollbackValue?: number;
   onChange: (v: number) => void;
   min: number;
   max: number;
@@ -18,6 +21,7 @@ interface NumberInputProps {
 export function NumberInput({
   label,
   value,
+  rollbackValue,
   onChange,
   min,
   max,
@@ -26,11 +30,19 @@ export function NumberInput({
   step: propsStep,
   showStepper = false,
 }: NumberInputProps) {
+  const { t } = useI18n();
   const inputId = useId();
+  const [clampAnnouncement, setClampAnnouncement] = useState("");
   // Preserve the raw draft until commit, including intermediate out-of-range values.
   const [draft, setDraft] = useState<string | null>(null);
-  const draftStartValue = useRef(value);
+  const draftStartValue = useRef(rollbackValue ?? value);
   const displayValue = draft ?? String(value);
+  const visibleNumber = Number(displayValue);
+  const hasVisibleNumber =
+    displayValue.trim() !== "" && Number.isFinite(visibleNumber);
+  const invalidDraft =
+    draft !== null &&
+    (!hasVisibleNumber || visibleNumber < min || visibleNumber > max);
 
   const normalizeValue = (candidate: number) => {
     if (!Number.isFinite(candidate)) return min;
@@ -47,6 +59,7 @@ export function NumberInput({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const nextVal = e.target.value;
+    setClampAnnouncement("");
 
     if (nextVal === "") {
       setDraft("");
@@ -71,13 +84,17 @@ export function NumberInput({
   };
 
   const commitDraft = () => {
+    if (draft === null) return;
     const parsed = parseFloat(displayValue);
     setDraft(null);
     if (!Number.isFinite(parsed)) {
-      draftStartValue.current = value;
+      draftStartValue.current = rollbackValue ?? value;
       return;
     }
     const normalized = normalizeValue(parsed);
+    if (parsed < min || parsed > max) {
+      setClampAnnouncement(t("number_clamped", { label, value: normalized }));
+    }
     draftStartValue.current = normalized;
     onChange(normalized);
   };
@@ -98,6 +115,7 @@ export function NumberInput({
       const next = normalizeValue(
         current + (event.key === "ArrowUp" ? step : -step),
       );
+      if (next === current) return;
       setDraft(String(next));
       onChange(next);
     }
@@ -145,14 +163,20 @@ export function NumberInput({
           id={inputId}
           name={inputId}
           type="text"
+          role="spinbutton"
+          aria-valuemin={min}
+          aria-valuemax={max}
+          aria-valuenow={hasVisibleNumber ? visibleNumber : undefined}
+          aria-valuetext={`${label}: ${displayValue}`}
+          aria-invalid={invalidDraft || undefined}
           inputMode={isInteger ? "numeric" : "decimal"}
           value={displayValue}
           onChange={handleChange}
           onBlur={commitDraft}
           onKeyDown={handleKeyDown}
           onFocus={(e) => {
-            draftStartValue.current = value;
-            setDraft(String(value));
+            setClampAnnouncement("");
+            draftStartValue.current = rollbackValue ?? value;
             e.currentTarget.select();
           }}
           className={`font-mono text-sm font-semibold text-text-main ${
@@ -171,6 +195,9 @@ export function NumberInput({
             aria-controls={inputId}
           />
         )}
+      </div>
+      <div aria-live="polite" className="sr-only">
+        {clampAnnouncement}
       </div>
     </FieldShell>
   );

@@ -15,12 +15,13 @@ export function InlineAlert({
   children,
   className = "",
   tone = "danger",
+  role = "status",
   ...divProps
 }: InlineAlertProps) {
   return (
     <div
       {...divProps}
-      role="alert"
+      role={role}
       className={`${toneStyles[tone]} ${className}`}
     >
       {children}

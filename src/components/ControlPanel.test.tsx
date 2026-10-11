@@ -8,8 +8,10 @@ import {
   screen,
 } from "@testing-library/react";
 import type { ComponentProps } from "react";
+import type { ComponentProps as ReadinessComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { useGenerationReadiness } from "../hooks/useGenerationReadiness";
 import { useStore } from "../store/useStore";
 import { I18nProvider } from "../utils/i18n";
 import { A4_HEIGHT_MM, A4_WIDTH_MM } from "../utils/layoutMath";
@@ -36,12 +38,25 @@ const defaultTextConfig = {
 };
 const originalSetConfig = useStore.getState().setConfig;
 
+function ReadyControlPanel(
+  props: Omit<ReadinessComponentProps<typeof ControlPanel>, "readiness">,
+) {
+  const { config, appMode, imageItems, textConfig } = useStore();
+  const readiness = useGenerationReadiness(
+    config,
+    appMode,
+    imageItems,
+    textConfig,
+  );
+  return <ControlPanel readiness={readiness} {...props} />;
+}
+
 function renderControlPanel(
   props: Partial<ComponentProps<typeof ControlPanel>> = {},
 ) {
   return render(
     <I18nProvider>
-      <ControlPanel
+      <ReadyControlPanel
         onFilesSelect={vi.fn()}
         onGeneratePdf={vi.fn()}
         {...props}
@@ -53,6 +68,7 @@ function renderControlPanel(
 function resetStore() {
   useStore.setState({
     config: defaultConfig,
+    gridPreferences: { rows: defaultConfig.rows, cols: defaultConfig.cols },
     textConfig: defaultTextConfig,
     appMode: "image",
     theme: "system",
@@ -78,11 +94,167 @@ afterEach(() => {
 });
 
 describe("ControlPanel", () => {
+  it("warns for 5 by 2.5 mm image cells without blocking generation", () => {
+    useStore.setState({
+      config: {
+        ...defaultConfig,
+        orientation: "portrait",
+        rows: 20,
+        cols: 10,
+        pageWidthMm: 50,
+        pageHeightMm: 50,
+        marginMm: 0,
+        spacingMm: 0,
+      },
+      imageItems: [
+        {
+          id: "small",
+          file: new File(["image"], "small.png", { type: "image/png" }),
+          count: 1,
+        },
+      ],
+    });
+    renderControlPanel();
+    expect(screen.getByText(/图片单元格为 5 × 2.5 mm/).textContent).toContain(
+      "最短边至少 5 mm",
+    );
+    expect(
+      screen.getByText(/图片单元格为 5 × 2.5 mm/).closest('[role="status"]'),
+    ).not.toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "生成 PDF 文档" }),
+    ).toHaveProperty("disabled", false);
+  });
+
+  it("warns about low raster text resolution without disabling generation", () => {
+    useStore.setState({
+      appMode: "text",
+      config: { ...defaultConfig, rows: 1, cols: 1 },
+      textConfig: { ...defaultTextConfig, prefix: "设备-" },
+    });
+    renderControlPanel();
+    expect(screen.getByText(/中文\/非ASCII文本会以/).textContent).toContain(
+      "300 DPI",
+    );
+    expect(
+      screen.getByText(/中文\/非ASCII文本会以/).closest('[role="status"]'),
+    ).not.toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "生成 PDF 文档" }),
+    ).toHaveProperty("disabled", false);
+  });
+
+  it.each(["image/jpeg", ""])(
+    "shows the conditional processing hint for JPEG or unknown MIME %s",
+    (type) => {
+      useStore.getState().setImageItems([
+        {
+          id: "jpeg",
+          file: new File(["image"], "label.jpg", { type }),
+          count: 1,
+        },
+      ]);
+      renderControlPanel();
+      expect(
+        screen.getByText(/需要纠正方向的 JPEG 图片可能会重新编码/).textContent,
+      ).toContain("16 百万像素");
+      expect(
+        screen.getByRole("button", { name: "生成 PDF 文档" }),
+      ).toHaveProperty("disabled", false);
+      act(() =>
+        useStore.getState().setImageItems([
+          {
+            id: "png",
+            file: new File(["image"], "label.png", { type: "image/png" }),
+            count: 1,
+          },
+        ]),
+      );
+      expect(
+        screen.queryByText(/需要纠正方向的 JPEG 图片可能会重新编码/),
+      ).toBeNull();
+    },
+  );
+
+  it("announces an orientation grid clamp and clears it on a later unclamped change", () => {
+    useStore.getState().setConfig({ rows: 10, cols: 20 });
+    renderControlPanel();
+    fireEvent.click(screen.getByRole("button", { name: "纵向" }));
+    expect(useStore.getState().config).toMatchObject({
+      orientation: "portrait",
+      rows: 10,
+      cols: 10,
+    });
+    const announcement = screen.getByText(/网格已从 10×20 临时调整为 10×10/);
+    expect(announcement.textContent).toContain("行列偏好已保留");
+    expect(announcement.getAttribute("aria-live")).toBe("polite");
+    fireEvent.click(screen.getByRole("button", { name: "横向" }));
+    expect(useStore.getState().config.cols).toBe(20);
+    expect(screen.queryByText(/网格已从/)).toBeNull();
+  });
+  it("announces the actual projection when both logical dimensions are 20", () => {
+    useStore.getState().setConfig({ orientation: "portrait", rows: 20 });
+    useStore.getState().setConfig({ orientation: "landscape", cols: 20 });
+    renderControlPanel();
+    fireEvent.click(screen.getByRole("button", { name: "纵向" }));
+    expect(useStore.getState().config).toMatchObject({ rows: 20, cols: 10 });
+    expect(
+      screen.getByText(/网格已从 10×20 临时调整为 20×10/).textContent,
+    ).toContain("行列偏好已保留");
+    fireEvent.click(screen.getByRole("button", { name: "横向" }));
+    expect(useStore.getState().config).toMatchObject({ rows: 10, cols: 20 });
+    expect(screen.getByText(/网格已从 20×10 临时调整为 10×20/)).toBeTruthy();
+  });
+
+  it.each(["blur", "Enter", "Escape", "ArrowUp", "edit", "sameValue"])(
+    "preserves or explicitly edits a clamped preference through %s input events",
+    (interaction) => {
+      useStore.getState().setConfig({ cols: 20 });
+      useStore.getState().setConfig({ orientation: "portrait" });
+      renderControlPanel();
+      const input = screen.getByRole("spinbutton", {
+        name: "列数",
+      });
+      expect(input).toHaveProperty("value", "10");
+      fireEvent.focus(input);
+      if (interaction === "sameValue") {
+        fireEvent.change(input, { target: { value: "" } });
+        fireEvent.change(input, { target: { value: "10" } });
+      }
+      if (interaction === "Escape" || interaction === "edit") {
+        fireEvent.change(input, { target: { value: "9" } });
+        expect(useStore.getState().gridPreferences.cols).toBe(9);
+      }
+      if (interaction === "Escape") fireEvent.keyDown(input, { key: "Escape" });
+      if (interaction === "ArrowUp")
+        fireEvent.keyDown(input, { key: "ArrowUp" });
+      if (interaction === "Enter") fireEvent.keyDown(input, { key: "Enter" });
+      fireEvent.blur(input);
+      expect(useStore.getState().gridPreferences.cols).toBe(
+        interaction === "edit" ? 9 : interaction === "sameValue" ? 10 : 20,
+      );
+      fireEvent.click(screen.getByRole("button", { name: "横向" }));
+      expect(input).toHaveProperty(
+        "value",
+        interaction === "edit"
+          ? "9"
+          : interaction === "sameValue"
+            ? "10"
+            : "20",
+      );
+    },
+  );
+
   it("passes selected image files to the upload callback", () => {
     const onFilesSelect = vi.fn();
     render(
       <I18nProvider>
-        <ControlPanel onFilesSelect={onFilesSelect} onGeneratePdf={vi.fn()} />
+        <ReadyControlPanel
+          onFilesSelect={onFilesSelect}
+          onGeneratePdf={vi.fn()}
+        />
       </I18nProvider>,
     );
 
@@ -163,11 +335,7 @@ describe("ControlPanel", () => {
     useStore.setState({ setConfig });
     render(
       <I18nProvider>
-        <ControlPanel
-          onFilesSelect={vi.fn()}
-          onGeneratePdf={vi.fn()}
-          maxRows={20}
-        />
+        <ReadyControlPanel onFilesSelect={vi.fn()} onGeneratePdf={vi.fn()} />
       </I18nProvider>,
     );
 
@@ -227,6 +395,18 @@ describe("ControlPanel", () => {
     expect(useStore.getState().textConfig.digits).toBe(10);
   });
 
+  it("describes QR slider values as percentages", () => {
+    useStore.setState({
+      appMode: "text",
+      textConfig: { ...defaultTextConfig, showQrCode: true, qrSizeRatio: 0.35 },
+    });
+    renderControlPanel();
+    const slider = screen.getByRole("slider", { name: "二维码大小" });
+    expect(slider.getAttribute("aria-valuetext")).toBe("35%");
+    fireEvent.change(slider, { target: { value: "0.5" } });
+    expect(slider.getAttribute("aria-valuetext")).toBe("50%");
+  });
+
   it("blocks generation when image quantities exceed the aggregate label limit", () => {
     const items = Array.from({ length: 6 }, (_, index) => ({
       id: `img-${index}`,
@@ -237,11 +417,58 @@ describe("ControlPanel", () => {
 
     renderControlPanel();
 
-    expect(screen.getByRole("alert").textContent).toContain("5000");
+    expect(
+      screen
+        .getByText("单次最多生成 5000 个图片标签。")
+        .closest('[role="alert"]')?.textContent,
+    ).toContain("5000");
     expect(
       screen.getByRole("button", { name: "生成 PDF 文档" }),
     ).toHaveProperty("disabled", true);
+    act(() => useStore.getState().setImageItems(items.slice(0, 5)));
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "生成 PDF 文档" }),
+    ).toHaveProperty("disabled", false);
   });
+
+  it.each([
+    { prefix: "设备".repeat(32), qrContentPrefix: "", message: "预计字号仅" },
+    {
+      prefix: "SN-",
+      qrContentPrefix: "x".repeat(512),
+      message: "二维码模块仅",
+    },
+  ])(
+    "announces the blocking text error $message and restores generation after correction",
+    ({ prefix, qrContentPrefix, message }) => {
+      useStore.setState({
+        appMode: "text",
+        config: { ...defaultConfig, rows: 3, cols: 3 },
+        textConfig: {
+          ...defaultTextConfig,
+          prefix,
+          qrContentPrefix,
+          showQrCode: true,
+          qrSizeRatio: 0.35,
+        },
+      });
+      renderControlPanel();
+      expect(screen.getByRole("alert").textContent).toContain(message);
+      expect(
+        screen.getByRole("button", { name: "生成 PDF 文档" }),
+      ).toHaveProperty("disabled", true);
+      act(() =>
+        useStore
+          .getState()
+          .setTextConfig({ prefix: "SN-", qrContentPrefix: "" }),
+      );
+      expect(screen.queryByRole("alert")).toBeNull();
+      expect(
+        screen.getByRole("button", { name: "生成 PDF 文档" }),
+      ).toHaveProperty("disabled", false);
+    },
+  );
 
   it("disables all PDF input controls while generation is running", () => {
     renderControlPanel({ isGenerating: true });
