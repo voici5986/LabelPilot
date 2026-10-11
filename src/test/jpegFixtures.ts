@@ -1,0 +1,92 @@
+export function createJpegWithMetadata({
+  width = 80,
+  height = 40,
+  orientation,
+  lateOrientation,
+  fillBeforeSof = false,
+}: {
+  width?: number;
+  height?: number;
+  orientation?: number;
+  lateOrientation?: number;
+  fillBeforeSof?: boolean;
+} = {}): ArrayBuffer {
+  const exif = (value: number | undefined) =>
+    value === undefined
+      ? []
+      : [
+          0xff,
+          0xe1,
+          0x00,
+          0x22,
+          0x45,
+          0x78,
+          0x69,
+          0x66,
+          0x00,
+          0x00,
+          0x49,
+          0x49,
+          0x2a,
+          0x00,
+          0x08,
+          0x00,
+          0x00,
+          0x00,
+          0x01,
+          0x00,
+          0x12,
+          0x01,
+          0x03,
+          0x00,
+          0x01,
+          0x00,
+          0x00,
+          0x00,
+          value,
+          0x00,
+          0x00,
+          0x00,
+          0x00,
+          0x00,
+          0x00,
+          0x00,
+        ];
+  return new Uint8Array([
+    0xff,
+    0xd8,
+    ...exif(orientation),
+    0xff,
+    0xe0,
+    0x00,
+    0x02,
+    ...(fillBeforeSof ? [0xff] : []),
+    0xff,
+    0xc0,
+    0x00,
+    0x0b,
+    0x08,
+    (height >> 8) & 0xff,
+    height & 0xff,
+    (width >> 8) & 0xff,
+    width & 0xff,
+    0x01,
+    0x01,
+    0x11,
+    0x00,
+    0xff,
+    0xda,
+    0x00,
+    0x08,
+    0x01,
+    0x01,
+    0x00,
+    0x00,
+    0x3f,
+    0x00,
+    0x00, // Nonempty synthetic entropy payload; this is not a decodable image.
+    ...exif(lateOrientation),
+    0xff,
+    0xd9,
+  ]).buffer;
+}

@@ -1,7 +1,13 @@
 import { AppError } from "./appError";
+import { readJpegFileMetadata, readJpegMetadata } from "./jpegMetadata";
 import type { ImageItem } from "./layoutMath";
+import { readPngDimensions } from "./pngMetadata";
 
 export type ImageDimensions = { width: number; height: number };
+
+export const IMAGE_PROCESSING_LIMITS = {
+  maxNormalizedJpegPixels: 16_000_000,
+} as const;
 
 export const IMAGE_LIMITS = {
   maxFiles: 20,
@@ -116,47 +122,17 @@ export async function readValidatedImageFile(
   return { buffer, type: actualType };
 }
 
-async function decodeImageDimensions(file: File): Promise<ImageDimensions> {
-  if (typeof createImageBitmap === "function") {
-    let bitmap: ImageBitmap | null = null;
-    try {
-      bitmap = await createImageBitmap(file, {
-        imageOrientation: "from-image",
-      });
-      return { width: bitmap.width, height: bitmap.height };
-    } catch (error) {
-      throw new AppError(
-        "image_error_decode",
-        { name: file.name },
-        error instanceof Error ? error.message : String(error),
-      );
-    } finally {
-      bitmap?.close();
-    }
-  }
-
-  if (typeof Image === "undefined") {
-    throw new AppError("image_error_decode", { name: file.name });
-  }
-
-  const url = URL.createObjectURL(file);
-  try {
-    return await new Promise<ImageDimensions>((resolve, reject) => {
-      const image = new Image();
-      image.onload = () =>
-        resolve({ width: image.naturalWidth, height: image.naturalHeight });
-      image.onerror = () =>
-        reject(new AppError("image_error_decode", { name: file.name }));
-      image.src = url;
-    });
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-}
-
 // Files are immutable. Keep only successful validation results, never bitmaps
 // or pending/rejected promises; removed files can be garbage collected.
 const validatedDimensions = new WeakMap<File, ImageDimensions>();
+const validatedJpegOrientations = new WeakMap<File, number | null>();
+
+/** Null means PNG; undefined means unvalidated or an incomplete JPEG header. */
+export function getValidatedJpegOrientation(
+  file: File,
+): number | null | undefined {
+  return validatedJpegOrientations.get(file);
+}
 
 export async function validateImageFileContents(
   files: File[],
@@ -165,14 +141,73 @@ export async function validateImageFileContents(
   const pixelBudget = createImagePixelBudget();
   for (const file of files) {
     let decoded = validatedDimensions.get(file);
+    let budgetChecked = false;
+    let jpegOrientation: number | null | undefined;
     if (!decoded) {
-      const signature = await file.slice(0, 8).arrayBuffer();
-      validateImageSignature(file, new Uint8Array(signature));
-      decoded = await decodeImageDimensions(file);
+      const header = new Uint8Array(await file.slice(0, 33).arrayBuffer());
+      const type = validateImageSignature(file, header);
+      if (type === "image/png") {
+        jpegOrientation = null;
+        if (
+          header.length < 33 ||
+          new DataView(header.buffer).getUint32(8) !== 13 ||
+          String.fromCharCode(...header.subarray(12, 16)) !== "IHDR"
+        ) {
+          throw new AppError("image_error_decode", { name: file.name });
+        }
+        const view = new DataView(header.buffer);
+        // Reject the header dimensions before reading the remaining compressed
+        // bytes. Upload admission never allocates or inflates PNG pixels.
+        pixelBudget.add(file.name, {
+          width: view.getUint32(16),
+          height: view.getUint32(20),
+        });
+        budgetChecked = true;
+        const { buffer } = await readValidatedImageFile(file);
+        decoded = readPngDimensions(new Uint8Array(buffer)) ?? undefined;
+        if (!decoded) {
+          throw new AppError("image_error_decode", { name: file.name });
+        }
+        // File is immutable; a differing header indicates an invalid source.
+        if (
+          decoded.width !== view.getUint32(16) ||
+          decoded.height !== view.getUint32(20)
+        ) {
+          throw new AppError("image_error_content", { name: file.name });
+        }
+        // Compressed-stream and CRC integrity remain the Worker's responsibility.
+      } else {
+        const metadata = await readJpegFileMetadata(file);
+        if (!metadata)
+          throw new AppError("image_error_decode", { name: file.name });
+        const oriented =
+          metadata.orientation >= 5
+            ? { width: metadata.height, height: metadata.width }
+            : { width: metadata.width, height: metadata.height };
+        pixelBudget.add(file.name, oriented);
+        budgetChecked = true;
+        const { buffer } = await readValidatedImageFile(file);
+        const complete = readJpegMetadata(new Uint8Array(buffer));
+        if (!complete)
+          throw new AppError("image_error_decode", { name: file.name });
+        if (
+          complete.width !== metadata.width ||
+          complete.height !== metadata.height ||
+          complete.orientation !== metadata.orientation
+        ) {
+          throw new AppError("image_error_content", { name: file.name });
+        }
+        decoded = oriented;
+        jpegOrientation = metadata.orientation;
+        // Marker validation does not establish entropy-code/pixel integrity.
+      }
     }
     const { width, height } = decoded;
-    pixelBudget.add(file.name, decoded);
+    if (!budgetChecked) pixelBudget.add(file.name, decoded);
     validatedDimensions.set(file, decoded);
+    if (jpegOrientation !== undefined) {
+      validatedJpegOrientations.set(file, jpegOrientation);
+    }
     dimensions.set(file, { width, height });
   }
   return dimensions;
@@ -223,6 +258,7 @@ export function createImagePixelBudget() {
 export function validateImageLabelCount(
   items: Pick<ImageItem, "count">[],
 ): void {
+  if (items.length === 0) throw new AppError("image_error_no_files");
   const total = getImageLabelCount(items);
 
   if (total > IMAGE_LIMITS.maxTotalLabels) {
