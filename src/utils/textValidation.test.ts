@@ -6,9 +6,46 @@ import {
   TEXT_CONFIG_LIMITS,
   normalizeTextConfig,
 } from "./layoutMath";
+import { calculateLabelLayout, getTextLayoutBoxes } from "./layoutMath";
+import { getRasterTextDpi } from "./pdfRendering";
 import { getTextOutputMetrics } from "./textValidation";
 
 describe("text output validation", () => {
+  it("reports the PDF raster resolution for non-ASCII labels without blocking", () => {
+    const config = { ...DEFAULT_LAYOUT_CONFIG, rows: 1, cols: 1 };
+    const position = calculateLabelLayout(config).positions[0];
+    const metrics = getTextOutputMetrics(config, {
+      ...DEFAULT_TEXT_CONFIG,
+      prefix: "设备-",
+    });
+    expect(metrics.rasterDpi).toBe(
+      getRasterTextDpi(position.width, position.height),
+    );
+    expect(metrics.rasterDpi).toBeLessThan(300);
+    expect(metrics.error).toBeNull();
+    expect(
+      getTextOutputMetrics(config, DEFAULT_TEXT_CONFIG).rasterDpi,
+    ).toBeUndefined();
+  });
+
+  it("uses the actual QR text box and keeps raster metrics alongside blocking errors", () => {
+    const config = { ...DEFAULT_LAYOUT_CONFIG, rows: 1, cols: 2 };
+    const textConfig = {
+      ...DEFAULT_TEXT_CONFIG,
+      prefix: "设备".repeat(32),
+      showQrCode: true,
+      qrSizeRatio: 0.6,
+    };
+    const position = calculateLabelLayout(config).positions[0];
+    const metrics = getTextOutputMetrics(config, textConfig);
+    expect(metrics.rasterDpi).toBe(
+      getRasterTextDpi(
+        position.width,
+        getTextLayoutBoxes(position, true, 0.6).textBoxHeightMm,
+      ),
+    );
+    expect(metrics.error).not.toBeNull();
+  });
   it("accepts the default printable layout", () => {
     expect(
       getTextOutputMetrics(DEFAULT_LAYOUT_CONFIG, DEFAULT_TEXT_CONFIG).error,

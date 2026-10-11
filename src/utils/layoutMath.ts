@@ -129,7 +129,7 @@ export interface LabelPosition {
   col: number;
 }
 
-export const MM_PER_PT = 0.3527;
+export const MM_PER_PT = 25.4 / 72;
 
 export const A4_WIDTH_MM = 210;
 export const A4_HEIGHT_MM = 297;

@@ -1,4 +1,5 @@
 export const APP_ERROR_CODES = [
+  "image_error_no_files",
   "image_error_type",
   "image_error_empty",
   "image_error_content",
@@ -22,6 +23,8 @@ export const APP_ERROR_CODES = [
   "label_too_small",
   "pdf_generation_failed",
   "pdf_worker_protocol_error",
+  "pdf_worker_busy",
+  "pdf_worker_version_mismatch",
   "generation_timeout",
   "generation_cancelled",
 ] as const;

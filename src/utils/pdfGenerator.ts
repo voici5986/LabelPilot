@@ -9,6 +9,10 @@ import type { HelperLayoutConfig, ImageItem, TextConfig } from "./layoutMath";
 import type { PdfProgressUpdate } from "./pdfProgress";
 import {
   isPdfWorkerResponse,
+  isPdfWorkerResponseShape,
+  assertProtocolVersion,
+  PDF_WORKER_PROTOCOL_VERSION,
+  isPdfWorkerRequestId,
   type PdfWorkerGenerateRequest,
   type PdfWorkerImageItem,
 } from "./pdfWorkerProtocol";
@@ -19,6 +23,18 @@ export const DEFAULT_PDF_TIMEOUT_MS = 120_000;
 export interface GeneratePdfOptions {
   signal?: AbortSignal;
   timeoutMs?: number;
+}
+
+let requestSequence = 0;
+function createRequestId(): string {
+  try {
+    if (typeof globalThis.crypto?.randomUUID === "function")
+      return globalThis.crypto.randomUUID();
+  } catch {
+    /* Fall back when randomUUID is unavailable in this context. */
+  }
+  requestSequence = (requestSequence + 1) % Number.MAX_SAFE_INTEGER;
+  return `pdf-${Date.now().toString(36)}-${requestSequence.toString(36)}`;
 }
 
 function throwIfAborted(signal?: AbortSignal): void {
@@ -39,6 +55,7 @@ export async function generatePDF(
   onProgress?: (progress: PdfProgressUpdate) => void,
   options: GeneratePdfOptions = {},
 ): Promise<void> {
+  const requestId = createRequestId();
   const { signal, timeoutMs = DEFAULT_PDF_TIMEOUT_MS } = options;
   throwIfAborted(signal);
 
@@ -126,13 +143,53 @@ export async function generatePDF(
       Math.max(1, timeoutMs),
     );
 
+    let diagnosticCount = 0;
+    const diagnoseIgnoredResponse = (
+      reason: "settled" | "request_mismatch",
+      receivedRequestId: unknown,
+    ) => {
+      if (diagnosticCount++ < 3)
+        console.warn("Ignored PDF worker response", {
+          reason,
+          expectedRequestId: requestId,
+          receivedRequestId: isPdfWorkerRequestId(receivedRequestId)
+            ? receivedRequestId
+            : "invalid",
+        });
+    };
+
     worker.onmessage = (event: MessageEvent<unknown>) => {
-      if (settled) return;
+      if (settled) {
+        const receivedRequestId =
+          typeof event.data === "object" &&
+          event.data !== null &&
+          "requestId" in event.data
+            ? event.data.requestId
+            : undefined;
+        diagnoseIgnoredResponse("settled", receivedRequestId);
+        return;
+      }
+      try {
+        if (isPdfWorkerResponseShape(event.data)) {
+          assertProtocolVersion(event.data.protocolVersion);
+        }
+      } catch (error) {
+        rejectOnce(error);
+        return;
+      }
       if (!isPdfWorkerResponse(event.data)) {
         rejectOnce(new AppError("pdf_worker_protocol_error"));
         return;
       }
       const message = event.data;
+      if (message.requestId === null) {
+        rejectOnce(new AppError("pdf_worker_protocol_error"));
+        return;
+      }
+      if (message.requestId !== requestId) {
+        diagnoseIgnoredResponse("request_mismatch", message.requestId);
+        return;
+      }
 
       if (message.type === "progress") {
         onProgress?.(message.data);
@@ -171,7 +228,14 @@ export async function generatePDF(
       // Send data to worker using Transferable Objects (zero-copy).
       const request: PdfWorkerGenerateRequest = {
         type: "generate",
-        data: { config, imageItems: itemsWithBuffers, appMode, textConfig },
+        requestId,
+        data: {
+          protocolVersion: PDF_WORKER_PROTOCOL_VERSION,
+          config,
+          imageItems: itemsWithBuffers,
+          appMode,
+          textConfig,
+        },
       };
       worker.postMessage(request, buffers);
     } catch (error) {

@@ -1,7 +1,26 @@
-import { isAppErrorCode, type SerializedAppError } from "./appError";
+import { AppError, isAppErrorCode, type SerializedAppError } from "./appError";
 import type { SupportedImageMimeType } from "./imageLimits";
 import type { HelperLayoutConfig, TextConfig } from "./layoutMath";
 import type { PdfProgressUpdate } from "./pdfProgress";
+
+export const PDF_WORKER_PROTOCOL_VERSION = 2;
+
+export function assertProtocolVersion(
+  actual: unknown,
+): asserts actual is typeof PDF_WORKER_PROTOCOL_VERSION {
+  if (actual !== PDF_WORKER_PROTOCOL_VERSION) {
+    const received =
+      typeof actual === "number" && Number.isFinite(actual)
+        ? actual
+        : actual === undefined
+          ? "missing"
+          : "invalid";
+    throw new AppError("pdf_worker_version_mismatch", {
+      expected: PDF_WORKER_PROTOCOL_VERSION,
+      received,
+    });
+  }
+}
 
 export interface PdfWorkerImageItem {
   id: string;
@@ -12,6 +31,7 @@ export interface PdfWorkerImageItem {
 }
 
 export interface PdfWorkerGeneratePayload {
+  protocolVersion: typeof PDF_WORKER_PROTOCOL_VERSION;
   config: HelperLayoutConfig;
   imageItems: PdfWorkerImageItem[];
   appMode: "image" | "text";
@@ -20,13 +40,26 @@ export interface PdfWorkerGeneratePayload {
 
 export interface PdfWorkerGenerateRequest {
   type: "generate";
+  requestId: string;
   data: PdfWorkerGeneratePayload;
 }
 
-export type PdfWorkerResponse =
-  | { type: "progress"; data: PdfProgressUpdate }
-  | { type: "complete"; data: ArrayBuffer }
-  | { type: "error"; data: SerializedAppError };
+export type PdfWorkerResponse = {
+  protocolVersion: typeof PDF_WORKER_PROTOCOL_VERSION;
+} & (
+  | { type: "progress"; requestId: string; data: PdfProgressUpdate }
+  | { type: "complete"; requestId: string; data: ArrayBuffer }
+  | { type: "error"; requestId: string | null; data: SerializedAppError }
+);
+
+export function isPdfWorkerRequestId(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    value.length > 0 &&
+    value.length <= 128 &&
+    value.trim().length > 0
+  );
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -90,9 +123,15 @@ function isSerializedError(value: unknown): value is SerializedAppError {
   );
 }
 
-export function isPdfWorkerGenerateRequest(
-  value: unknown,
-): value is PdfWorkerGenerateRequest {
+export function isPdfWorkerGenerateRequestShape(value: unknown): value is Omit<
+  PdfWorkerGenerateRequest,
+  "data" | "requestId"
+> & {
+  requestId?: unknown;
+  data: Omit<PdfWorkerGeneratePayload, "protocolVersion"> & {
+    protocolVersion?: unknown;
+  };
+} {
   if (!isRecord(value) || value.type !== "generate" || !isRecord(value.data)) {
     return false;
   }
@@ -106,12 +145,37 @@ export function isPdfWorkerGenerateRequest(
   );
 }
 
-export function isPdfWorkerResponse(
-  value: unknown,
-): value is PdfWorkerResponse {
+export function isPdfWorkerResponseShape(value: unknown): value is Omit<
+  PdfWorkerResponse,
+  "protocolVersion" | "requestId"
+> & {
+  requestId?: unknown;
+  protocolVersion?: unknown;
+} {
   if (!isRecord(value) || typeof value.type !== "string") return false;
   if (value.type === "progress") return isProgressUpdate(value.data);
   if (value.type === "complete") return value.data instanceof ArrayBuffer;
   if (value.type === "error") return isSerializedError(value.data);
   return false;
+}
+
+export function isPdfWorkerGenerateRequest(
+  value: unknown,
+): value is PdfWorkerGenerateRequest {
+  return (
+    isPdfWorkerGenerateRequestShape(value) &&
+    value.data.protocolVersion === PDF_WORKER_PROTOCOL_VERSION &&
+    isPdfWorkerRequestId(value.requestId)
+  );
+}
+
+export function isPdfWorkerResponse(
+  value: unknown,
+): value is PdfWorkerResponse {
+  return (
+    isPdfWorkerResponseShape(value) &&
+    value.protocolVersion === PDF_WORKER_PROTOCOL_VERSION &&
+    (isPdfWorkerRequestId(value.requestId) ||
+      (value.type === "error" && value.requestId === null))
+  );
 }

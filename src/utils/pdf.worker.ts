@@ -2,11 +2,14 @@ import jsPDF from "jspdf";
 
 import { AppError, serializeAppError, type AppErrorCode } from "./appError";
 import {
+  IMAGE_PROCESSING_LIMITS,
   createImagePixelBudget,
   validateImageFiles,
   validateImageLabelCount,
   normalizeImageItemCount,
+  type ImageDimensions,
 } from "./imageLimits";
+import { readJpegMetadata, type JpegMetadata } from "./jpegMetadata";
 import {
   calculateLabelLayout,
   resolveItemAtSlot,
@@ -21,10 +24,20 @@ import {
 } from "./layoutMath";
 import type { PdfProgressPhase } from "./pdfProgress";
 import {
+  createRasterTextAlias,
+  getRasterTextScale,
+  needsRasterText,
+} from "./pdfRendering";
+import {
+  isPdfWorkerRequestId,
   isPdfWorkerGenerateRequest,
+  isPdfWorkerGenerateRequestShape,
+  assertProtocolVersion,
+  PDF_WORKER_PROTOCOL_VERSION,
   type PdfWorkerImageItem,
   type PdfWorkerResponse,
 } from "./pdfWorkerProtocol";
+import { readPngDimensions, validatePngScanlines } from "./pngMetadata";
 import { createQrMatrix, QR_QUIET_ZONE_MODULES } from "./qrCode";
 import { validateTextOutput } from "./textValidation";
 
@@ -35,14 +48,6 @@ const ctx: Worker = self as unknown as Worker;
 
 const PDF_TEXT_FONT_FAMILY =
   '"Segoe UI", "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif';
-const RASTER_TEXT_PX_PER_MM = 300 / 25.4;
-const MAX_TEXT_CANVAS_WIDTH = 2048;
-const MAX_TEXT_CANVAS_HEIGHT = 1024;
-
-function needsRasterText(text: string): boolean {
-  return /[^\x20-\x7e]/u.test(text);
-}
-
 async function renderTextAsPng(
   text: string,
   widthMm: number,
@@ -53,11 +58,7 @@ async function renderTextAsPng(
     throw new AppError("unicode_render_unsupported");
   }
 
-  const scale = Math.min(
-    RASTER_TEXT_PX_PER_MM,
-    MAX_TEXT_CANVAS_WIDTH / Math.max(widthMm, 0.01),
-    MAX_TEXT_CANVAS_HEIGHT / Math.max(heightMm, 0.01),
-  );
+  const scale = getRasterTextScale(widthMm, heightMm);
   const widthPx = Math.max(1, Math.ceil(widthMm * scale));
   const heightPx = Math.max(1, Math.ceil(heightMm * scale));
   const canvas = new OffscreenCanvas(widthPx, heightPx);
@@ -158,7 +159,7 @@ async function drawLabelText(
       pos.y + textBoxTopMm,
       pos.width,
       textBoxHeightMm,
-      undefined,
+      createRasterTextAlias(text, pos.width, textBoxHeightMm, fontSizeMm),
       "FAST",
     );
     return;
@@ -167,19 +168,18 @@ async function drawLabelText(
   pdf.setFont("courier", "bold");
   const fontSizePt = fontSizeMm / MM_PER_PT;
   pdf.setFontSize(fontSizePt);
-  const textWidth = pdf.getStringUnitWidth(text) * fontSizePt * MM_PER_PT;
-  const textHeight = fontSizePt * MM_PER_PT;
   pdf.text(
     text,
-    pos.x + (pos.width - textWidth) / 2,
-    pos.y + textBoxTopMm + (textBoxHeightMm + textHeight) / 2,
-    { align: "left" },
+    pos.x + pos.width / 2,
+    pos.y + textBoxTopMm + textBoxHeightMm / 2,
+    { align: "center", baseline: "middle" },
   );
 }
 
 type ImageWorkerItem = PdfWorkerImageItem;
 
 type LoadedImage = ImageWorkerItem & {
+  alias: string;
   data: Uint8Array;
   format: "PNG" | "JPEG";
   width: number;
@@ -190,181 +190,25 @@ type PreparedImage = Pick<
   LoadedImage,
   "data" | "format" | "width" | "height"
 > & {
+  alias: string;
   sourceWidth: number;
   sourceHeight: number;
 };
 
-type ImageDimensions = {
-  width: number;
-  height: number;
-};
+type ImageMetadata =
+  | { type: "image/png"; dimensions: ImageDimensions }
+  | { type: "image/jpeg"; dimensions: JpegMetadata };
 
-type JpegMetadata = ImageDimensions & {
-  orientation: number;
-};
-
-const MAX_NORMALIZED_JPEG_PIXELS = 16_000_000;
-
-function readPngDimensions(data: Uint8Array): ImageDimensions | null {
-  if (
-    data.length < 24 ||
-    data[0] !== 0x89 ||
-    data[1] !== 0x50 ||
-    data[2] !== 0x4e ||
-    data[3] !== 0x47
-  ) {
-    return null;
+function readImageMetadata(item: ImageWorkerItem): ImageMetadata {
+  const data = new Uint8Array(item.buffer);
+  if (item.type === "image/png") {
+    const dimensions = readPngDimensions(data);
+    if (dimensions) return { type: "image/png", dimensions };
+  } else {
+    const dimensions = readJpegMetadata(data);
+    if (dimensions) return { type: "image/jpeg", dimensions };
   }
-
-  const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
-  return {
-    width: view.getUint32(16),
-    height: view.getUint32(20),
-  };
-}
-
-function isJpegStartOfFrame(marker: number): boolean {
-  return (
-    (marker >= 0xc0 && marker <= 0xc3) ||
-    (marker >= 0xc5 && marker <= 0xc7) ||
-    (marker >= 0xc9 && marker <= 0xcb) ||
-    (marker >= 0xcd && marker <= 0xcf)
-  );
-}
-
-function readExifOrientation(
-  data: Uint8Array,
-  payloadOffset: number,
-  payloadLength: number,
-): number | null {
-  const payloadEnd = payloadOffset + payloadLength;
-  if (
-    payloadLength < 14 ||
-    data[payloadOffset] !== 0x45 ||
-    data[payloadOffset + 1] !== 0x78 ||
-    data[payloadOffset + 2] !== 0x69 ||
-    data[payloadOffset + 3] !== 0x66 ||
-    data[payloadOffset + 4] !== 0x00 ||
-    data[payloadOffset + 5] !== 0x00
-  ) {
-    return null;
-  }
-
-  const tiffOffset = payloadOffset + 6;
-  const littleEndian =
-    data[tiffOffset] === 0x49 && data[tiffOffset + 1] === 0x49;
-  const bigEndian = data[tiffOffset] === 0x4d && data[tiffOffset + 1] === 0x4d;
-  if (!littleEndian && !bigEndian) return null;
-
-  const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
-  if (view.getUint16(tiffOffset + 2, littleEndian) !== 0x2a) return null;
-  const firstIfdOffset = view.getUint32(tiffOffset + 4, littleEndian);
-  const ifdOffset = tiffOffset + firstIfdOffset;
-  if (ifdOffset + 2 > payloadEnd) return null;
-
-  const entryCount = view.getUint16(ifdOffset, littleEndian);
-  for (let index = 0; index < entryCount; index++) {
-    const entryOffset = ifdOffset + 2 + index * 12;
-    if (entryOffset + 12 > payloadEnd) return null;
-    if (
-      view.getUint16(entryOffset, littleEndian) === 0x0112 &&
-      view.getUint16(entryOffset + 2, littleEndian) === 3 &&
-      view.getUint32(entryOffset + 4, littleEndian) === 1
-    ) {
-      const orientation = view.getUint16(entryOffset + 8, littleEndian);
-      return orientation >= 1 && orientation <= 8 ? orientation : null;
-    }
-  }
-
-  return null;
-}
-
-function hasJpegEndOfImage(data: Uint8Array, startOffset: number): boolean {
-  let offset = startOffset;
-  while (offset < data.length) {
-    if (data[offset] !== 0xff) {
-      offset += 1;
-      continue;
-    }
-    while (offset < data.length && data[offset] === 0xff) offset += 1;
-    if (offset >= data.length) return false;
-
-    const marker = data[offset];
-    offset += 1;
-    if (marker === 0x00 || (marker >= 0xd0 && marker <= 0xd7)) continue;
-    if (marker === 0xd9) return true;
-    if (marker === 0x01 || marker === 0xd8) continue;
-    if (offset + 2 > data.length) return false;
-
-    const blockLength = (data[offset] << 8) | data[offset + 1];
-    if (blockLength < 2 || offset + blockLength > data.length) return false;
-    offset += blockLength;
-  }
-  return false;
-}
-
-function readJpegMetadata(data: Uint8Array): JpegMetadata | null {
-  if (data.length < 4 || data[0] !== 0xff || data[1] !== 0xd8) return null;
-
-  const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
-  let offset = 2;
-  let dimensions: ImageDimensions | null = null;
-  let orientation = 1;
-  let hasCompleteScan = false;
-
-  while (offset < data.length) {
-    while (offset < data.length && data[offset] !== 0xff) offset += 1;
-    while (offset < data.length && data[offset] === 0xff) offset += 1;
-    if (offset >= data.length) break;
-
-    const marker = data[offset];
-    offset += 1;
-    if (marker === 0x00) continue;
-    if (marker === 0xd9) break;
-    if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd8)) continue;
-    if (offset + 2 > data.length) return null;
-
-    const blockLength = view.getUint16(offset);
-    const segmentEnd = offset + blockLength;
-    if (blockLength < 2 || segmentEnd > data.length) return null;
-
-    if (marker === 0xda) {
-      hasCompleteScan = hasJpegEndOfImage(data, segmentEnd);
-      break;
-    }
-
-    if (isJpegStartOfFrame(marker)) {
-      if (blockLength < 7) return null;
-      dimensions = {
-        height: view.getUint16(offset + 3),
-        width: view.getUint16(offset + 5),
-      };
-    } else if (marker === 0xe1) {
-      orientation =
-        readExifOrientation(data, offset + 2, blockLength - 2) ?? orientation;
-    }
-
-    offset = segmentEnd;
-  }
-
-  if (
-    !dimensions ||
-    dimensions.width <= 0 ||
-    dimensions.height <= 0 ||
-    !hasCompleteScan
-  ) {
-    return null;
-  }
-  return { ...dimensions, orientation };
-}
-
-function parseImageDimensions(
-  data: Uint8Array,
-  type: string,
-): ImageDimensions | null {
-  if (type === "image/png") return readPngDimensions(data);
-  if (type === "image/jpeg") return readJpegMetadata(data);
-  return null;
+  throw new AppError("image_error_decode", { name: item.name });
 }
 
 function getJpegBitmapOptions(metadata: JpegMetadata): ImageBitmapOptions {
@@ -373,7 +217,10 @@ function getJpegBitmapOptions(metadata: JpegMetadata): ImageBitmapOptions {
   const orientedHeight = swapsAxes ? metadata.width : metadata.height;
   const scale = Math.min(
     1,
-    Math.sqrt(MAX_NORMALIZED_JPEG_PIXELS / (orientedWidth * orientedHeight)),
+    Math.sqrt(
+      IMAGE_PROCESSING_LIMITS.maxNormalizedJpegPixels /
+        (orientedWidth * orientedHeight),
+    ),
   );
 
   return {
@@ -390,48 +237,52 @@ function getJpegBitmapOptions(metadata: JpegMetadata): ImageBitmapOptions {
 
 async function prepareImageForPdf(
   buffer: ArrayBuffer,
-  type: string,
+  metadata: ImageMetadata,
   name: string,
+  alias: string,
 ): Promise<PreparedImage> {
   const originalData = new Uint8Array(buffer);
-  const jpegMetadata =
-    type === "image/jpeg" ? readJpegMetadata(originalData) : null;
-
-  if (type === "image/jpeg") {
-    if (!jpegMetadata) throw new AppError("image_error_decode", { name });
-    if (jpegMetadata.orientation === 1) {
-      return {
-        data: originalData,
-        format: "JPEG",
-        width: jpegMetadata.width,
-        height: jpegMetadata.height,
-        sourceWidth: jpegMetadata.width,
-        sourceHeight: jpegMetadata.height,
-      };
+  if (metadata.type === "image/png") {
+    const dimensions = metadata.dimensions;
+    try {
+      await validatePngScanlines(originalData);
+    } catch (error) {
+      throw new AppError(
+        "image_error_decode",
+        { name },
+        error instanceof Error ? error.message : String(error),
+      );
     }
+    return {
+      data: originalData,
+      format: "PNG",
+      ...dimensions,
+      alias,
+      sourceWidth: dimensions.width,
+      sourceHeight: dimensions.height,
+    };
+  }
+  const jpegMetadata = metadata.dimensions;
+  if (jpegMetadata.orientation === 1) {
+    return {
+      alias,
+      data: originalData,
+      format: "JPEG",
+      width: jpegMetadata.width,
+      height: jpegMetadata.height,
+      sourceWidth: jpegMetadata.width,
+      sourceHeight: jpegMetadata.height,
+    };
   }
 
   if (typeof createImageBitmap === "function") {
     let bitmap: ImageBitmap | null = null;
     try {
-      const blob = new Blob([buffer], { type });
+      const blob = new Blob([buffer], { type: metadata.type });
       bitmap = await createImageBitmap(
         blob,
-        jpegMetadata
-          ? getJpegBitmapOptions(jpegMetadata)
-          : { imageOrientation: "from-image" },
+        getJpegBitmapOptions(jpegMetadata),
       );
-
-      if (type !== "image/jpeg") {
-        return {
-          data: originalData,
-          format: "PNG",
-          width: bitmap.width,
-          height: bitmap.height,
-          sourceWidth: bitmap.width,
-          sourceHeight: bitmap.height,
-        };
-      }
 
       if (typeof OffscreenCanvas !== "function") {
         throw new AppError("image_error_normalize", { name });
@@ -450,12 +301,13 @@ async function prepareImageForPdf(
       }
 
       return {
+        alias,
         data: new Uint8Array(await normalized.arrayBuffer()),
         format: "JPEG",
         width: bitmap.width,
         height: bitmap.height,
-        sourceWidth: jpegMetadata?.width ?? bitmap.width,
-        sourceHeight: jpegMetadata?.height ?? bitmap.height,
+        sourceWidth: jpegMetadata.width,
+        sourceHeight: jpegMetadata.height,
       };
     } catch (error) {
       if (error instanceof AppError) throw error;
@@ -469,37 +321,43 @@ async function prepareImageForPdf(
     }
   }
 
-  if (type === "image/jpeg") {
-    throw new AppError("image_error_normalize", { name });
-  }
-  const parsed = parseImageDimensions(originalData, type);
-  if (parsed) {
-    return {
-      data: originalData,
-      format: "PNG",
-      width: parsed.width,
-      height: parsed.height,
-      sourceWidth: parsed.width,
-      sourceHeight: parsed.height,
-    };
-  }
-
-  throw new AppError("image_error_decode", { name });
+  throw new AppError("image_error_normalize", { name });
 }
 
-function postProgress(percent: number, phase: PdfProgressPhase): void {
+let activeRequestId: string | null = null;
+
+function postProgress(
+  requestId: string,
+  percent: number,
+  phase: PdfProgressPhase,
+): void {
   const message: PdfWorkerResponse = {
+    protocolVersion: PDF_WORKER_PROTOCOL_VERSION,
     type: "progress",
+    requestId,
     data: { percent: Math.min(100, Math.max(0, Math.round(percent))), phase },
   };
   ctx.postMessage(message);
 }
 
 ctx.onmessage = async (event: MessageEvent<unknown>) => {
+  const rawRequestId =
+    typeof event.data === "object" && event.data !== null
+      ? (event.data as { requestId?: unknown }).requestId
+      : undefined;
+  const requestId = isPdfWorkerRequestId(rawRequestId) ? rawRequestId : null;
+  let ownsActiveRequest = false;
   try {
+    if (isPdfWorkerGenerateRequestShape(event.data)) {
+      assertProtocolVersion(event.data.data.protocolVersion);
+    }
     if (!isPdfWorkerGenerateRequest(event.data)) {
       throw new AppError("pdf_worker_protocol_error");
     }
+    if (activeRequestId !== null) throw new AppError("pdf_worker_busy");
+    activeRequestId = event.data.requestId;
+    ownsActiveRequest = true;
+    const ownerRequestId = event.data.requestId;
     const payload = event.data.data;
     const config = normalizeLayoutConfig(payload.config);
     const textConfig = normalizeTextConfig(payload.textConfig);
@@ -532,27 +390,48 @@ ctx.onmessage = async (event: MessageEvent<unknown>) => {
       validateImageLabelCount(imageItems);
 
       const pixelBudget = createImagePixelBudget();
+      const preparedCache = new Map<ArrayBuffer, Map<string, PreparedImage>>();
+      let nextImageAlias = 0;
       for (let idx = 0; idx < imageItems.length; idx++) {
         const item = imageItems[idx];
-        const prepared = await prepareImageForPdf(
-          item.buffer,
-          item.type,
-          item.name,
-        );
-        pixelBudget.add(item.name, {
-          width: prepared.sourceWidth,
-          height: prepared.sourceHeight,
-        });
+        let byMime = preparedCache.get(item.buffer);
+        if (!byMime) {
+          byMime = new Map();
+          preparedCache.set(item.buffer, byMime);
+        }
+        let prepared = byMime.get(item.type);
+        if (prepared) {
+          // Count every queue item using source dimensions, even after resizing.
+          pixelBudget.add(item.name, {
+            width: prepared.sourceWidth,
+            height: prepared.sourceHeight,
+          });
+        } else {
+          const metadata = readImageMetadata(item);
+          // Enforce the budget before scanline validation or bitmap allocation.
+          pixelBudget.add(item.name, metadata.dimensions);
+          prepared = await prepareImageForPdf(
+            item.buffer,
+            metadata,
+            item.name,
+            `image-${nextImageAlias++}`,
+          );
+          byMime.set(item.type, prepared);
+        }
 
         loadedImages.push({
           ...item,
           ...prepared,
         });
-        postProgress(20 + ((idx + 1) / imageItems.length) * 15, "preparing");
+        postProgress(
+          ownerRequestId,
+          20 + ((idx + 1) / imageItems.length) * 15,
+          "preparing",
+        );
         await nextTick();
       }
     } else {
-      postProgress(20, "preparing");
+      postProgress(ownerRequestId, 20, "preparing");
     }
 
     // 3. Create PDF
@@ -602,7 +481,15 @@ ctx.onmessage = async (event: MessageEvent<unknown>) => {
           const x = pos.x + (pos.width - w) / 2;
           const y = pos.y + (pos.height - h) / 2;
 
-          pdf.addImage(img.data, img.format, x, y, w, h, undefined, "FAST");
+          try {
+            pdf.addImage(img.data, img.format, x, y, w, h, img.alias, "FAST");
+          } catch (error) {
+            throw new AppError(
+              "image_error_decode",
+              { name: img.name },
+              error instanceof Error ? error.message : String(error),
+            );
+          }
         } else {
           // 文本模式 (可选带二维码)
           const text = formatLabelText(globalIdx, textConfig);
@@ -634,6 +521,7 @@ ctx.onmessage = async (event: MessageEvent<unknown>) => {
         completedLabels += 1;
         if (completedLabels % 5 === 0 || completedLabels === totalCount) {
           postProgress(
+            ownerRequestId,
             35 + (completedLabels / Math.max(1, totalCount)) * 55,
             "rendering",
           );
@@ -641,11 +529,16 @@ ctx.onmessage = async (event: MessageEvent<unknown>) => {
       }
     }
 
-    postProgress(95, "serializing");
+    postProgress(ownerRequestId, 95, "serializing");
 
     // 5. Generate Output
     const output = pdf.output("arraybuffer");
-    const message: PdfWorkerResponse = { type: "complete", data: output };
+    const message: PdfWorkerResponse = {
+      protocolVersion: PDF_WORKER_PROTOCOL_VERSION,
+      type: "complete",
+      requestId: ownerRequestId,
+      data: output,
+    };
     ctx.postMessage(message, [output]);
   } catch (error) {
     const safeError =
@@ -657,9 +550,13 @@ ctx.onmessage = async (event: MessageEvent<unknown>) => {
             error instanceof Error ? error.message : String(error),
           );
     const message: PdfWorkerResponse = {
+      protocolVersion: PDF_WORKER_PROTOCOL_VERSION,
       type: "error",
+      requestId,
       data: serializeAppError(safeError),
     };
     ctx.postMessage(message);
+  } finally {
+    if (ownsActiveRequest) activeRequestId = null;
   }
 };

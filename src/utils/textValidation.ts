@@ -4,12 +4,14 @@ import {
   formatLabelText,
   getLabelTextFontSizeMm,
   getQrSizeMm,
+  getTextLayoutBoxes,
   MM_PER_PT,
   normalizeLayoutConfig,
   normalizeTextConfig,
   type HelperLayoutConfig,
   type TextConfig,
 } from "./layoutMath";
+import { getRasterTextDpi, needsRasterText } from "./pdfRendering";
 import { getQrModuleSizeMm, MIN_QR_MODULE_SIZE_MM } from "./qrCode";
 
 export const MIN_LABEL_FONT_SIZE_MM = 2.1;
@@ -18,6 +20,7 @@ export interface TextOutputMetrics {
   fontSizePt: number;
   qrModuleSizeMm: number | null;
   error: AppError | null;
+  rasterDpi?: number;
 }
 
 export function getTextOutputMetrics(
@@ -40,9 +43,22 @@ export function getTextOutputMetrics(
     safeTextConfig.showQrCode,
   );
   const fontSizePt = fontSizeMm / MM_PER_PT;
+  const rasterMetric = needsRasterText(lastText)
+    ? {
+        rasterDpi: getRasterTextDpi(
+          position.width,
+          getTextLayoutBoxes(
+            position,
+            safeTextConfig.showQrCode,
+            safeTextConfig.qrSizeRatio,
+          ).textBoxHeightMm,
+        ),
+      }
+    : {};
 
   if (fontSizeMm < MIN_LABEL_FONT_SIZE_MM) {
     return {
+      ...rasterMetric,
       fontSizePt,
       qrModuleSizeMm: null,
       error: new AppError("text_error_too_small", {
@@ -53,7 +69,7 @@ export function getTextOutputMetrics(
   }
 
   if (!safeTextConfig.showQrCode) {
-    return { fontSizePt, qrModuleSizeMm: null, error: null };
+    return { ...rasterMetric, fontSizePt, qrModuleSizeMm: null, error: null };
   }
 
   const qrValue = `${safeTextConfig.qrContentPrefix}${lastText}`;
@@ -65,6 +81,7 @@ export function getTextOutputMetrics(
     );
   } catch {
     return {
+      ...rasterMetric,
       fontSizePt,
       qrModuleSizeMm: null,
       error: new AppError("qr_error_capacity"),
@@ -73,6 +90,7 @@ export function getTextOutputMetrics(
 
   if (qrModuleSizeMm < MIN_QR_MODULE_SIZE_MM) {
     return {
+      ...rasterMetric,
       fontSizePt,
       qrModuleSizeMm,
       error: new AppError("qr_error_too_dense", {
@@ -82,7 +100,7 @@ export function getTextOutputMetrics(
     };
   }
 
-  return { fontSizePt, qrModuleSizeMm, error: null };
+  return { ...rasterMetric, fontSizePt, qrModuleSizeMm, error: null };
 }
 
 export function validateTextOutput(

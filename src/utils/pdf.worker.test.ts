@@ -1,7 +1,27 @@
 import jsPDF from "jspdf";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { createJpegWithMetadata } from "../test/jpegFixtures";
+import { createBudgetPng, createCollisionPng } from "../test/pngFixtures";
+import { readJpegMetadata } from "./jpegMetadata";
 import type { HelperLayoutConfig, TextConfig } from "./layoutMath";
+import { PDF_WORKER_PROTOCOL_VERSION } from "./pdfWorkerProtocol";
+import { readPngDimensions, validatePngScanlines } from "./pngMetadata";
+
+vi.mock("./jpegMetadata", async (importOriginal) => {
+  const original = await importOriginal<typeof import("./jpegMetadata")>();
+  return { ...original, readJpegMetadata: vi.fn(original.readJpegMetadata) };
+});
+
+vi.mock("./pngMetadata", async (importOriginal) => {
+  const original = await importOriginal<typeof import("./pngMetadata")>();
+  return {
+    ...original,
+    readPngDimensions: vi.fn(original.readPngDimensions),
+    // Budget fixtures deliberately omit real pixels; real worker tests cover decoding.
+    validatePngScanlines: vi.fn(async () => {}),
+  };
+});
 
 const mockJsPdfInstance = {
   addImage: vi.fn(),
@@ -44,108 +64,21 @@ const flushAsync = async () => {
   await new Promise((resolve) => setTimeout(resolve, 0));
 };
 
-function createJpegWithMetadata({
-  width = 80,
-  height = 40,
-  orientation,
-  fillBeforeSof = false,
-}: {
-  width?: number;
-  height?: number;
-  orientation?: number;
-  fillBeforeSof?: boolean;
-} = {}): ArrayBuffer {
-  const exif =
-    orientation === undefined
-      ? []
-      : [
-          0xff,
-          0xe1,
-          0x00,
-          0x22,
-          0x45,
-          0x78,
-          0x69,
-          0x66,
-          0x00,
-          0x00,
-          0x49,
-          0x49,
-          0x2a,
-          0x00,
-          0x08,
-          0x00,
-          0x00,
-          0x00,
-          0x01,
-          0x00,
-          0x12,
-          0x01,
-          0x03,
-          0x00,
-          0x01,
-          0x00,
-          0x00,
-          0x00,
-          orientation,
-          0x00,
-          0x00,
-          0x00,
-          0x00,
-          0x00,
-          0x00,
-          0x00,
-        ];
-  return new Uint8Array([
-    0xff,
-    0xd8,
-    ...exif,
-    0xff,
-    0xe0,
-    0x00,
-    0x02,
-    ...(fillBeforeSof ? [0xff] : []),
-    0xff,
-    0xc0,
-    0x00,
-    0x0b,
-    0x08,
-    (height >> 8) & 0xff,
-    height & 0xff,
-    (width >> 8) & 0xff,
-    width & 0xff,
-    0x01,
-    0x01,
-    0x11,
-    0x00,
-    0xff,
-    0xda,
-    0x00,
-    0x08,
-    0x01,
-    0x01,
-    0x00,
-    0x00,
-    0x3f,
-    0x00,
-    0xff,
-    0xd9,
-  ]).buffer;
-}
-
 type WorkerSelf = {
   postMessage: (message: unknown, transfer?: Transferable[]) => void;
-  onmessage?: (e: { data: unknown }) => void;
+  onmessage?: (e: { data: unknown }) => Promise<void>;
 };
 
 const fillTextMock = vi.fn();
 const drawImageMock = vi.fn();
+const canvasSizes: { width: number; height: number }[] = [];
 
 class MockOffscreenCanvas {
   width: number;
   height: number;
 
   constructor(width: number, height: number) {
+    canvasSizes.push({ width, height });
     this.width = width;
     this.height = height;
   }
@@ -175,19 +108,31 @@ const setupWorker = async () => {
   (globalThis as unknown as { self: WorkerSelf }).self = { postMessage };
   await import("./pdf.worker");
   const workerSelf = (globalThis as unknown as { self: WorkerSelf }).self;
-  const rawOnmessage = workerSelf.onmessage as (e: { data: unknown }) => void;
+  const rawOnmessage = workerSelf.onmessage as (e: {
+    data: unknown;
+  }) => Promise<void>;
   return {
     postMessage,
     rawOnmessage,
     onmessage: (event: { data: unknown }) =>
       rawOnmessage({
-        data: { type: "generate", data: event.data },
+        data: {
+          type: "generate",
+          requestId: "test-request",
+          data: {
+            protocolVersion: PDF_WORKER_PROTOCOL_VERSION,
+            ...(event.data as Record<string, unknown>),
+          },
+        },
       }),
   };
 };
 
 beforeEach(() => {
   vi.resetModules();
+  vi.mocked(validatePngScanlines).mockClear();
+  vi.mocked(readPngDimensions).mockClear();
+  vi.mocked(readJpegMetadata).mockClear();
   vi.stubGlobal("createImageBitmap", undefined);
   mockJsPdfInstance.addImage.mockClear();
   mockJsPdfInstance.setFont.mockClear();
@@ -199,11 +144,382 @@ beforeEach(() => {
   mockJsPdfInstance.addPage.mockClear();
   mockJsPdfInstance.output.mockClear();
   fillTextMock.mockClear();
+  canvasSizes.length = 0;
   drawImageMock.mockClear();
   vi.mocked(jsPDF).mockClear();
 });
 
 describe("pdf.worker", () => {
+  it.each([undefined, null, "", "x".repeat(129)])(
+    "rejects unreadable request ID %s before decoding",
+    async (requestId) => {
+      const { postMessage, rawOnmessage } = await setupWorker();
+      await rawOnmessage({
+        data: {
+          type: "generate",
+          requestId,
+          data: {
+            protocolVersion: PDF_WORKER_PROTOCOL_VERSION,
+            config: createBaseConfig(),
+            imageItems: [
+              {
+                id: "png",
+                name: "label.png",
+                count: 1,
+                type: "image/png",
+                buffer: createBudgetPng(32, 32),
+              },
+            ],
+            appMode: "image",
+            textConfig: createTextConfig(),
+          },
+        },
+      });
+      expect(postMessage).toHaveBeenCalledExactlyOnceWith({
+        protocolVersion: PDF_WORKER_PROTOCOL_VERSION,
+        requestId: null,
+        type: "error",
+        data: expect.objectContaining({ code: "pdf_worker_protocol_error" }),
+      });
+      expect(validatePngScanlines).not.toHaveBeenCalled();
+      expect(jsPDF).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([false, true])(
+    "holds the active owner through concurrent rejection and releases after failure=%s",
+    async (fail) => {
+      let release!: () => void;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      vi.mocked(validatePngScanlines).mockImplementationOnce(async () => {
+        await gate;
+        if (fail) throw new Error("decode failed");
+      });
+      const { postMessage, rawOnmessage } = await setupWorker();
+      const payload = {
+        protocolVersion: PDF_WORKER_PROTOCOL_VERSION,
+        config: createBaseConfig(),
+        appMode: "image",
+        textConfig: createTextConfig(),
+        imageItems: [
+          {
+            id: "png",
+            name: "label.png",
+            count: 1,
+            type: "image/png",
+            buffer: createBudgetPng(32, 32),
+          },
+        ],
+      };
+      const send = (requestId: string) =>
+        rawOnmessage({ data: { type: "generate", requestId, data: payload } });
+      const owner = send("A");
+      await send("B");
+      await send("C");
+      for (const requestId of ["B", "C"])
+        expect(postMessage).toHaveBeenCalledWith({
+          protocolVersion: PDF_WORKER_PROTOCOL_VERSION,
+          requestId,
+          type: "error",
+          data: expect.objectContaining({ code: "pdf_worker_busy" }),
+        });
+      expect(jsPDF).not.toHaveBeenCalled();
+      expect(vi.mocked(validatePngScanlines)).toHaveBeenCalledTimes(1);
+      release();
+      await owner;
+      expect(postMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          requestId: "A",
+          type: fail ? "error" : "complete",
+        }),
+        ...(fail ? [] : [[expect.any(ArrayBuffer)]]),
+      );
+      await send("D");
+      expect(postMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ requestId: "D", type: "complete" }),
+        [expect.any(ArrayBuffer)],
+      );
+      expect(vi.mocked(validatePngScanlines)).toHaveBeenCalledTimes(2);
+    },
+  );
+
+  it.each([undefined, 1])(
+    "rejects request protocol version %s before decode or rendering",
+    async (protocolVersion) => {
+      const decode = vi.fn();
+      vi.stubGlobal("createImageBitmap", decode);
+      const { postMessage, rawOnmessage } = await setupWorker();
+      rawOnmessage({
+        data: {
+          type: "generate",
+          requestId: "test-request",
+          data: {
+            ...(protocolVersion === undefined ? {} : { protocolVersion }),
+            config: createBaseConfig(),
+            imageItems: [],
+            appMode: "image",
+            textConfig: createTextConfig(),
+          },
+        },
+      });
+      await flushAsync();
+      expect(postMessage).toHaveBeenCalledExactlyOnceWith({
+        protocolVersion: PDF_WORKER_PROTOCOL_VERSION,
+        requestId: "test-request",
+        type: "error",
+        data: expect.objectContaining({ code: "pdf_worker_version_mismatch" }),
+      });
+      expect(decode).not.toHaveBeenCalled();
+      expect(jsPDF).not.toHaveBeenCalled();
+    },
+  );
+
+  it("keeps a large Chinese label canvas within the 2048 by 1024 budget", async () => {
+    vi.stubGlobal("OffscreenCanvas", MockOffscreenCanvas);
+    const { postMessage, onmessage } = await setupWorker();
+    onmessage({
+      data: {
+        config: {
+          ...createBaseConfig(),
+          pageWidthMm: 1000,
+          pageHeightMm: 1000,
+        },
+        imageItems: [],
+        appMode: "text",
+        textConfig: createTextConfig({ prefix: "中文-" }),
+      },
+    });
+    await vi.waitFor(() =>
+      expect(postMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "complete",
+          protocolVersion: PDF_WORKER_PROTOCOL_VERSION,
+        }),
+        expect.any(Array),
+      ),
+    );
+    expect(canvasSizes).toHaveLength(1);
+    expect(canvasSizes[0].width).toBeLessThanOrEqual(2048);
+    expect(canvasSizes[0].height).toBeLessThanOrEqual(1024);
+    expect(canvasSizes[0].width * canvasSizes[0].height).toBeLessThanOrEqual(
+      2048 * 1024,
+    );
+    expect(mockJsPdfInstance.text).not.toHaveBeenCalled();
+  });
+
+  it("parses PNG dimensions and validates scanlines once per source buffer", async () => {
+    const { postMessage, onmessage } = await setupWorker();
+    const { validatePngScanlines } = await import("./pngMetadata");
+    const buffer = createCollisionPng("red").buffer;
+    onmessage({
+      data: {
+        config: createBaseConfig(),
+        appMode: "image",
+        textConfig: createTextConfig(),
+        imageItems: [buffer, buffer, buffer.slice(0)].map((source) => ({
+          id: "duplicate",
+          count: 2,
+          name: "cached.png",
+          type: "image/png",
+          buffer: source,
+        })),
+      },
+    });
+    await vi.waitFor(() =>
+      expect(postMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "complete" }),
+        expect.any(Array),
+      ),
+    );
+    expect(readPngDimensions).toHaveBeenCalledTimes(2);
+    expect(validatePngScanlines).toHaveBeenCalledTimes(2);
+  });
+  it("rejects oversized oriented JPEGs before bitmap normalization", async () => {
+    const decode = vi.fn();
+    vi.stubGlobal("createImageBitmap", decode);
+    const { postMessage, onmessage } = await setupWorker();
+    onmessage({
+      data: {
+        config: createBaseConfig(),
+        appMode: "image",
+        textConfig: createTextConfig(),
+        imageItems: [
+          {
+            id: "1",
+            count: 1,
+            name: "huge.jpg",
+            type: "image/jpeg",
+            buffer: createJpegWithMetadata({
+              width: 10_001,
+              height: 100,
+              orientation: 6,
+            }),
+          },
+        ],
+      },
+    });
+    await flushAsync();
+    expect(decode).not.toHaveBeenCalled();
+    expect(postMessage).toHaveBeenCalledWith({
+      protocolVersion: PDF_WORKER_PROTOCOL_VERSION,
+      requestId: "test-request",
+      type: "error",
+      data: expect.objectContaining({ code: "image_error_dimensions" }),
+    });
+  });
+
+  it.each(["image/png", "image/jpeg"])(
+    "counts each shared %s buffer against the source pixel budget",
+    async (type) => {
+      const decode = vi.fn(async () => ({
+        width: 40,
+        height: 80,
+        close: vi.fn(),
+      }));
+      vi.stubGlobal("createImageBitmap", decode);
+      vi.stubGlobal("OffscreenCanvas", MockOffscreenCanvas);
+      const { postMessage, onmessage } = await setupWorker();
+      const buffer =
+        type === "image/png"
+          ? createBudgetPng(5_000, 7_000)
+          : createJpegWithMetadata({
+              width: 5_000,
+              height: 7_000,
+              orientation: 6,
+            });
+      await onmessage({
+        data: {
+          config: createBaseConfig(),
+          appMode: "image",
+          textConfig: createTextConfig(),
+          imageItems: Array.from({ length: 5 }, (_, index) => ({
+            id: String(index),
+            count: 1,
+            name: `shared-${index}`,
+            type,
+            buffer,
+          })),
+        },
+      });
+      expect(postMessage).toHaveBeenCalledWith({
+        protocolVersion: PDF_WORKER_PROTOCOL_VERSION,
+        requestId: "test-request",
+        type: "error",
+        data: expect.objectContaining({
+          code: "image_error_total_pixels",
+        }),
+      });
+      expect(
+        postMessage.mock.calls.filter(
+          ([message]) => message.type === "progress",
+        ),
+      ).toHaveLength(4);
+      expect(
+        type === "image/png" ? readPngDimensions : readJpegMetadata,
+      ).toHaveBeenCalledTimes(1);
+      expect(
+        type === "image/png" ? validatePngScanlines : decode,
+      ).toHaveBeenCalledTimes(1);
+      expect(mockJsPdfInstance.addImage).not.toHaveBeenCalled();
+    },
+  );
+
+  it("parses a shared buffer independently for each declared MIME type", async () => {
+    const { postMessage, onmessage } = await setupWorker();
+    const buffer = createCollisionPng("red").buffer;
+    await onmessage({
+      data: {
+        config: createBaseConfig(),
+        appMode: "image",
+        textConfig: createTextConfig(),
+        imageItems: ["image/png", "image/jpeg"].map((type) => ({
+          id: type,
+          count: 1,
+          name: type,
+          type,
+          buffer,
+        })),
+      },
+    });
+    expect(readPngDimensions).toHaveBeenCalledTimes(1);
+    expect(readJpegMetadata).toHaveBeenCalledTimes(1);
+    expect(postMessage).toHaveBeenCalledWith({
+      protocolVersion: PDF_WORKER_PROTOCOL_VERSION,
+      requestId: "test-request",
+      type: "error",
+      data: expect.objectContaining({ code: "image_error_decode" }),
+    });
+    expect(mockJsPdfInstance.addImage).not.toHaveBeenCalled();
+  });
+
+  it("caches oriented source preparation by buffer and uses distinct aliases for duplicate IDs", async () => {
+    const decode = vi.fn(async () => ({
+      width: 40,
+      height: 80,
+      close: vi.fn(),
+    }));
+    vi.stubGlobal("createImageBitmap", decode);
+    vi.stubGlobal("OffscreenCanvas", MockOffscreenCanvas);
+    const { postMessage, onmessage } = await setupWorker();
+    const buffer = createJpegWithMetadata({ orientation: 6 });
+    onmessage({
+      data: {
+        config: createBaseConfig(),
+        appMode: "image",
+        textConfig: createTextConfig(),
+        imageItems: [buffer, buffer, buffer.slice(0)].map((source) => ({
+          id: "duplicate",
+          count: 1,
+          name: "phone.jpg",
+          type: "image/jpeg",
+          buffer: source,
+        })),
+      },
+    });
+    await vi.waitFor(() =>
+      expect(postMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "complete" }),
+        expect.any(Array),
+      ),
+    );
+    expect(readJpegMetadata).toHaveBeenCalledTimes(2);
+    expect(decode).toHaveBeenCalledTimes(2);
+    const aliases = mockJsPdfInstance.addImage.mock.calls.map(
+      (call) => call[6],
+    );
+    expect(aliases[0]).toBe(aliases[1]);
+    expect(aliases[2]).not.toBe(aliases[0]);
+  });
+
+  it("gives distinct Unicode labels aliases containing the complete rendering identity", async () => {
+    vi.stubGlobal("OffscreenCanvas", MockOffscreenCanvas);
+    const { postMessage, onmessage } = await setupWorker();
+    onmessage({
+      data: {
+        config: createBaseConfig(),
+        imageItems: [],
+        appMode: "text",
+        textConfig: createTextConfig({ prefix: "中文-", count: 2 }),
+      },
+    });
+    await vi.waitFor(() =>
+      expect(postMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "complete" }),
+        expect.any(Array),
+      ),
+    );
+    const aliases = mockJsPdfInstance.addImage.mock.calls.map((call) =>
+      JSON.parse(call[6]),
+    );
+    expect(aliases[0][1]).toBe("中文-001");
+    expect(aliases[1][1]).toBe("中文-002");
+    expect(aliases[0]).toHaveLength(5);
+    expect(
+      aliases[0].slice(2).every((value: unknown) => typeof value === "number"),
+    ).toBe(true);
+  });
   it("draws repeated image labels across pages and releases bitmaps", async () => {
     const closeMock = vi.fn();
     (
@@ -216,7 +532,7 @@ describe("pdf.worker", () => {
 
     const { postMessage, onmessage } = await setupWorker();
 
-    const buffer = new ArrayBuffer(4);
+    const buffer = createCollisionPng("red").buffer;
     onmessage({
       data: {
         config: createBaseConfig(),
@@ -231,7 +547,7 @@ describe("pdf.worker", () => {
     await flushAsync();
     await flushAsync();
 
-    expect(closeMock).toHaveBeenCalledTimes(1);
+    expect(closeMock).not.toHaveBeenCalled();
     expect(mockJsPdfInstance.addImage).toHaveBeenCalledTimes(3);
     expect(mockJsPdfInstance.addPage).toHaveBeenCalledTimes(2);
     expect(postMessage).toHaveBeenCalledWith(
@@ -281,7 +597,7 @@ describe("pdf.worker", () => {
       expect.any(Number),
       expect.any(Number),
       expect.any(Number),
-      undefined,
+      expect.any(String),
       "FAST",
     );
     expect(closeMock).toHaveBeenCalledOnce();
@@ -327,7 +643,7 @@ describe("pdf.worker", () => {
       expect.any(Number),
       expect.any(Number),
       expect.any(Number),
-      undefined,
+      expect.any(String),
       "FAST",
     );
     expect(postMessage).toHaveBeenCalledWith(
@@ -441,6 +757,8 @@ describe("pdf.worker", () => {
     expect(createBitmap).not.toHaveBeenCalled();
     expect(mockJsPdfInstance.addImage).not.toHaveBeenCalled();
     expect(postMessage).toHaveBeenCalledWith({
+      protocolVersion: PDF_WORKER_PROTOCOL_VERSION,
+      requestId: "test-request",
       type: "error",
       data: expect.objectContaining({ code: "image_error_decode" }),
     });
@@ -478,6 +796,8 @@ describe("pdf.worker", () => {
     expect(createBitmap).not.toHaveBeenCalled();
     expect(mockJsPdfInstance.addImage).not.toHaveBeenCalled();
     expect(postMessage).toHaveBeenCalledWith({
+      protocolVersion: PDF_WORKER_PROTOCOL_VERSION,
+      requestId: "test-request",
       type: "error",
       data: expect.objectContaining({ code: "image_error_decode" }),
     });
@@ -502,7 +822,7 @@ describe("pdf.worker", () => {
             count: 1,
             name: "huge.png",
             type: "image/png",
-            buffer: new ArrayBuffer(4),
+            buffer: createBudgetPng(10_001, 10),
           },
         ],
         appMode: "image",
@@ -513,6 +833,8 @@ describe("pdf.worker", () => {
 
     expect(postMessage).toHaveBeenCalledWith(
       expect.objectContaining({
+        protocolVersion: PDF_WORKER_PROTOCOL_VERSION,
+        requestId: "test-request",
         type: "error",
         data: expect.objectContaining({ code: "image_error_dimensions" }),
       }),
@@ -529,7 +851,7 @@ describe("pdf.worker", () => {
       count: 1,
       name: `label-${index}.png`,
       type: "image/png",
-      buffer: new ArrayBuffer(4),
+      buffer: createBudgetPng(5_000, 7_000),
     }));
     const data = {
       config: createBaseConfig(),
@@ -540,13 +862,17 @@ describe("pdf.worker", () => {
     onmessage({ data });
     await vi.waitFor(() => {
       expect(postMessage).toHaveBeenCalledWith({
+        protocolVersion: PDF_WORKER_PROTOCOL_VERSION,
+        requestId: "test-request",
         type: "error",
         data: expect.objectContaining({ code: "image_error_total_pixels" }),
       });
     });
-    expect(decode).toHaveBeenCalledTimes(5);
-    expect(close).toHaveBeenCalledTimes(5);
+    expect(decode).not.toHaveBeenCalled();
+    expect(close).not.toHaveBeenCalled();
     expect(mockJsPdfInstance.addImage).not.toHaveBeenCalled();
+    expect(readPngDimensions).toHaveBeenCalledTimes(5);
+    expect(validatePngScanlines).toHaveBeenCalledTimes(4);
     expect(
       postMessage.mock.calls.filter(
         ([message]) =>
@@ -562,8 +888,8 @@ describe("pdf.worker", () => {
         expect.any(Array),
       );
     });
-    expect(decode).toHaveBeenCalledTimes(9);
-    expect(close).toHaveBeenCalledTimes(9);
+    expect(decode).not.toHaveBeenCalled();
+    expect(close).not.toHaveBeenCalled();
     expect(mockJsPdfInstance.addImage).toHaveBeenCalledTimes(4);
   });
 
@@ -586,7 +912,7 @@ describe("pdf.worker", () => {
             count: Number.POSITIVE_INFINITY,
             name: "label.png",
             type: "image/png",
-            buffer: new ArrayBuffer(4),
+            buffer: createCollisionPng("red").buffer,
           },
         ],
         appMode: "image",
@@ -598,12 +924,14 @@ describe("pdf.worker", () => {
 
     expect(mockJsPdfInstance.addImage).not.toHaveBeenCalled();
     expect(postMessage).toHaveBeenCalledWith({
+      protocolVersion: PDF_WORKER_PROTOCOL_VERSION,
+      requestId: "test-request",
       type: "error",
       data: expect.objectContaining({ code: "pdf_worker_protocol_error" }),
     });
   });
 
-  it("normalizes invalid layout values from worker messages", async () => {
+  it("rejects empty image generation after normalizing layout values", async () => {
     (
       globalThis as unknown as { createImageBitmap?: unknown }
     ).createImageBitmap = vi.fn();
@@ -621,8 +949,12 @@ describe("pdf.worker", () => {
     await flushAsync();
 
     expect(postMessage).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "complete" }),
-      expect.any(Array),
+      expect.objectContaining({
+        protocolVersion: PDF_WORKER_PROTOCOL_VERSION,
+        requestId: "test-request",
+        type: "error",
+        data: expect.objectContaining({ code: "image_error_no_files" }),
+      }),
     );
   });
 
@@ -676,16 +1008,23 @@ describe("pdf.worker", () => {
       "ASSET-0008",
       expect.any(Number),
       expect.any(Number),
-      { align: "left" },
+      { align: "center", baseline: "middle" },
     );
     expect(mockJsPdfInstance.text).toHaveBeenNthCalledWith(
       3,
       "ASSET-0010",
       expect.any(Number),
       expect.any(Number),
-      { align: "left" },
+      { align: "center", baseline: "middle" },
     );
     expect(mockJsPdfInstance.addPage).toHaveBeenCalledTimes(1);
+    expect(mockJsPdfInstance.setFont).toHaveBeenCalledWith("courier", "bold");
+    expect(mockJsPdfInstance.addImage).not.toHaveBeenCalled();
+    expect(
+      postMessage.mock.calls.every(
+        ([message]) => message.protocolVersion === PDF_WORKER_PROTOCOL_VERSION,
+      ),
+    ).toBe(true);
     expect(postMessage).toHaveBeenCalledWith(
       expect.objectContaining({ type: "complete" }),
       expect.any(Array),
@@ -748,6 +1087,8 @@ describe("pdf.worker", () => {
     await flushAsync();
 
     expect(postMessage).toHaveBeenCalledWith({
+      protocolVersion: PDF_WORKER_PROTOCOL_VERSION,
+      requestId: "test-request",
       type: "error",
       data: expect.objectContaining({
         code: "pdf_generation_failed",
@@ -799,7 +1140,7 @@ describe("pdf.worker", () => {
       "SN-0000000001",
       expect.any(Number),
       expect.any(Number),
-      { align: "left" },
+      { align: "center", baseline: "middle" },
     );
     expect(postMessage).toHaveBeenCalledWith(
       expect.objectContaining({ type: "complete" }),
@@ -835,7 +1176,7 @@ describe("pdf.worker", () => {
       expect.any(Number),
       expect.any(Number),
       expect.any(Number),
-      undefined,
+      expect.any(String),
       "FAST",
     );
     expect(mockJsPdfInstance.text).not.toHaveBeenCalled();
@@ -860,14 +1201,20 @@ describe("pdf.worker", () => {
     await flushAsync();
 
     expect(postMessage).toHaveBeenCalledWith({
+      protocolVersion: PDF_WORKER_PROTOCOL_VERSION,
+      requestId: "test-request",
       type: "progress",
       data: { percent: 20, phase: "preparing" },
     });
     expect(postMessage).toHaveBeenCalledWith({
+      protocolVersion: PDF_WORKER_PROTOCOL_VERSION,
+      requestId: "test-request",
       type: "progress",
       data: { percent: 90, phase: "rendering" },
     });
     expect(postMessage).toHaveBeenCalledWith({
+      protocolVersion: PDF_WORKER_PROTOCOL_VERSION,
+      requestId: "test-request",
       type: "progress",
       data: { percent: 95, phase: "serializing" },
     });
@@ -880,6 +1227,8 @@ describe("pdf.worker", () => {
     await flushAsync();
 
     expect(postMessage).toHaveBeenCalledWith({
+      protocolVersion: PDF_WORKER_PROTOCOL_VERSION,
+      requestId: null,
       type: "error",
       data: expect.objectContaining({ code: "pdf_worker_protocol_error" }),
     });
