@@ -16,7 +16,7 @@ A modern, offline-capable web application for batch generating label PDF documen
   - **Image Mode**: Batch process JPG/PNG images into labels with smart auto-filling.
   - **Text/Serial Mode**: Generate sequential labels (e.g., SN-001, SN-002) with custom prefixes and padding.
   - **🔗 QR Code Generation**: Optional QR code integration for serial numbers. Supports custom URL prefixes for easy asset tracking.
-- **⚡ High Performance**: Powered by **Web Workers**, PDF generation is asynchronous and non-blocking, ensuring the UI remains responsive even with 100+ high-res images.
+- **⚡ Background PDF Generation**: Powered by **Web Workers**. The image queue accepts up to **20 files**, **10 MiB per file** and **50 MiB total**, with additional decoded pixel and label-count limits.
 - **🎨 Smart Button Feedback**: Integrated progress tracking and success/error status directly within the action button. No more intrusive full-screen overlays.
 - **📐 Dynamic Constraints**: Grid limits (rows/cols) automatically adjust based on page orientation (Portrait vs Landscape).
 - **🛡️ Smart Layout Validation**: Real-time detection of invalid layouts (e.g., margins exceeding paper size) with visual error feedback.
@@ -25,7 +25,7 @@ A modern, offline-capable web application for batch generating label PDF documen
 - **🌓 Adaptive Dark Mode**: Full dark mode support that follows your system preferences or can be manually toggled ('System', 'Light', 'Dark'). Powered by Tailwind CSS 4.
 - **👁️ Real-time Preview**: What you see is what you get with a virtual paper canvas.
 - **📏 Screen 1:1 Actual Size**: Calibrate once by measuring an on-screen ruler line, then view the paper at its true physical size on desktop. The calibration is stored locally and survives reloads.
-- **📲 PWA Ready**: Supports offline use and can be installed as a standalone app.
+- **📲 PWA Ready**: Can be installed as a standalone app. Offline use requires a first online visit with service-worker installation and caching completed. The current production precache is approximately **3.5 MiB**, including the **2.55 MB MiSans font**; this size can change with the build.
 - **📱 Mobile Optimized**: A preview-first workspace with a collapsible edit sheet for comfortable touch workflows.
 
 ## 🚀 One-Click Deploy with Vercel
@@ -45,12 +45,14 @@ A modern, offline-capable web application for batch generating label PDF documen
 
 ### Installation
 
+Use Node.js **24.21.0 or newer** and the pinned **pnpm 12.11.2**. CI uses Node.js 26, which satisfies the same minimum.
+
 1. `pnpm install`
 2. `pnpm dev`
 
 ### Deployment to Vercel
 
-This project is optimized for Vercel.
+Configure and verify the build toolchain on Vercel before deploying.
 
 1. Fork this repository to your own GitHub account.
 2. Import the project in Vercel.
@@ -58,11 +60,12 @@ This project is optimized for Vercel.
    - **Framework Preset**: Vite
    - **Build Command**: `pnpm build`
    - **Output Directory**: `dist`
-4. Click **Deploy**.
+4. Enable platform Corepack support with the Vercel environment variable **`ENABLE_EXPERIMENTAL_COREPACK=1`** and verify that the selected build environment supports **pnpm 12.11.2** from `packageManager`.
+5. Click **Deploy** and check the build logs to confirm the pinned pnpm version is used.
 
 ### Release process
 
-See [docs/release.md](./docs/release.md) for the manually triggered `semantic-release` workflow and local validation commands.
+See [docs/release.md](./docs/release.md) for the local `release.ps1` process (PowerShell 7.6 or newer), which invokes `semantic-release`, and its validation commands. GitHub Actions runs CI for pushes to `main` and pull requests; releases are initiated locally.
 
 ## 📦 Building for Production
 
@@ -83,6 +86,16 @@ The output will be in the `dist/` directory.
 5. **Generate**: Click "Generate PDF" to download the final file.
 6. **Check Actual Size (desktop)**: Click the "1:1" button next to the zoom slider. On first use, measure the on-screen ruler line (keep browser zoom at 100%, Ctrl+0), enter the value you read, and save. The preview then shows the paper at true physical size; re-calibrate after changing monitors or system display scaling.
 
+**PDF output quality:** Non-ASCII text is rasterized with a target of 300 DPI. Large text boxes can lower the output DPI to stay within the canvas limits; the text controls show the expected DPI when this happens. JPEG images that need orientation correction may be re-encoded, and normalized images above 16 megapixels are resized. Other JPEGs retain their original bytes. Check the exported PDF and a sample print when sharpness matters.
+
+PNG upload admission reads compressed-file structure and dimensions without creating a full-size bitmap. Complete scanline and CRC checks run during PDF generation, so a structurally complete but damaged PNG may be rejected at generation time. Streaming validation still inflates the complete image data, and PDF embedding decodes it again; very high-resolution inputs retain a CPU cost even though the extra RGBA bitmap allocation is removed. Image cells below a recommended 5 mm shortest side show a print-readability warning while allowing generation.
+
+The supported PDF inputs are PNG/JPEG images, text and QR codes. Optional jsPDF HTML/SVG renderers are replaced with explicit unsupported-feature stubs; their dependencies cannot silently bypass the offline cache guard. Vercel cache headers are defined in [vercel.json](./vercel.json); verify the deployed response headers before release.
+
+QR content is the literal prefix followed by the label text. When using a URL prefix, supply any URL encoding your destination requires; spaces and Unicode remain valid QR text.
+
 ## 📄 License
 
 [MIT License](./LICENSE).
+
+Bundled third-party assets have separate notices; see [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).

@@ -1,9 +1,26 @@
+import { fileURLToPath } from "node:url";
+
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 import { defineConfig } from "vitest/config";
 
 // https://vite.dev/config/
 export default defineConfig({
+  // LabelPilot renders PDFs from text, raster images and QR codes. jsPDF's
+  // optional HTML/SVG APIs deliberately fail in both app and worker builds.
+  resolve: {
+    alias: {
+      html2canvas: fileURLToPath(
+        new URL("./src/utils/pdfOptionalHtml2canvas.ts", import.meta.url),
+      ),
+      dompurify: fileURLToPath(
+        new URL("./src/utils/pdfOptionalDomPurify.ts", import.meta.url),
+      ),
+      canvg: fileURLToPath(
+        new URL("./src/utils/pdfOptionalCanvg.ts", import.meta.url),
+      ),
+    },
+  },
   plugins: [
     react(),
     VitePWA({
@@ -37,11 +54,6 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,svg,png,ico,txt,woff2}"],
-        globIgnores: [
-          "**/html2canvas-*.js",
-          "**/purify.es-*.js",
-          "**/index.es-*.js",
-        ],
         // MiSansVF 可变字体（gb2312 子集）约 2.55 MB，提高预缓存上限以纳入
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
       },
