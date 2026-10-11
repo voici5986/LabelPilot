@@ -4,15 +4,17 @@
   "version": "1.4.0",
   "license": "MIT",
   "type": "module",
+  "packageManager": "pnpm@12.11.2",
   "engines": {
     "node": ">=24.21.0",
     "pnpm": ">=12 <13"
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && node scripts/check-precache.mjs",
     "lint": "oxlint .",
     "check:docs": "node scripts/check-docs-links.mjs",
+    "check:pdf-optional": "node scripts/check-pdf-optional-browser.mjs",
     "format": "oxfmt .",
     "format:check": "oxfmt . --check",
     "test": "vitest run",

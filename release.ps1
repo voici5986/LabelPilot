@@ -542,7 +542,8 @@ function Invoke-PlaywrightGate {
 
         $env:CI = "true"
         $env:PLAYWRIGHT_EXTERNAL_SERVER = "true"
-        Invoke-NativeStep -Description "6/6 Playwright 端到端测试（CI 等价模式）" -Command "node" -Arguments @(
+        Invoke-NativeStep -Description "7/8 PDF 可选渲染器离线检查" -Command "pnpm" -Arguments @("run", "check:pdf-optional")
+        Invoke-NativeStep -Description "8/8 Playwright 端到端测试（CI 等价模式）" -Command "node" -Arguments @(
             "node_modules/@playwright/test/cli.js",
             "test"
         )
@@ -578,11 +579,12 @@ function Invoke-QualityGates {
     Write-Host ""
     Write-Host "开始完整发版验证。" -ForegroundColor Cyan
 
-    Invoke-NativeStep -Description "1/6 锁定依赖安装" -Command "pnpm" -Arguments @("install", "--frozen-lockfile")
-    Invoke-NativeStep -Description "2/6 格式检查" -Command "pnpm" -Arguments @("run", "format:check")
-    Invoke-NativeStep -Description "3/6 静态检查" -Command "pnpm" -Arguments @("run", "lint")
-    Invoke-NativeStep -Description "4/6 单元测试" -Command "pnpm" -Arguments @("test")
-    Invoke-NativeStep -Description "5/6 生产构建" -Command "pnpm" -Arguments @("run", "build")
+    Invoke-NativeStep -Description "1/8 锁定依赖安装" -Command "pnpm" -Arguments @("install", "--frozen-lockfile")
+    Invoke-NativeStep -Description "2/8 格式检查" -Command "pnpm" -Arguments @("run", "format:check")
+    Invoke-NativeStep -Description "3/8 静态检查" -Command "pnpm" -Arguments @("run", "lint")
+    Invoke-NativeStep -Description "4/8 文档链接检查" -Command "pnpm" -Arguments @("run", "check:docs")
+    Invoke-NativeStep -Description "5/8 单元测试" -Command "pnpm" -Arguments @("test")
+    Invoke-NativeStep -Description "6/8 生产构建" -Command "pnpm" -Arguments @("run", "build")
     Invoke-PlaywrightGate
 }
 

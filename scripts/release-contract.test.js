@@ -8,12 +8,103 @@ const expectedReleaseFiles = [
   "package.json",
 ];
 
+/** @param {string} relativePath */
 async function readRepositoryFile(relativePath) {
   return readFile(new URL(`../${relativePath}`, import.meta.url), "utf8");
 }
 
 describe("release contracts", () => {
+  it("includes strict JavaScript tooling checks in the build project graph", async () => {
+    const rootConfig = JSON.parse(await readRepositoryFile("tsconfig.json"));
+    const scriptsConfig = JSON.parse(
+      await readRepositoryFile("tsconfig.scripts.json"),
+    );
+    expect(rootConfig.references).toContainEqual({
+      path: "./tsconfig.scripts.json",
+    });
+    expect(scriptsConfig.compilerOptions).toMatchObject({
+      allowJs: true,
+      checkJs: true,
+      strict: true,
+      noEmit: true,
+    });
+    expect(scriptsConfig.include).toEqual([
+      "scripts/**/*.mjs",
+      "scripts/**/*.js",
+    ]);
+  });
+
+  it("revalidates mutable PWA entry points while caching hashed assets", async () => {
+    const config = JSON.parse(await readRepositoryFile("vercel.json"));
+    expect(config.headers).toEqual(
+      expect.arrayContaining([
+        ...["/sw.js", "/manifest.webmanifest", "/index.html", "/"].map(
+          (source) => ({
+            source,
+            headers: [
+              { key: "Cache-Control", value: "max-age=0, must-revalidate" },
+            ],
+          }),
+        ),
+        ...["/assets/(.*)", "/workbox-([a-f0-9]+).js"].map((source) => ({
+          source,
+          headers: [
+            {
+              key: "Cache-Control",
+              value: "public, max-age=31536000, immutable",
+            },
+          ],
+        })),
+      ]),
+    );
+  });
+  it("runs docs and offline build validation before browser release acceptance", async () => {
+    const releaseScript = await readRepositoryFile("release.ps1");
+    const gates = releaseScript
+      .split("function Invoke-QualityGates {")[1]
+      .split("function Invoke-SemanticReleasePreview")[0];
+    const packageJson = JSON.parse(await readRepositoryFile("package.json"));
+    expect(gates).toContain('"4/8 文档链接检查"');
+    expect(gates).toContain('@("run", "check:docs")');
+    expect(gates.indexOf('"check:docs"')).toBeLessThan(
+      gates.indexOf('"build"'),
+    );
+    expect(gates.indexOf('"build"')).toBeLessThan(
+      gates.indexOf("Invoke-PlaywrightGate"),
+    );
+    expect(releaseScript).toContain("8/8 Playwright");
+    expect(packageJson.scripts.build).toBe(
+      "tsc -b && vite build && node scripts/check-precache.mjs",
+    );
+  });
+
+  it("runs the same optional-renderer browser check in CI and local release gates", async () => {
+    const [workflow, releaseScript, packageText] = await Promise.all([
+      readRepositoryFile(".github/workflows/ci.yml"),
+      readRepositoryFile("release.ps1"),
+      readRepositoryFile("package.json"),
+    ]);
+    const packageJson = JSON.parse(packageText);
+    expect(packageJson.scripts["check:pdf-optional"]).toBe(
+      "node scripts/check-pdf-optional-browser.mjs",
+    );
+    const browserInstall = workflow.indexOf("pnpm exec playwright install");
+    const optionalCheck = workflow.indexOf("pnpm run check:pdf-optional");
+    const browserTests = workflow.indexOf("pnpm exec playwright test");
+    expect(browserInstall).toBeGreaterThan(-1);
+    expect(optionalCheck).toBeGreaterThan(browserInstall);
+    expect(browserTests).toBeGreaterThan(optionalCheck);
+    const releaseGate = releaseScript
+      .split("function Invoke-PlaywrightGate {")[1]
+      .split("function Invoke-QualityGates")[0];
+    expect(releaseGate).toContain('@("run", "check:pdf-optional")');
+    expect(releaseGate.indexOf('"check:pdf-optional"')).toBeLessThan(
+      releaseGate.indexOf('"node_modules/@playwright/test/cli.js"'),
+    );
+  });
+
   it("orders prepare plugins and commits exactly the release assets", async () => {
+    /** @type {{plugins: (string | [string, {assets: string[]}])[], tagFormat: string}} */
     const config = JSON.parse(await readRepositoryFile(".releaserc.json"));
     const pluginNames = config.plugins.map((entry) =>
       Array.isArray(entry) ? entry[0] : entry,
@@ -29,6 +120,8 @@ describe("release contracts", () => {
     expect(npmIndex).toBeGreaterThan(-1);
     expect(docIndex).toBeGreaterThan(npmIndex);
     expect(gitIndex).toBeGreaterThan(docIndex);
+    if (!Array.isArray(gitPlugin))
+      throw new Error("Missing Git release plugin config");
     expect([...gitPlugin[1].assets].sort()).toEqual(
       [...expectedReleaseFiles].sort(),
     );

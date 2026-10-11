@@ -6,10 +6,12 @@ const PACKAGE_PATH = "package.json";
 const START_MARKER = "<!-- semantic-release:current-release:start -->";
 const END_MARKER = "<!-- semantic-release:current-release:end -->";
 
+/** @param {string} message @returns {never} */
 function fail(message) {
   throw new Error(`[release-doc] ${message}`);
 }
 
+/** @param {string} content @param {string} marker */
 function findMarker(content, marker) {
   const matches = [];
   let searchFrom = 0;
@@ -39,6 +41,7 @@ function findMarker(content, marker) {
   return matches[0];
 }
 
+/** @param {string} content */
 function inspectReleaseBlock(content) {
   const start = findMarker(content, START_MARKER);
   const end = findMarker(content, END_MARKER);
@@ -58,6 +61,7 @@ function inspectReleaseBlock(content) {
   };
 }
 
+/** @param {unknown} version @returns {asserts version is string} */
 function assertVersion(version) {
   if (
     typeof version !== "string" ||
@@ -69,6 +73,7 @@ function assertVersion(version) {
   }
 }
 
+/** @param {string} version @param {string} eol */
 function renderReleaseBody(version, eol) {
   return [
     "",
@@ -79,6 +84,7 @@ function renderReleaseBody(version, eol) {
   ].join(eol);
 }
 
+/** @param {string | undefined} cwd */
 async function loadReleaseFiles(cwd) {
   if (typeof cwd !== "string" || cwd.length === 0) {
     fail("semantic-release 未提供有效的 cwd");
@@ -95,20 +101,30 @@ async function loadReleaseFiles(cwd) {
       readFile(packagePath, "utf8"),
     ]);
   } catch (error) {
-    fail(`无法读取 ${RELEASE_DOC_PATH} 或 ${PACKAGE_PATH}：${error.message}`);
+    fail(
+      `无法读取 ${RELEASE_DOC_PATH} 或 ${PACKAGE_PATH}：${error instanceof Error ? error.message : String(error)}`,
+    );
   }
 
+  /** @type {{version?: unknown}} */
   let packageJson;
   try {
     packageJson = JSON.parse(packageText);
   } catch (error) {
-    fail(`${PACKAGE_PATH} 不是有效 JSON：${error.message}`);
+    fail(
+      `${PACKAGE_PATH} 不是有效 JSON：${error instanceof Error ? error.message : String(error)}`,
+    );
   }
 
   const block = inspectReleaseBlock(releaseDoc);
   return { releaseDocPath, releaseDoc, packageJson, block };
 }
 
+/**
+ * Only the semantic-release fields consumed by this plugin are required.
+ * @typedef {{cwd?: string, nextRelease?: {version?: string}}} ReleaseContext
+ */
+/** @param {unknown} _pluginConfig @param {ReleaseContext} context */
 export async function verifyConditions(_pluginConfig, context) {
   const { releaseDoc, packageJson, block } = await loadReleaseFiles(
     context?.cwd,
@@ -124,6 +140,7 @@ export async function verifyConditions(_pluginConfig, context) {
   }
 }
 
+/** @param {unknown} _pluginConfig @param {ReleaseContext} context */
 export async function prepare(_pluginConfig, context) {
   const version = context?.nextRelease?.version;
   assertVersion(version);

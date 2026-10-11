@@ -29,6 +29,7 @@ const LINK_PATTERN = /\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g;
 const EXTERNAL_TIMEOUT_MS = 10_000;
 const EXTERNAL_CONCURRENCY = 4;
 
+/** @param {string} dir @param {string[]} acc */
 function collectMarkdownFiles(dir, acc = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     if (SKIP_DIRS.has(entry.name)) continue;
@@ -39,14 +40,17 @@ function collectMarkdownFiles(dir, acc = []) {
   return acc;
 }
 
+/** @param {string} target */
 function isExternalLink(target) {
   return /^https?:\/\//i.test(target);
 }
 
+/** @param {string} filePath */
 function toRelative(filePath) {
   return path.relative(root, filePath).split(path.sep).join("/");
 }
 
+/** @param {string} filePath @param {string} target */
 function resolveInternalTarget(filePath, target) {
   const withoutAnchor = target.split("#")[0];
   if (!withoutAnchor) return null;
@@ -59,7 +63,9 @@ function resolveInternalTarget(filePath, target) {
   return path.resolve(path.dirname(filePath), decoded);
 }
 
+/** @param {string} url */
 async function checkExternalUrl(url) {
+  /** @param {"HEAD" | "GET"} method */
   const request = async (method) => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), EXTERNAL_TIMEOUT_MS);
@@ -92,7 +98,7 @@ async function checkExternalUrl(url) {
   } catch (error) {
     return {
       ok: true,
-      warning: `请求失败（${error.name}，已忽略）`,
+      warning: `请求失败（${error instanceof Error ? error.name : String(error)}，已忽略）`,
     };
   }
 }

@@ -13,7 +13,7 @@
 
 ## 什么时候发版
 
-发版脚本要求 PowerShell 7.6 或更高版本（当前验证版本为 7.6.5）。发版不是每次 push 自动执行，而是维护者需要发布时，在本地 `main` 分支手动运行：
+发版脚本要求 PowerShell 7.6 或更高版本（当前验证版本为 7.6.5）、Node.js 24.21.0 或更高版本及锁定的 pnpm 12.11.2；CI 使用 Node.js 26。脚本通过 `pwsh` 运行，不要求 Windows PowerShell。发版不是每次 push 自动执行，而是维护者需要发布时，在本地 `main` 分支手动运行：
 
 ```powershell
 .\release.ps1
@@ -28,7 +28,7 @@
 脚本会依次完成：
 
 1. 确认当前位于干净的 `main`，执行真实的 `git fetch`，要求 `HEAD`、本地 `main`、刚刷新的 `origin/main` 三者完全一致，并要求本地与远端的全部标签引用及目标完全一致。
-2. 执行 frozen install、格式检查、lint、单元测试、生产构建和 Playwright 端到端测试。
+2. 执行八项质量门禁：frozen install、格式检查、lint、文档链接检查、单元测试、生产构建、PDF 可选渲染器离线检查和 Playwright 端到端测试。生产构建包含应用、E2E 及 scripts 类型检查和 PWA 预缓存检查，确保必要离线资产进入预缓存；`pnpm run check:pdf-optional` 在 CI 安装浏览器后及本地发版门禁中执行。
 3. 运行 `semantic-release` 预演，显示下一版本；没有可发布提交时正常结束。
 4. 要求输入完整版本号进行确认。
 5. 再次刷新并校验远端，防止验证期间 `main` 已发生变化。
@@ -80,7 +80,7 @@ pnpm exec playwright install chromium
 
 ## CI 与 Git hooks
 
-- 普通 push 仍由 GitHub Actions 的 `CI / verify` 执行完整 CI。
+- `main` 分支的 push 和所有 pull request 由 GitHub Actions 的 `CI / verify` 执行完整 CI；其他分支的普通 push 不触发该 workflow。
 - 本地提交继续执行 pre-commit 的 format/lint-staged 和 commit-msg 检查。
 - 本地 push 继续直接执行 `vitest run`。
 - 正式发版前已经完成完整门禁，因此自动生成的 release commit 带 `[skip ci]`；semantic-release 推送时本地 pre-push hook 仍会再运行一次单元测试。

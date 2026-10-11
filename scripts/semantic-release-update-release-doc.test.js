@@ -10,8 +10,10 @@ import {
   verifyConditions,
 } from "./semantic-release-update-release-doc.mjs";
 
+/** @type {string[]} */
 const temporaryDirectories = [];
 
+/** @param {{eol?: string, packageVersion?: string, releaseDoc?: string}} options */
 async function createFixture({
   eol = "\n",
   packageVersion = "1.3.1",
