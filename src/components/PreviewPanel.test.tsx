@@ -70,6 +70,14 @@ afterEach(() => {
 });
 
 describe("PreviewPanel", () => {
+  it("exposes the preview as an explicitly keyboard-focusable named region", () => {
+    renderPanel();
+    const preview = screen.getByRole("region", { name: "纸张预览" });
+    expect(preview.getAttribute("tabindex")).toBe("0");
+    preview.focus();
+    expect(document.activeElement).toBe(preview);
+  });
+
   it("supports next-page navigation and direct page input", () => {
     renderPanel();
 
@@ -114,6 +122,9 @@ describe("PreviewPanel", () => {
     renderPanel();
 
     expect(screen.getByRole("alert").textContent).toContain("布局错误");
+    act(() => useStore.getState().setConfig({ marginMm: 10 }));
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByText("SN-001")).not.toBeNull();
   });
 
   it("keeps the stored page index clamped when page count shrinks", () => {

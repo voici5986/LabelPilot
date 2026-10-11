@@ -1,5 +1,12 @@
 import { AlertCircle } from "lucide-react";
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  memo,
+  useCallback,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { useShallow } from "zustand/shallow";
 
@@ -33,7 +40,7 @@ interface ZoomFocus {
   paperPointY: number;
 }
 
-export function PreviewPanel({
+export const PreviewPanel = memo(function PreviewPanel({
   zoomMode,
   manualScale,
   onZoomModeChange,
@@ -185,6 +192,9 @@ export function PreviewPanel({
         {/* Scrollable Area */}
         <div
           ref={containerRef}
+          role="region"
+          aria-label={t("preview_region")}
+          tabIndex={0}
           style={{ overflowAnchor: "none" }}
           onPointerDown={handlePointerDown}
           onScroll={() => {
@@ -384,4 +394,4 @@ export function PreviewPanel({
       </div>
     </section>
   );
-}
+});

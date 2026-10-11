@@ -4,6 +4,9 @@ import { File as BrowserFile } from "node:buffer";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { createJpegWithMetadata } from "../test/jpegFixtures";
+import { createCollisionPng } from "../test/pngFixtures";
+
 afterEach(() => {
   localStorage.clear();
   vi.resetModules();
@@ -11,17 +14,51 @@ afterEach(() => {
 });
 
 describe("useStore image uploads", () => {
+  it("makes JPEG direction metadata available before publishing uploaded items", async () => {
+    vi.stubGlobal("File", BrowserFile);
+    vi.stubGlobal(
+      "createImageBitmap",
+      vi.fn(async () => ({ width: 80, height: 40, close: vi.fn() })),
+    );
+    const { useStore } = await import("./useStore");
+    const { getValidatedJpegOrientation } =
+      await import("../utils/imageLimits");
+    vi.stubGlobal("URL", {
+      createObjectURL: vi.fn(() => "blob:jpeg"),
+      revokeObjectURL: vi.fn(),
+    });
+    const file = new File(
+      [createJpegWithMetadata({ orientation: 2 })],
+      "mirror.jpg",
+      { type: "image/jpg" },
+    );
+    const read = vi.spyOn(file, "slice");
+    const publishedOrientations: (number | null | undefined)[] = [];
+    const unsubscribe = useStore.subscribe((state) => {
+      if (state.imageItems.length)
+        publishedOrientations.push(
+          getValidatedJpegOrientation(state.imageItems[0].file),
+        );
+    });
+    await useStore.getState().addImageFiles([file]);
+    expect(publishedOrientations).toEqual([2]);
+    const reads = read.mock.calls.length;
+    useStore
+      .getState()
+      .updateItemCount(useStore.getState().imageItems[0].id, 4);
+    await useStore.getState().addImageFiles([file]);
+    expect(read).toHaveBeenCalledTimes(reads);
+    expect(createImageBitmap).not.toHaveBeenCalled();
+    unsubscribe();
+  });
+
   it("validates direct uploads and appends with the latest default count and URL lifecycle", async () => {
     vi.stubGlobal("File", BrowserFile);
-    const close = vi.fn();
-    let finishDecode!: () => void;
-    const decodeGate = new Promise<void>((resolve) => {
-      finishDecode = resolve;
+    let finishRead!: () => void;
+    const readGate = new Promise<void>((resolve) => {
+      finishRead = resolve;
     });
-    const decode = vi.fn(async () => {
-      await decodeGate;
-      return { width: 320, height: 180, close };
-    });
+    const decode = vi.fn();
     vi.stubGlobal("createImageBitmap", decode);
     const createObjectURL = vi.fn(() => "blob:upload");
     const revokeObjectURL = vi.fn();
@@ -36,14 +73,18 @@ describe("useStore image uploads", () => {
     expect(useStore.getState().imageItems).toEqual([]);
     expect(useStore.getState().imageUrlMap.size).toBe(0);
     expect(createObjectURL).not.toHaveBeenCalled();
-    const file = new File(
-      [new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])],
-      "label.png",
-      { type: "image/png" },
-    );
+    const file = new File([createCollisionPng("red")], "label.png", {
+      type: "image/png",
+    });
+    const originalRead = file.arrayBuffer.bind(file);
+    const read = vi.spyOn(file, "arrayBuffer").mockImplementation(async () => {
+      await readGate;
+      return originalRead();
+    });
     const upload = useStore.getState().addImageFiles([file]);
+    await vi.waitFor(() => expect(read).toHaveBeenCalledOnce());
     useStore.getState().setConfig({ rows: 2, cols: 3 });
-    finishDecode();
+    finishRead();
     await upload;
 
     const [item] = useStore.getState().imageItems;
@@ -51,7 +92,7 @@ describe("useStore image uploads", () => {
     expect(item.id).toBeTruthy();
     expect(useStore.getState().imageUrlMap.get(item.id)).toBe("blob:upload");
     expect(createObjectURL).toHaveBeenCalledExactlyOnceWith(file);
-    expect(close).toHaveBeenCalledOnce();
+    expect(read).toHaveBeenCalledOnce();
 
     await expect(
       useStore
@@ -60,7 +101,7 @@ describe("useStore image uploads", () => {
     ).rejects.toMatchObject({ code: "image_error_type" });
     expect(useStore.getState().imageItems).toEqual([item]);
     expect(createObjectURL).toHaveBeenCalledOnce();
-    expect(decode).toHaveBeenCalledOnce();
+    expect(decode).not.toHaveBeenCalled();
 
     useStore.getState().setImageItems([]);
     expect(revokeObjectURL).toHaveBeenCalledExactlyOnceWith("blob:upload");
@@ -303,5 +344,124 @@ describe("useStore text configuration", () => {
 
     useStore.getState().setScreenCalibration(null);
     expect(useStore.getState().screenCalibration).toBeNull();
+  });
+});
+
+describe("useStore grid preferences", () => {
+  it.each([
+    ["landscape", "portrait", "cols"],
+    ["portrait", "landscape", "rows"],
+  ] as const)(
+    "restores %s preferences after temporary %s limits",
+    async (original, temporary, dimension) => {
+      const { useStore } = await import("./useStore");
+      useStore.getState().setConfig({ orientation: original, [dimension]: 20 });
+      useStore.getState().setConfig({ orientation: temporary });
+      expect(useStore.getState().config[dimension]).toBe(10);
+      expect(useStore.getState().gridPreferences[dimension]).toBe(20);
+      useStore.getState().setConfig({ marginMm: 1, spacingMm: 0 });
+      useStore.getState().setPaperSizeMode("A3");
+      useStore.getState().setConfig({ pageWidthMm: 300 });
+      useStore.getState().setConfig({ orientation: original });
+      expect(useStore.getState().config[dimension]).toBe(20);
+      expect(useStore.getState().paperSizeMode).toBe("Custom");
+    },
+  );
+
+  it("edits one preference without overwriting the other clamped dimension", async () => {
+    const { useStore } = await import("./useStore");
+    useStore.getState().setConfig({ cols: 20 });
+    useStore.getState().setConfig({ orientation: "portrait" });
+    useStore.getState().setConfig({ rows: 20 });
+    expect(useStore.getState().gridPreferences).toEqual({ rows: 20, cols: 20 });
+    useStore.getState().setConfig({ orientation: "landscape" });
+    expect(useStore.getState().config).toMatchObject({ rows: 10, cols: 20 });
+    useStore.getState().setConfig({ cols: 7 });
+    useStore.getState().setConfig({ orientation: "portrait" });
+    expect(useStore.getState().config).toMatchObject({ rows: 20, cols: 7 });
+    useStore.getState().setConfig({ rows: 5 });
+    useStore.getState().setConfig({ orientation: "landscape" });
+    expect(useStore.getState().gridPreferences).toEqual({ rows: 5, cols: 7 });
+  });
+
+  it("keeps clamped preferences across reload", async () => {
+    const { useStore } = await import("./useStore");
+    useStore.getState().setConfig({ cols: 20, spacingMm: 0 });
+    useStore.getState().setConfig({ orientation: "portrait" });
+    vi.resetModules();
+    const { useStore: restored } = await import("./useStore");
+    expect(restored.getState().config.cols).toBe(10);
+    expect(restored.getState().gridPreferences.cols).toBe(20);
+    restored.getState().setConfig({ orientation: "landscape" });
+    expect(restored.getState().config.cols).toBe(20);
+  });
+
+  it.each([0, 3])(
+    "initializes version %s preferences only from its effective grid",
+    async (version) => {
+      localStorage.setItem(
+        "label-pilot-storage",
+        JSON.stringify({
+          version,
+          state: {
+            config: { orientation: "portrait", rows: 20, cols: 10 },
+            gridPreferences: { rows: 20, cols: 20 },
+          },
+        }),
+      );
+      const { useStore } = await import("./useStore");
+      expect(useStore.getState().gridPreferences).toEqual({
+        rows: 20,
+        cols: 10,
+      });
+      useStore.getState().setConfig({ orientation: "landscape" });
+      expect(useStore.getState().config.cols).toBe(10);
+    },
+  );
+
+  it.each([
+    [
+      { rows: -5, cols: 999 },
+      { rows: 1, cols: 20 },
+    ],
+    [
+      { rows: 3.9, cols: "20" },
+      { rows: 3, cols: 7 },
+    ],
+    [
+      { rows: null, cols: {} },
+      { rows: 6, cols: 7 },
+    ],
+    [null, { rows: 6, cols: 7 }],
+    [{ rows: 20 }, { rows: 20, cols: 7 }],
+  ])(
+    "cleans malformed current-version preferences %j",
+    async (gridPreferences, expected) => {
+      localStorage.setItem(
+        "label-pilot-storage",
+        JSON.stringify({
+          version: 4,
+          state: {
+            config: { orientation: "portrait", rows: 6, cols: 7 },
+            gridPreferences,
+          },
+        }),
+      );
+      const { useStore } = await import("./useStore");
+      expect(useStore.getState().gridPreferences).toEqual(expected);
+      expect(useStore.getState().config).toMatchObject({
+        rows: expected.rows,
+        cols: Math.min(10, expected.cols),
+      });
+    },
+  );
+
+  it("bounds explicit edits globally and ignores nonfinite values", async () => {
+    const { useStore } = await import("./useStore");
+    useStore.getState().setConfig({ rows: 999, cols: -2 });
+    expect(useStore.getState().gridPreferences).toEqual({ rows: 20, cols: 1 });
+    expect(useStore.getState().config).toMatchObject({ rows: 10, cols: 1 });
+    useStore.getState().setConfig({ rows: NaN, cols: Infinity });
+    expect(useStore.getState().gridPreferences).toEqual({ rows: 20, cols: 1 });
   });
 });

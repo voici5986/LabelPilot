@@ -10,6 +10,7 @@ import { MobileActionBar } from "./components/MobileActionBar";
 import { PreviewPanel } from "./components/PreviewPanel";
 import { ReloadPrompt } from "./components/ReloadPrompt";
 import { Toast, type ToastType } from "./components/Toast";
+import { useFrameProgress } from "./hooks/useFrameProgress";
 import { useGenerationReadiness } from "./hooks/useGenerationReadiness";
 import { useStore } from "./store/useStore";
 import { AppError } from "./utils/appError";
@@ -17,7 +18,6 @@ import type { GenerationStatus } from "./utils/generation";
 import { useI18n } from "./utils/i18nContext";
 import type { Translations } from "./utils/i18nContext";
 import { generatePDF } from "./utils/pdfGenerator";
-import type { PdfProgressPhase } from "./utils/pdfProgress";
 import {
   getCurrentScreenEnvironment,
   isCalibrationStale,
@@ -49,18 +49,26 @@ function App() {
 
   // Toast State
   const [toast, setToast] = useState<{
+    eventId: number;
     message: string;
     type: ToastType;
     visible: boolean;
   }>({
+    eventId: 0,
     message: "",
     type: "success",
     visible: false,
   });
 
   const [genStatus, setGenStatus] = useState<GenerationStatus>("idle");
-  const [genProgress, setGenProgress] = useState(0);
-  const [genPhase, setGenPhase] = useState<PdfProgressPhase>("preparing");
+  const {
+    progress,
+    start: startProgress,
+    update: updateProgress,
+    finish: finishProgress,
+    cancel: cancelProgress,
+  } = useFrameProgress();
+  const { percent: genProgress, phase: genPhase } = progress;
   const resetTimerRef = useRef<number | null>(null);
   const generationControllerRef = useRef<AbortController | null>(null);
 
@@ -77,16 +85,21 @@ function App() {
   const [calibrationNonce, setCalibrationNonce] = useState(0);
 
   const showToast = useCallback((message: string, type: ToastType) => {
-    setToast({ message, type, visible: true });
+    setToast((previous) => ({
+      eventId: previous.eventId + 1,
+      message,
+      type,
+      visible: true,
+    }));
   }, []);
 
-  const openCalibration = (source: CalibrationDialogSource) => {
+  const openCalibration = useCallback((source: CalibrationDialogSource) => {
     setCalibrationNonce((nonce) => nonce + 1);
     setCalibrationSource(source);
-  };
+  }, []);
 
   // 1:1 请求：未校准或环境失效时打开校准对话框，否则直接进入 actual
-  const handleRequestActual = () => {
+  const handleRequestActual = useCallback(() => {
     if (
       !screenCalibration ||
       isCalibrationStale(screenCalibration, getCurrentScreenEnvironment())
@@ -95,7 +108,7 @@ function App() {
       return;
     }
     setZoomMode("actual");
-  };
+  }, [screenCalibration, openCalibration]);
 
   // 对话框打开时，若已存校准与环境不符 → 显示重校提示、不预填旧测量值
   const calibrationMismatch =
@@ -171,7 +184,7 @@ function App() {
   }, []);
 
   // 生成就绪度：与桌面 ControlPanel 共用同一判定来源
-  const { canGenerate: mobileCanGenerate } = useGenerationReadiness(
+  const readiness = useGenerationReadiness(
     config,
     appMode,
     imageItems,
@@ -210,21 +223,24 @@ function App() {
     }
     const controller = new AbortController();
     generationControllerRef.current = controller;
+    const run = startProgress({
+      percent: 0,
+      phase: appMode === "image" ? "reading" : "preparing",
+    });
     try {
       setGenStatus("generating");
-      setGenProgress(0);
-      setGenPhase(appMode === "image" ? "reading" : "preparing");
       await generatePDF(
         config,
         imageItems,
         appMode,
         textConfig,
         (update) => {
-          setGenProgress(update.percent);
-          setGenPhase(update.phase);
+          updateProgress(run, update);
         },
         { signal: controller.signal },
       );
+      if (generationControllerRef.current !== controller) return;
+      finishProgress(run);
       setGenStatus("success");
       // Auto reset after 2.5s
       if (resetTimerRef.current !== null) {
@@ -232,12 +248,15 @@ function App() {
       }
       resetTimerRef.current = window.setTimeout(() => {
         resetTimerRef.current = null;
+        cancelProgress();
         setGenStatus("idle");
       }, 2500);
     } catch (e) {
+      if (generationControllerRef.current !== controller) return;
+      cancelProgress();
       if (e instanceof AppError && e.code === "generation_cancelled") {
         setGenStatus("idle");
-        setGenProgress(0);
+        startProgress({ percent: 0, phase: "preparing" });
         showToast(t("generation_cancelled"), "warning");
         return;
       }
@@ -248,6 +267,7 @@ function App() {
       }
       resetTimerRef.current = window.setTimeout(() => {
         resetTimerRef.current = null;
+        cancelProgress();
         setGenStatus("idle");
       }, 3000);
     } finally {
@@ -264,7 +284,10 @@ function App() {
     return error instanceof Error ? error.message : String(error);
   };
 
-  const handleCancelPdf = () => generationControllerRef.current?.abort();
+  const handleCancelPdf = () => {
+    cancelProgress();
+    generationControllerRef.current?.abort();
+  };
 
   useEffect(() => {
     return () => {
@@ -272,6 +295,7 @@ function App() {
         window.clearTimeout(resetTimerRef.current);
       }
       generationControllerRef.current?.abort();
+      generationControllerRef.current = null;
     };
   }, []);
 
@@ -286,6 +310,7 @@ function App() {
         {/* 桌面控制面板（<lg 隐藏，由 EditSheet 承担） */}
         <div className="hidden shrink-0 flex-col gap-3 scrollbar-hide lg:flex lg:h-full lg:w-80">
           <ControlPanel
+            readiness={readiness}
             onFilesSelect={handleFilesSelect}
             onGeneratePdf={handleGeneratePdf}
             onCancelPdf={handleCancelPdf}
@@ -311,7 +336,7 @@ function App() {
             onGenerate={handleGeneratePdf}
             onCancel={handleCancelPdf}
             editDisabled={genStatus === "generating"}
-            disabled={!mobileCanGenerate}
+            disabled={!readiness.canGenerate}
             genStatus={genStatus}
             genProgress={genProgress}
             genPhase={genPhase}
@@ -320,6 +345,7 @@ function App() {
       </main>
 
       <EditSheet
+        readiness={readiness}
         open={editOpen}
         full={editFull}
         onClose={() => setEditOpen(false)}
@@ -338,6 +364,7 @@ function App() {
       />
 
       <Toast
+        eventId={toast.eventId}
         message={toast.message}
         type={toast.type}
         isVisible={toast.visible}

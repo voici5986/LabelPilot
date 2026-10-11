@@ -3,13 +3,63 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { I18nProvider } from "../utils/i18n";
 import { I18nContext } from "../utils/i18nContext";
+import { DEFAULT_TEXT_CONFIG } from "../utils/layoutMath";
 import { LayoutFields } from "./LayoutFields";
 import { TextModeFields } from "./TextModeFields";
 
 afterEach(cleanup);
 
 describe("numeric field control choices", () => {
+  it.each([undefined, 300, 299.999999])(
+    "omits raster warnings for vector text or target resolution (%s)",
+    (rasterDpi) => {
+      localStorage.clear();
+      render(
+        <I18nProvider>
+          <TextModeFields
+            textConfig={DEFAULT_TEXT_CONFIG}
+            metrics={{
+              fontSizePt: 12,
+              qrModuleSizeMm: null,
+              error: null,
+              rasterDpi,
+            }}
+            error={null}
+            onChange={vi.fn()}
+          />
+        </I18nProvider>,
+      );
+      expect(screen.queryByText(/中文\/非ASCII文本会以/)).toBeNull();
+    },
+  );
+
+  it("localizes the quality warning in English", () => {
+    localStorage.setItem("label_printer_lang", "en");
+    render(
+      <I18nProvider>
+        <TextModeFields
+          textConfig={DEFAULT_TEXT_CONFIG}
+          metrics={{
+            fontSizePt: 12,
+            qrModuleSizeMm: null,
+            error: null,
+            rasterDpi: 180,
+          }}
+          error={null}
+          onChange={vi.fn()}
+        />
+      </I18nProvider>,
+    );
+    expect(
+      screen.getByText(/non-ASCII text will be rasterized at 180 DPI/)
+        .textContent,
+    ).toContain("target: 300");
+    expect(screen.getByRole("status").textContent).toContain("180 DPI");
+    expect(screen.queryByRole("alert")).toBeNull();
+    localStorage.clear();
+  });
   it("opts only rows, columns and digits into steppers and inherits fieldset disabling", () => {
     render(
       <I18nContext.Provider

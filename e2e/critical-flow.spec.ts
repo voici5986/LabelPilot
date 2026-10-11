@@ -1,4 +1,5 @@
 import { pathToFileURL } from "node:url";
+import { inflateSync } from "node:zlib";
 
 import {
   expect,
@@ -8,6 +9,7 @@ import {
   type TestInfo,
 } from "@playwright/test";
 
+import { createCollisionPng } from "../src/test/pngFixtures";
 import { resetForE2e } from "./helpers";
 
 async function expectValidPdf(
@@ -127,7 +129,7 @@ test("preview controls dim for a primary mouse with secondary touch", async ({
     });
 
     await switchToTextMode(page);
-    const quantity = page.getByRole("textbox", { name: "总数量" });
+    const quantity = page.getByRole("spinbutton", { name: "总数量" });
     await quantity.fill("10");
     await expect(quantity).toHaveValue("10");
     await quantity.press("Tab");
@@ -230,7 +232,7 @@ test("portrait layout, theme, PWA, and accessible names remain usable", async ({
   ).toBeVisible();
   const stepButton = editDialog.getByRole("button", { name: "行数: +1" });
   await expect(stepButton).toBeVisible();
-  const rowsInput = editDialog.getByRole("textbox", {
+  const rowsInput = editDialog.getByRole("spinbutton", {
     name: "行数",
     exact: true,
   });
@@ -303,7 +305,7 @@ test("custom paper mode survives layout updates and reloads", async ({
   await settingsButton.click();
   await page.getByRole("button", { name: "自定义尺寸", exact: true }).click();
   await expect(
-    page.getByRole("textbox", { name: "纸张宽度 (mm)" }),
+    page.getByRole("spinbutton", { name: "纸张宽度 (mm)" }),
   ).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.getByText(/^自定义尺寸,/)).toBeVisible();
@@ -314,13 +316,13 @@ test("custom paper mode survives layout updates and reloads", async ({
     .click();
   await settingsButton.click();
   await expect(
-    page.getByRole("textbox", { name: "纸张宽度 (mm)" }),
+    page.getByRole("spinbutton", { name: "纸张宽度 (mm)" }),
   ).toBeVisible();
 
   await page.reload();
   await settingsButton.click();
   await expect(
-    page.getByRole("textbox", { name: "纸张宽度 (mm)" }),
+    page.getByRole("spinbutton", { name: "纸张宽度 (mm)" }),
   ).toBeVisible();
 });
 
@@ -350,17 +352,45 @@ test("real worker generates image PDF and rejects unsupported input", async ({
   await expect(page.getByText(/bad\.png 不包含有效/)).toBeVisible();
   await page.getByRole("alert").getByRole("button", { name: "关闭" }).click();
 
-  await fileInput.setInputFiles({
-    name: "label.png",
-    mimeType: "",
-    buffer: await page.screenshot(),
-  });
+  await fileInput.setInputFiles(
+    ["red", "blue"].map((color) => ({
+      name: `${color}.png`,
+      mimeType: "",
+      buffer: Buffer.from(createCollisionPng(color as "red" | "blue")),
+    })),
+  );
   const downloadPromise = page.waitForEvent("download", { timeout: 20_000 });
   await page.getByRole("button", { name: "生成 PDF 文档" }).click();
-  await expectValidPdf(
+  const pdf = await expectValidPdf(
     await downloadPromise,
     page,
     testInfo.outputPath("image-labels.pdf"),
+  );
+  expect(pdf.toString("latin1").match(/\/Subtype \/Image/g)).toHaveLength(2);
+  expect(pdf.toString("latin1")).not.toContain("/SMask");
+  const bottomRows = Array.from(
+    pdf
+      .toString("latin1")
+      .matchAll(/<<([\s\S]*?)>>\s*stream\r?\n([\s\S]*?)\r?\nendstream/g),
+  )
+    .map((match) =>
+      match[1].includes("/FlateDecode")
+        ? inflateSync(Buffer.from(match[2], "latin1"))
+        : Buffer.from(match[2], "latin1"),
+    )
+    .filter((stream) => stream.length === 32 * 97)
+    .map((stream) => {
+      const row = Array.from(stream.subarray(-97));
+      expect(row.shift()).toBe(1);
+      for (let index = 3; index < row.length; index++)
+        row[index] = (row[index] + row[index - 3]) & 255;
+      return row;
+    });
+  expect(bottomRows).toContainEqual(
+    Array.from({ length: 32 }, () => [255, 0, 0]).flat(),
+  );
+  expect(bottomRows).toContainEqual(
+    Array.from({ length: 32 }, () => [0, 0, 255]).flat(),
   );
 });
 
@@ -385,15 +415,29 @@ test("JPEG EXIF orientation is normalized before PDF embedding", async ({
   );
 
   await page.getByLabel("点击上传标签图片").setInputFiles({
+    name: "regular.jpg",
+    mimeType: "image/jpeg",
+    buffer: Buffer.from(jpegBase64, "base64"),
+  });
+  await expect(
+    page.getByRole("textbox", { name: "regular.jpg 的数量" }),
+  ).toBeVisible();
+  const normalizationHint = page
+    .getByRole("status")
+    .filter({ hasText: "需要纠正方向的 JPEG" });
+  await expect(normalizationHint).toHaveCount(0);
+
+  await page.getByLabel("继续添加图片").setInputFiles({
     name: "oriented.jpg",
     mimeType: "image/jpeg",
     buffer: orientedJpeg,
   });
+  await expect(normalizationHint).toBeVisible();
   await expect
     .poll(() =>
       page
+        .getByTitle("oriented.jpg", { exact: true })
         .locator("img")
-        .last()
         .evaluate((image: HTMLImageElement) => ({
           width: image.naturalWidth,
           height: image.naturalHeight,
@@ -413,6 +457,8 @@ test("JPEG EXIF orientation is normalized before PDF embedding", async ({
     (match) => ({ width: Number(match[1]), height: Number(match[2]) }),
   );
   expect(dimensions).toContainEqual({ width: 40, height: 80 });
+  expect(dimensions).toContainEqual({ width: 80, height: 40 });
+  expect(pdf.toString("latin1").match(/\/Subtype \/Image/g)).toHaveLength(2);
 });
 
 test("real worker generates multi-page Unicode and QR PDF", async ({
@@ -421,7 +467,7 @@ test("real worker generates multi-page Unicode and QR PDF", async ({
   await page.goto("/");
   await switchToTextMode(page);
   await page.getByRole("textbox", { name: "前缀", exact: true }).fill("资产-");
-  await page.getByRole("textbox", { name: "总数量" }).fill("10");
+  await page.getByRole("spinbutton", { name: "总数量" }).fill("10");
   await page.getByRole("switch", { name: "生成二维码" }).click();
 
   await page.getByRole("button", { name: "全局设置" }).click();
@@ -429,7 +475,9 @@ test("real worker generates multi-page Unicode and QR PDF", async ({
   await qrPrefix.fill("x".repeat(700));
   await expect(qrPrefix).toHaveValue("x".repeat(512));
   await page.getByRole("button", { name: "全局设置" }).click();
-  await expect(page.getByRole("alert")).toContainText("二维码模块仅");
+  await expect(
+    page.getByRole("alert").filter({ hasText: "二维码模块仅" }),
+  ).toContainText("二维码模块仅");
   await expect(
     page.getByRole("button", { name: "生成 PDF 文档" }),
   ).toBeDisabled();
@@ -439,16 +487,22 @@ test("real worker generates multi-page Unicode and QR PDF", async ({
   // 先确认清空本身生效，失败时才能区分“输入未生效”与“QR 校验异常”。
   await expect(qrPrefix).toHaveValue("");
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(
+    page.getByRole("alert").filter({ hasText: "二维码模块仅" }),
+  ).toHaveCount(0);
 
   const downloadPromise = page.waitForEvent("download", { timeout: 20_000 });
   await page.getByRole("button", { name: "生成 PDF 文档" }).click();
-  await expectValidPdf(
+  const pdf = await expectValidPdf(
     await downloadPromise,
     page,
     testInfo.outputPath("unicode-qr-labels.pdf"),
     2,
   );
+  // QR modules are vector rectangles; each of the ten native Unicode canvases
+  // contributes one opaque raster image with its own alias.
+  expect(pdf.toString("latin1").match(/\/Subtype \/Image/g)).toHaveLength(10);
+  expect(pdf.toString("latin1")).not.toContain("/SMask");
 });
 
 test("generation can be cancelled without a download", async ({ page }) => {
@@ -457,7 +511,7 @@ test("generation can be cancelled without a download", async ({ page }) => {
   await page
     .getByRole("textbox", { name: "前缀", exact: true })
     .fill("取消测试-");
-  await page.getByRole("textbox", { name: "总数量" }).fill("500");
+  await page.getByRole("spinbutton", { name: "总数量" }).fill("500");
   await page.getByRole("switch", { name: "生成二维码" }).click();
 
   await page.getByRole("button", { name: "生成 PDF 文档" }).click();
@@ -466,4 +520,141 @@ test("generation can be cancelled without a download", async ({ page }) => {
   await expect(
     page.getByRole("button", { name: "生成 PDF 文档" }),
   ).toBeEnabled();
+});
+
+test("orientation changes announce a temporary grid clamp and restore preferences", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const orientation = page.getByRole("group", { name: "纸张方向" });
+  await orientation.getByRole("button", { name: "横向" }).click();
+  const rows = page.getByRole("spinbutton", { name: "行数", exact: true });
+  const cols = page.getByRole("spinbutton", { name: "列数", exact: true });
+  await rows.fill("10");
+  await rows.press("Tab");
+  await cols.fill("20");
+  await cols.press("Tab");
+  await expect(rows).toHaveValue("10");
+  await expect(cols).toHaveValue("20");
+
+  await orientation.getByRole("button", { name: "纵向" }).click();
+  await expect(rows).toHaveValue("10");
+  await expect(cols).toHaveValue("10");
+  const warning = page.getByRole("status").filter({ hasText: /网格已从/ });
+  await expect(warning).toContainText("10×20 临时调整为 10×10");
+  await expect(warning).toContainText("行列偏好已保留");
+  await expect(warning).toHaveAttribute("aria-live", "polite");
+
+  await page.reload();
+  await expect(cols).toHaveValue("10");
+  await orientation.getByRole("button", { name: "横向" }).click();
+  await expect(cols).toHaveValue("20");
+  await expect(warning).toHaveCount(0);
+});
+
+test("tiny preview resizes keep fit scale valid and actual size independent", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const preview = page.getByRole("region", { name: "纸张预览" });
+  const paper = preview.locator("div.absolute.left-0.top-0.bg-white");
+  const readScale = () =>
+    paper.evaluate(
+      (element) => new DOMMatrixReadOnly(getComputedStyle(element).transform).a,
+    );
+  const expectedFit = () =>
+    paper.evaluate((element) => {
+      const viewport = element.closest(".overflow-auto")!;
+      return Math.min(
+        (viewport.clientWidth - 20) /
+          (parseFloat(element.style.width) * (96 / 25.4)),
+        (viewport.clientHeight - 20) /
+          (parseFloat(element.style.height) * (96 / 25.4)),
+      );
+    });
+  await expect
+    .poll(async () => (await readScale()) - (await expectedFit()))
+    .toBeCloseTo(0, 5);
+  const normalScale = await readScale();
+  const originalStyle = await preview.getAttribute("style");
+  const narrow = () =>
+    preview.evaluate((element) => {
+      element.style.width = "18px";
+      element.style.minWidth = "0";
+      element.style.maxWidth = "18px";
+    });
+  const restore = () =>
+    preview.evaluate((element, style) => {
+      if (style === null) element.removeAttribute("style");
+      else element.setAttribute("style", style);
+    }, originalStyle);
+
+  try {
+    await narrow();
+    await expect
+      .poll(() => preview.evaluate((element) => element.clientWidth))
+      .toBe(18);
+    await expect.poll(readScale).toBeCloseTo(0.01, 5);
+    expect((await paper.boundingBox())!.width).toBeGreaterThan(0);
+    const ruler = page.getByTestId("preview-ruler");
+    await expect(ruler).not.toContainText(/NaN|Infinity/);
+    expect(await ruler.locator("[style]").getAttribute("style")).not.toMatch(
+      /NaN|Infinity/,
+    );
+
+    await restore();
+    await expect.poll(readScale).toBeCloseTo(normalScale, 5);
+
+    // Calibration k=0.5 gives scale=2 regardless of the fit guard or manual zoom.
+    await page.getByRole("slider", { name: "缩放级别" }).press("End");
+    const actual = page.getByRole("button", { name: "1:1 实际尺寸" });
+    await actual.click();
+    const dialog = page.getByRole("dialog", { name: "屏幕 1:1 校准" });
+    await dialog.getByLabel(/量出来是/).fill("50");
+    await dialog.getByRole("button", { name: "保存并查看 1:1" }).click();
+    await expect.poll(readScale).toBeCloseTo(2, 5);
+    await narrow();
+    await expect
+      .poll(() => preview.evaluate((element) => element.clientWidth))
+      .toBe(18);
+    await expect(actual).toHaveAttribute("aria-pressed", "true");
+    await expect.poll(readScale).toBeCloseTo(2, 5);
+    await restore();
+    await page.getByRole("button", { name: "适应窗口" }).click();
+    await expect.poll(readScale).toBeCloseTo(normalScale, 5);
+  } finally {
+    await restore();
+  }
+});
+
+test("keyboard users can focus and scroll the preview at high zoom", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await switchToTextMode(page);
+  const zoom = page.getByRole("slider", { name: "缩放级别" });
+  await zoom.focus();
+  await page.keyboard.press("End");
+  const preview = page.getByRole("region", { name: "纸张预览" });
+  await expect(preview).toHaveAttribute("tabindex", "0");
+  await expect
+    .poll(() => preview.evaluate((el) => el.scrollHeight - el.clientHeight))
+    .toBeGreaterThan(100);
+  // Reach the region using sequential keyboard navigation, then exercise native scrolling.
+  await page.getByRole("button", { name: "全局设置" }).focus();
+  for (
+    let attempts = 0;
+    attempts < 40 &&
+    !(await preview.evaluate((el) => el === document.activeElement));
+    attempts++
+  ) {
+    await page.keyboard.press("Tab");
+  }
+  await expect(preview).toBeFocused();
+  const before = await preview.evaluate((el) => el.scrollTop);
+  await page.keyboard.press("PageDown");
+  await expect
+    .poll(() => preview.evaluate((el) => el.scrollTop))
+    .toBeGreaterThan(before + 20);
+  await expect(preview).toBeFocused();
 });

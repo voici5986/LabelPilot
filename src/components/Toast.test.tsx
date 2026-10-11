@@ -12,6 +12,31 @@ afterEach(() => {
 });
 
 describe("Toast", () => {
+  it("restarts the lifetime for a new event with the same visible message", () => {
+    vi.useFakeTimers();
+    const onClose = vi.fn();
+    const content = (eventId: number) => (
+      <I18nProvider>
+        <Toast
+          eventId={eventId}
+          message="Saved"
+          type="success"
+          isVisible
+          onClose={onClose}
+        />
+      </I18nProvider>
+    );
+    const { rerender } = render(content(1));
+    vi.advanceTimersByTime(2000);
+    rerender(content(2));
+    vi.advanceTimersByTime(1000);
+    expect(onClose).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1999);
+    expect(onClose).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
   it("does not restart auto-close when only the parent callback changes", () => {
     vi.useFakeTimers();
     const firstOnClose = vi.fn();

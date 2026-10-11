@@ -7,6 +7,36 @@ export const MAX_SCALE = 3.0;
 const MID_SCALE = 1.0;
 const MID_PROGRESS = 0.5;
 
+/** Fit the paper inside the preview's 20px allowance, even during a tiny resize. */
+export function computeFitScale(
+  containerWidth: number,
+  containerHeight: number,
+  pageWidthMm: number,
+  pageHeightMm: number,
+): number {
+  const dimensions = [
+    containerWidth,
+    containerHeight,
+    pageWidthMm,
+    pageHeightMm,
+  ];
+  // Zero-sized containers have not been measured (or are hidden). Keep the
+  // initial fit until a positive measurement arrives; tiny measured sizes
+  // still need the lower bound below.
+  if (
+    dimensions.some((value) => !Number.isFinite(value)) ||
+    dimensions.some((value) => value <= 0)
+  ) {
+    return 0.8;
+  }
+  const mmToPx = 96 / 25.4;
+  const scale = Math.min(
+    (containerWidth - 20) / (pageWidthMm * mmToPx),
+    (containerHeight - 20) / (pageHeightMm * mmToPx),
+  );
+  return Number.isFinite(scale) ? Math.max(0.01, scale) : 0.8;
+}
+
 /**
  * 预览缩放三态：
  * - fit：适应预览区（重置目标），倍率 = baseFitScale

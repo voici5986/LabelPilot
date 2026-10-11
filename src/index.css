@@ -326,11 +326,6 @@
   padding-left: env(safe-area-inset-left, 0px);
 }
 
-@utility min-h-app {
-  min-height: 100vh;
-  min-height: 100dvh;
-}
-
 /* Dim when the primary pointer supports hover and precision, even with secondary touch. */
 @utility preview-controls {
   opacity: 1;

@@ -1,16 +1,20 @@
 import { File as FileIcon, FileMinus, Grid } from "lucide-react";
+import { useState } from "react";
 
 import { useI18n } from "../utils/i18nContext";
-import { LAYOUT_CONFIG_LIMITS } from "../utils/layoutMath";
+import {
+  LAYOUT_CONFIG_LIMITS,
+  normalizeLayoutConfig,
+} from "../utils/layoutMath";
 import type { HelperLayoutConfig } from "../utils/layoutMath";
 import { NumberInput } from "./NumberInput";
 import { SegmentedControl } from "./SegmentedControl";
+import { InlineAlert } from "./ui/InlineAlert";
 
 interface LayoutFieldsProps {
   config: HelperLayoutConfig;
+  gridPreferences?: Pick<HelperLayoutConfig, "rows" | "cols">;
   onConfigChange: (updates: Partial<HelperLayoutConfig>) => void;
-  maxRows?: number;
-  maxCols?: number;
   /** 桌面控制栏显示纸张信息；移动端编辑面板省略 */
   paperSizeInfo?: string;
   /** 同名 framer-motion layoutId 不可跨组件共用，移动端面板需要独立前缀 */
@@ -19,23 +23,20 @@ interface LayoutFieldsProps {
 
 export function LayoutFields({
   config,
+  gridPreferences = config,
   onConfigChange,
-  maxRows,
-  maxCols,
   paperSizeInfo,
   layoutIdPrefix = "orientation-active",
 }: LayoutFieldsProps) {
   const { t } = useI18n();
-  const orientationMaxRows = LAYOUT_CONFIG_LIMITS.rows[config.orientation];
-  const orientationMaxCols = LAYOUT_CONFIG_LIMITS.cols[config.orientation];
-  const effectiveMaxRows = Math.max(
-    1,
-    Math.min(maxRows ?? orientationMaxRows, orientationMaxRows),
-  );
-  const effectiveMaxCols = Math.max(
-    1,
-    Math.min(maxCols ?? orientationMaxCols, orientationMaxCols),
-  );
+  const [gridAdjustment, setGridAdjustment] = useState<{
+    oldRows: number;
+    oldCols: number;
+    rows: number;
+    cols: number;
+  } | null>(null);
+  const maxRows = LAYOUT_CONFIG_LIMITS.rows[config.orientation];
+  const maxCols = LAYOUT_CONFIG_LIMITS.cols[config.orientation];
 
   return (
     <div className="space-y-4">
@@ -54,18 +55,20 @@ export function LayoutFields({
         <NumberInput
           label={t("rows")}
           value={config.rows}
+          rollbackValue={gridPreferences.rows}
           onChange={(value) => onConfigChange({ rows: value })}
           min={1}
-          max={effectiveMaxRows}
+          max={maxRows}
           isInteger
           showStepper
         />
         <NumberInput
           label={t("cols")}
           value={config.cols}
+          rollbackValue={gridPreferences.cols}
           onChange={(value) => onConfigChange({ cols: value })}
           min={1}
-          max={effectiveMaxCols}
+          max={maxCols}
           isInteger
           showStepper
         />
@@ -76,8 +79,8 @@ export function LayoutFields({
           label={`${t("margin")} ${t("unit_mm")}`}
           value={config.marginMm}
           onChange={(value) => onConfigChange({ marginMm: value })}
-          min={0}
-          max={50}
+          min={LAYOUT_CONFIG_LIMITS.marginMm.min}
+          max={LAYOUT_CONFIG_LIMITS.marginMm.max}
           decimalPlaces={1}
           step={1}
         />
@@ -85,8 +88,8 @@ export function LayoutFields({
           label={`${t("spacing")} ${t("unit_mm")}`}
           value={config.spacingMm}
           onChange={(value) => onConfigChange({ spacingMm: value })}
-          min={0}
-          max={30}
+          min={LAYOUT_CONFIG_LIMITS.spacingMm.min}
+          max={LAYOUT_CONFIG_LIMITS.spacingMm.max}
           decimalPlaces={1}
           step={1}
         />
@@ -96,7 +99,25 @@ export function LayoutFields({
         label={t("orientation")}
         layoutId={layoutIdPrefix}
         value={config.orientation}
-        onChange={(orientation) => onConfigChange({ orientation })}
+        onChange={(orientation) => {
+          const normalized = normalizeLayoutConfig({
+            ...config,
+            ...gridPreferences,
+            orientation,
+          });
+          setGridAdjustment(
+            normalized.rows !== gridPreferences.rows ||
+              normalized.cols !== gridPreferences.cols
+              ? {
+                  oldRows: config.rows,
+                  oldCols: config.cols,
+                  rows: normalized.rows,
+                  cols: normalized.cols,
+                }
+              : null,
+          );
+          onConfigChange({ orientation });
+        }}
         options={[
           { label: t("portrait"), value: "portrait", icon: FileIcon },
           {
@@ -108,6 +129,11 @@ export function LayoutFields({
         ]}
         className="mt-2"
       />
+      {gridAdjustment && (
+        <InlineAlert tone="warning" aria-live="polite" className="text-sm">
+          {t("orientation_grid_adjusted", gridAdjustment)}
+        </InlineAlert>
+      )}
     </div>
   );
 }

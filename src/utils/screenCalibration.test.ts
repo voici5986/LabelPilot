@@ -113,7 +113,7 @@ describe("isCalibrationStale", () => {
     ).toBe(false);
   });
 
-  it("detects DPR drift beyond 0.05", () => {
+  it("detects relative DPR drift beyond three percent", () => {
     expect(
       isCalibrationStale(cal, {
         dpr: 1.3,
@@ -129,6 +129,53 @@ describe("isCalibrationStale", () => {
       }),
     ).toBe(false);
   });
+
+  it.each([1, 1.25, 2, 4])(
+    "uses the same relative boundary at DPR %s",
+    (dpr) => {
+      const environment = {
+        screenWidth: cal.screenWidth,
+        screenHeight: cal.screenHeight,
+      };
+      expect(
+        isCalibrationStale(
+          { ...cal, dpr },
+          { ...environment, dpr: dpr * 1.03 },
+        ),
+      ).toBe(false);
+      expect(
+        isCalibrationStale(
+          { ...cal, dpr },
+          { ...environment, dpr: dpr * 0.97 },
+        ),
+      ).toBe(false);
+      expect(
+        isCalibrationStale(
+          { ...cal, dpr },
+          { ...environment, dpr: dpr * 1.031 },
+        ),
+      ).toBe(true);
+      expect(
+        isCalibrationStale(
+          { ...cal, dpr },
+          { ...environment, dpr: dpr * 0.969 },
+        ),
+      ).toBe(true);
+    },
+  );
+
+  it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY])(
+    "invalidates an unusable DPR %s",
+    (dpr) => {
+      expect(
+        isCalibrationStale(cal, {
+          dpr,
+          screenWidth: cal.screenWidth,
+          screenHeight: cal.screenHeight,
+        }),
+      ).toBe(true);
+    },
+  );
 
   it("detects logical resolution changes", () => {
     expect(

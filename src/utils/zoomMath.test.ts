@@ -1,12 +1,52 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  computeFitScale,
   getThumbBottomPct,
   mapPctToScale,
   mapScaleToPct,
   MAX_SCALE,
   MIN_SCALE,
 } from "./zoomMath";
+
+describe("preview fit scale", () => {
+  it("preserves normal portrait and landscape fit geometry", () => {
+    const mmToPx = 96 / 25.4;
+    for (const [width, height] of [
+      [210, 297],
+      [297, 210],
+    ]) {
+      expect(computeFitScale(800, 600, width, height)).toBeCloseTo(
+        Math.min(780 / (width * mmToPx), 580 / (height * mmToPx)),
+      );
+    }
+  });
+
+  it.each([20, 18, 1])(
+    "keeps the scale positive when a container dimension is %s px",
+    (size) => {
+      expect(computeFitScale(size, 600, 210, 297)).toBe(0.01);
+      expect(computeFitScale(800, size, 210, 297)).toBe(0.01);
+    },
+  );
+
+  it("uses a finite positive fallback for invalid dimensions", () => {
+    for (const invalid of [NaN, Infinity, -Infinity, 0, -20]) {
+      for (let index = 0; index < 4; index++) {
+        const dimensions = [800, 600, 210, 297];
+        dimensions[index] = invalid;
+        expect(
+          computeFitScale(...(dimensions as [number, number, number, number])),
+        ).toBe(0.8);
+      }
+    }
+    expect(computeFitScale(800, 600, 0, 297)).toBe(0.8);
+    expect(computeFitScale(800, 600, 210, -1)).toBe(0.8);
+    expect(computeFitScale(800, 600, Number.MIN_VALUE, Number.MIN_VALUE)).toBe(
+      0.8,
+    );
+  });
+});
 
 describe("zoom mapping", () => {
   it("keeps the configured endpoints and the 100% midpoint", () => {

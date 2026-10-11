@@ -10,7 +10,9 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import App from "./App";
+import { AppError } from "./utils/appError";
 import { I18nProvider } from "./utils/i18n";
+import type { PdfProgressUpdate } from "./utils/pdfProgress";
 
 const generatePDF = vi.hoisted(() => vi.fn());
 
@@ -30,13 +32,25 @@ vi.mock("./components/ControlPanel", () => ({
   ControlPanel: ({
     onGeneratePdf,
     genStatus,
+    genProgress,
+    genPhase,
+    onCancelPdf,
     isGenerating,
   }: {
     onGeneratePdf: () => void;
     genStatus: string;
+    genProgress: number;
+    genPhase: string;
+    onCancelPdf: () => void;
     isGenerating?: boolean;
   }) => (
     <>
+      <output aria-label="generation progress">
+        {genProgress}:{genPhase}
+      </output>
+      <button type="button" onClick={onCancelPdf}>
+        cancel
+      </button>
       <output aria-label="generation status">{genStatus}</output>
       <output aria-label="generation lock">{String(isGenerating)}</output>
       <button type="button" onClick={onGeneratePdf}>
@@ -48,10 +62,12 @@ vi.mock("./components/ControlPanel", () => ({
 
 function deferred() {
   let resolve!: () => void;
-  const promise = new Promise<void>((done) => {
+  let reject!: (error: unknown) => void;
+  const promise = new Promise<void>((done, fail) => {
     resolve = done;
+    reject = fail;
   });
-  return { promise, resolve };
+  return { promise, resolve, reject };
 }
 
 describe("App PDF generation state", () => {
@@ -112,4 +128,66 @@ describe("App PDF generation state", () => {
 
     await act(async () => second.resolve());
   });
+  it.each(["error", "cancel"])(
+    "cancels pending progress on %s and rejects late callbacks",
+    async (ending) => {
+      const frames = new Map<number, FrameRequestCallback>();
+      let nextFrame = 0;
+      vi.stubGlobal(
+        "requestAnimationFrame",
+        vi.fn((callback: FrameRequestCallback) => {
+          frames.set(++nextFrame, callback);
+          return nextFrame;
+        }),
+      );
+      const cancelFrame = vi.fn((id: number) => frames.delete(id));
+      vi.stubGlobal("cancelAnimationFrame", cancelFrame);
+      const first = deferred();
+      const second = deferred();
+      generatePDF
+        .mockReturnValueOnce(first.promise)
+        .mockReturnValueOnce(second.promise);
+      render(
+        <I18nProvider>
+          <App />
+        </I18nProvider>,
+      );
+      fireEvent.click(screen.getByRole("button", { name: "generate" }));
+      const update = generatePDF.mock.calls[0][4] as (
+        value: PdfProgressUpdate,
+      ) => void;
+      act(() => update({ percent: 75, phase: "rendering" }));
+      const staleFrame = frames.get(1)!;
+      if (ending === "cancel")
+        fireEvent.click(screen.getByRole("button", { name: "cancel" }));
+      await act(async () =>
+        first.reject(
+          ending === "cancel"
+            ? new AppError("generation_cancelled")
+            : new Error("failed"),
+        ),
+      );
+      expect(cancelFrame).toHaveBeenCalledWith(1);
+      fireEvent.click(screen.getByRole("button", { name: "generate" }));
+      act(() => {
+        staleFrame(0);
+        update({ percent: 99, phase: "serializing" });
+      });
+      expect(screen.getByLabelText("generation progress").textContent).toMatch(
+        /^0:/,
+      );
+      await act(async () => second.resolve());
+      expect(screen.getByLabelText("generation progress").textContent).toBe(
+        "100:serializing",
+      );
+      act(() => update({ percent: 25, phase: "reading" }));
+      expect(screen.getByLabelText("generation progress").textContent).toBe(
+        "100:serializing",
+      );
+      await act(async () => vi.advanceTimersByTimeAsync(2500));
+      expect(screen.getByLabelText("generation status").textContent).toBe(
+        "idle",
+      );
+    },
+  );
 });

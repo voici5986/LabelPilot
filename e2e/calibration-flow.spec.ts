@@ -295,3 +295,36 @@ test("stale environment exits actual to fit (manual scale reset) and prompts re-
   const afterWidth = await paperContainerWidth(page);
   expect(afterWidth!.w).toBeCloseTo(fitWidth!.w, 0);
 });
+
+test("verification line retains 50/k mm at k=0.2 and its right endpoint is reachable", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "1:1 实际尺寸" }).click();
+  const dialog = page.getByRole("dialog", { name: "屏幕 1:1 校准" });
+  await dialog.getByLabel(/量出来是/).fill("20");
+  const line = dialog.getByTestId("calibration-verification-line");
+  await expect
+    .poll(async () => (await line.boundingBox())?.width ?? 0)
+    .toBeCloseTo(((50 / 0.2) * 96) / 25.4, 0);
+  const scroll = dialog.getByTestId("calibration-verification-scroll");
+  const end = dialog.getByTestId("calibration-verification-end");
+  expect(await scroll.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(
+    true,
+  );
+  await scroll.evaluate((el) => {
+    el.scrollLeft = el.scrollWidth;
+  });
+  const scrollBox = await scroll.boundingBox();
+  const endBox = await end.boundingBox();
+  expect(scrollBox).not.toBeNull();
+  expect(endBox).not.toBeNull();
+  expect(endBox!.width).toBeGreaterThan(0);
+  expect(endBox!.x).toBeGreaterThanOrEqual(scrollBox!.x);
+  expect(endBox!.x + endBox!.width).toBeLessThanOrEqual(
+    scrollBox!.x + scrollBox!.width + 1,
+  );
+  await expect
+    .poll(async () => (await line.boundingBox())?.width ?? 0)
+    .toBeCloseTo(((50 / 0.2) * 96) / 25.4, 0);
+});

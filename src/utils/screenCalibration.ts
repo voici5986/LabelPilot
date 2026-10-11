@@ -5,9 +5,12 @@
  * 则 k = X / L 为「1 CSS mm 对应的现实毫米数」，实际尺寸渲染倍率为 1 / k。
  */
 
+export const REFERENCE_OPTIONS = [50, 100] as const;
+export type CalibrationReferenceMm = (typeof REFERENCE_OPTIONS)[number];
+
 export interface ScreenCalibration {
   k: number;
-  referenceMm: 50 | 100;
+  referenceMm: CalibrationReferenceMm;
   measuredMm: number;
   /** 校准时 devicePixelRatio 快照，用于检测系统缩放/换屏 */
   dpr: number;
@@ -20,6 +23,9 @@ export const K_HARD_MIN = 0.2;
 export const K_HARD_MAX = 4.0;
 export const K_SOFT_MIN = 0.5;
 export const K_SOFT_MAX = 2.0;
+
+/** Relative DPR drift: keep the same sensitivity at every display scale. */
+export const DPR_RELATIVE_TOLERANCE = 0.03;
 
 /** k = 实测现实长度 ÷ 参考线 CSS 长度 */
 export function computeK(referenceMm: number, measuredMm: number): number {
@@ -36,8 +42,8 @@ export function verificationCssMm(k: number): number {
   return 50 / k;
 }
 
-export function isReference(value: unknown): value is 50 | 100 {
-  return value === 50 || value === 100;
+export function isReference(value: unknown): value is CalibrationReferenceMm {
+  return REFERENCE_OPTIONS.some((reference) => reference === value);
 }
 
 export function isFinitePositive(value: unknown): value is number {
@@ -101,13 +107,15 @@ export function getCurrentScreenEnvironment(): ScreenEnvironment {
   };
 }
 
-/** 显示环境是否与校准时不同（DPR 差异或逻辑分辨率变化） */
+/** 显示环境是否与校准时不同；分辨率变化仍是保守的换屏信号。 */
 export function isCalibrationStale(
   cal: ScreenCalibration,
   current: ScreenEnvironment,
 ): boolean {
   return (
-    Math.abs(current.dpr - cal.dpr) > 0.05 ||
+    !isFinitePositive(current.dpr) ||
+    Math.abs(current.dpr / cal.dpr - 1) >
+      DPR_RELATIVE_TOLERANCE + Number.EPSILON * 4 ||
     current.screenWidth !== cal.screenWidth ||
     current.screenHeight !== cal.screenHeight
   );

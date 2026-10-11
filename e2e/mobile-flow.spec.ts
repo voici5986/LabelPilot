@@ -83,7 +83,13 @@ test("edit sheet: open, size toggle, files collapse, upload enables generate", a
     return height / viewport;
   };
   await expect.poll(sheetHeightRatio).toBeGreaterThan(0.55);
+  await expect(
+    page.getByRole("button", { name: "切换面板高度" }),
+  ).toHaveAttribute("aria-pressed", "false");
   await page.getByRole("button", { name: "切换面板高度" }).click();
+  await expect(
+    page.getByRole("button", { name: "切换面板高度" }),
+  ).toHaveAttribute("aria-pressed", "true");
   await expect.poll(sheetHeightRatio).toBeGreaterThan(0.95);
   await page.getByRole("button", { name: "切换面板高度" }).click();
   await expect.poll(sheetHeightRatio).toBeLessThan(0.9);
@@ -111,6 +117,7 @@ test("edit sheet: open, size toggle, files collapse, upload enables generate", a
     buffer: LABEL_PNG,
   });
   await expect(dialog.locator("li", { hasText: "label.png" })).toBeVisible();
+  await expect(dialog.getByLabel("继续添加图片")).toBeVisible();
   await expect(generateButton).toBeEnabled();
   for (const name of ["label.png 的数量: -1", "label.png 的数量: +1"]) {
     const button = dialog.getByRole("button", { name });

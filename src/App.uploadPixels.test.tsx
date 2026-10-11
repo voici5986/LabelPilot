@@ -2,11 +2,13 @@
 
 import { File as BrowserFile } from "node:buffer";
 
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import App from "./App";
 import { useStore } from "./store/useStore";
+import { createJpegWithMetadata } from "./test/jpegFixtures";
+import { createBudgetPng } from "./test/pngFixtures";
 import { I18nProvider } from "./utils/i18n";
 
 const upload = vi.hoisted(() => ({
@@ -46,16 +48,23 @@ function deferred() {
   });
   return { promise, resolve };
 }
-const dimensions = new WeakMap<File, { width: number; height: number }>();
+const readFiles = new Set<File>();
 const gates = new Map<File, ReturnType<typeof deferred>>();
 let decode: ReturnType<typeof vi.fn>;
 function image(name: string, pixels = 35_000_000) {
-  const file = new File(
-    [new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])],
-    name,
-    { type: "image/png" },
-  );
-  dimensions.set(file, { width: 5_000, height: pixels / 5_000 });
+  const jpeg = name.endsWith(".jpg");
+  const bytes = jpeg
+    ? createJpegWithMetadata({ width: 5_000, height: pixels / 5_000 })
+    : createBudgetPng(5_000, pixels / 5_000);
+  const file = new File([bytes], name, {
+    type: jpeg ? "image/jpeg" : "image/png",
+  });
+  const read = file.arrayBuffer.bind(file);
+  vi.spyOn(file, "arrayBuffer").mockImplementation(async () => {
+    readFiles.add(file);
+    await gates.get(file)?.promise;
+    return read();
+  });
   return file;
 }
 function mount() {
@@ -74,11 +83,9 @@ async function select(files: File[]) {
 beforeEach(() => {
   localStorage.clear();
   gates.clear();
+  readFiles.clear();
   vi.stubGlobal("File", BrowserFile);
-  decode = vi.fn(async (file: File) => {
-    await gates.get(file)?.promise;
-    return { ...dimensions.get(file)!, close: vi.fn() };
-  });
+  decode = vi.fn();
   vi.stubGlobal("createImageBitmap", decode);
   vi.stubGlobal("URL", {
     createObjectURL: vi.fn(() => "blob:preview"),
@@ -103,58 +110,83 @@ afterEach(() => {
 });
 
 describe("App cumulative image pixel admission", () => {
-  it("rejects split 4 + 1 uploads with the same error as a combined 5 upload", async () => {
+  it("rejects oversized JPEGs before compressed file reads or preview allocation", async () => {
     mount();
-    const files = Array.from({ length: 5 }, (_, index) =>
-      image(`${index}.png`),
-    );
-    await select(files);
-    const combinedError = screen.getByTestId("upload-error").textContent;
-    expect(combinedError).not.toBe("");
+    const file = image("huge.jpg", 50_000_000);
+    await select([file]);
     expect(useStore.getState().imageItems).toEqual([]);
-    await select(files.slice(0, 4));
-    const accepted = useStore.getState().imageItems;
-    expect(accepted).toHaveLength(4);
-    await select(files.slice(4));
-    expect(useStore.getState().imageItems).toBe(accepted);
-    expect(screen.getByTestId("upload-error").textContent).toBe(combinedError);
-  });
-
-  it("accepts exactly 160 million pixels across selections without decoding accepted files again", async () => {
-    mount();
-    const files = Array.from({ length: 4 }, (_, index) =>
-      image(`${index}.png`, 40_000_000),
-    );
-    await select(files.slice(0, 3));
-    await select(files.slice(3));
-    expect(useStore.getState().imageItems.map((item) => item.file)).toEqual(
-      files,
-    );
-    expect(decode).toHaveBeenCalledTimes(4);
-  });
-
-  it("rechecks pixels when two incoming selections finish concurrently", async () => {
-    mount();
-    await select(
-      Array.from({ length: 3 }, (_, index) => image(`queued-${index}.png`)),
-    );
-    const first = image("first.png");
-    const second = image("second.png");
-    const firstGate = deferred();
-    const secondGate = deferred();
-    gates.set(first, firstGate);
-    gates.set(second, secondGate);
-    const firstUpload = upload.select!([first]);
-    const secondUpload = upload.select!([second]);
-    await act(async () => {
-      firstGate.resolve();
-      secondGate.resolve();
-      await Promise.all([firstUpload, secondUpload]);
-    });
-    expect(useStore.getState().imageItems).toHaveLength(4);
-    expect(useStore.getState().imageItems.at(-1)?.file).toBe(first);
+    expect(readFiles.has(file)).toBe(false);
+    expect(decode).not.toHaveBeenCalled();
+    expect(URL.createObjectURL).not.toHaveBeenCalled();
     expect(screen.getByTestId("upload-error").textContent).not.toBe("");
   });
+
+  it.each(["png", "jpg"])(
+    "rejects split 4 + 1 %s uploads with the same error as a combined 5 upload",
+    async (extension) => {
+      mount();
+      const files = Array.from({ length: 5 }, (_, index) =>
+        image(`${index}.${extension}`),
+      );
+      await select(files);
+      const combinedError = screen.getByTestId("upload-error").textContent;
+      expect(combinedError).not.toBe("");
+      expect(useStore.getState().imageItems).toEqual([]);
+      await select(files.slice(0, 4));
+      const accepted = useStore.getState().imageItems;
+      expect(accepted).toHaveLength(4);
+      await select(files.slice(4));
+      expect(useStore.getState().imageItems).toBe(accepted);
+      expect(screen.getByTestId("upload-error").textContent).toBe(
+        combinedError,
+      );
+    },
+  );
+
+  it.each(["png", "jpg"])(
+    "accepts exactly 160 million %s pixels across selections without native decoding",
+    async (extension) => {
+      mount();
+      const files = Array.from({ length: 4 }, (_, index) =>
+        image(`${index}.${extension}`, 40_000_000),
+      );
+      await select(files.slice(0, 3));
+      await select(files.slice(3));
+      expect(useStore.getState().imageItems.map((item) => item.file)).toEqual(
+        files,
+      );
+      expect(decode).not.toHaveBeenCalled();
+      expect(readFiles.size).toBe(4);
+    },
+  );
+
+  it.each(["png", "jpg"])(
+    "rechecks %s pixels when two incoming selections finish concurrently",
+    async (extension) => {
+      mount();
+      await select(
+        Array.from({ length: 3 }, (_, index) =>
+          image(`queued-${index}.${extension}`),
+        ),
+      );
+      const first = image(`first.${extension}`);
+      const second = image(`second.${extension}`);
+      const firstGate = deferred();
+      const secondGate = deferred();
+      gates.set(first, firstGate);
+      gates.set(second, secondGate);
+      const firstUpload = upload.select!([first]);
+      const secondUpload = upload.select!([second]);
+      await act(async () => {
+        firstGate.resolve();
+        secondGate.resolve();
+        await Promise.all([firstUpload, secondUpload]);
+      });
+      expect(useStore.getState().imageItems).toHaveLength(4);
+      expect(useStore.getState().imageItems.at(-1)?.file).toBe(first);
+      expect(screen.getByTestId("upload-error").textContent).not.toBe("");
+    },
+  );
 
   it("rechecks the latest queue after waiting for uncached queued dimensions", async () => {
     mount();
@@ -177,7 +209,7 @@ describe("App cumulative image pixel admission", () => {
     await act(async () => {
       await Promise.resolve();
     });
-    expect(decode.mock.calls.some(([file]) => file === queued[0])).toBe(true);
+    await waitFor(() => expect(readFiles.has(queued[0])).toBe(true));
     await act(async () => {
       queuedGate.resolve();
       await Promise.all([firstUpload, secondUpload]);
@@ -186,7 +218,7 @@ describe("App cumulative image pixel admission", () => {
     expect(screen.getByTestId("upload-error").textContent).not.toBe("");
   });
 
-  it("preserves removals, reordering, count edits and the latest default count during decoding", async () => {
+  it("preserves removals, reordering, count edits and the latest default count during metadata reading", async () => {
     mount();
     const queued = [
       image("remove.png"),
@@ -207,7 +239,7 @@ describe("App cumulative image pixel admission", () => {
     await act(async () => {
       await Promise.resolve();
     });
-    expect(decode.mock.calls.some(([file]) => file === queued[0])).toBe(true);
+    await waitFor(() => expect(readFiles.has(queued[0])).toBe(true));
     act(() => {
       const state = useStore.getState();
       state.setImageItems([

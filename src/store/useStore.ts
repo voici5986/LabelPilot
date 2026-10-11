@@ -24,6 +24,7 @@ import {
   DEFAULT_TEXT_CONFIG,
   LETTER_HEIGHT_MM,
   LETTER_WIDTH_MM,
+  LAYOUT_CONFIG_LIMITS,
   getPaperSizeInfo,
   normalizeLayoutConfig,
   normalizeTextConfig,
@@ -34,6 +35,8 @@ import type { ScreenCalibration } from "../utils/screenCalibration";
 export interface AppState {
   // Configs
   config: HelperLayoutConfig;
+  // Logical grid choices survive temporary orientation limits.
+  gridPreferences: Pick<HelperLayoutConfig, "rows" | "cols">;
   textConfig: TextConfig;
   appMode: "image" | "text";
   theme: "system" | "light" | "dark";
@@ -59,7 +62,7 @@ export interface AppState {
 }
 
 export const PERSIST_STORAGE_KEY = "label-pilot-storage";
-export const PERSIST_STORAGE_VERSION = 3;
+export const PERSIST_STORAGE_VERSION = 4;
 
 type PaperPreset = Exclude<PaperSize, "Custom">;
 
@@ -120,10 +123,41 @@ function normalizePaperState(
   };
 }
 
+function normalizeGridPreferences(
+  value: unknown,
+  fallback: Pick<HelperLayoutConfig, "rows" | "cols">,
+): Pick<HelperLayoutConfig, "rows" | "cols"> {
+  const source = asRecord(value);
+  const normalize = (value: unknown, fallback: number, max: number): number =>
+    typeof value === "number" && Number.isFinite(value)
+      ? Math.min(max, Math.max(1, Math.trunc(value)))
+      : fallback;
+  return {
+    rows: normalize(
+      Object.prototype.hasOwnProperty.call(source, "rows")
+        ? source.rows
+        : undefined,
+      fallback.rows,
+      Math.max(...Object.values(LAYOUT_CONFIG_LIMITS.rows)),
+    ),
+    cols: normalize(
+      Object.prototype.hasOwnProperty.call(source, "cols")
+        ? source.cols
+        : undefined,
+      fallback.cols,
+      Math.max(...Object.values(LAYOUT_CONFIG_LIMITS.cols)),
+    ),
+  };
+}
+
 export const useStore = create<AppState>()(
   persist(
     (set, get) => ({
       config: DEFAULT_LAYOUT_CONFIG,
+      gridPreferences: {
+        rows: DEFAULT_LAYOUT_CONFIG.rows,
+        cols: DEFAULT_LAYOUT_CONFIG.cols,
+      },
       textConfig: DEFAULT_TEXT_CONFIG,
       appMode: "image",
       theme: "system",
@@ -138,9 +172,14 @@ export const useStore = create<AppState>()(
             Object.prototype.hasOwnProperty.call(updates, "pageWidthMm") ||
             Object.prototype.hasOwnProperty.call(updates, "pageHeightMm");
 
+          const gridPreferences = normalizeGridPreferences(
+            updates,
+            state.gridPreferences,
+          );
           return {
+            gridPreferences,
             config: normalizeLayoutConfig(
-              { ...state.config, ...updates },
+              { ...state.config, ...updates, ...gridPreferences },
               state.config,
             ),
             ...(changesPaperDimensions
@@ -169,7 +208,11 @@ export const useStore = create<AppState>()(
           return {
             paperSizeMode: mode,
             config: normalizeLayoutConfig(
-              { ...state.config, ...PAPER_PRESETS[mode] },
+              {
+                ...state.config,
+                ...PAPER_PRESETS[mode],
+                ...state.gridPreferences,
+              },
               state.config,
             ),
           };
@@ -270,20 +313,29 @@ export const useStore = create<AppState>()(
       // Only persist configuration, not the actual image files (which can't be JSON serialized)
       partialize: (state) => ({
         config: state.config,
+        gridPreferences: state.gridPreferences,
         textConfig: state.textConfig,
         appMode: state.appMode,
         theme: state.theme,
         paperSizeMode: state.paperSizeMode,
         screenCalibration: state.screenCalibration,
       }),
-      migrate: (persistedState) => {
+      migrate: (persistedState, version) => {
         const persisted = asRecord(persistedState);
         const paperState = normalizePaperState(
           persisted.paperSizeMode,
           normalizeLayoutConfig(persisted.config),
         );
+        const gridPreferences = normalizeGridPreferences(
+          version < 4 ? undefined : persisted.gridPreferences,
+          paperState.config,
+        );
         return {
-          config: paperState.config,
+          config: normalizeLayoutConfig({
+            ...paperState.config,
+            ...gridPreferences,
+          }),
+          gridPreferences,
           textConfig: normalizeTextConfig(persisted.textConfig),
           appMode:
             persisted.appMode === "image" || persisted.appMode === "text"
@@ -311,9 +363,17 @@ export const useStore = create<AppState>()(
           ),
         );
 
+        const gridPreferences = normalizeGridPreferences(
+          persisted.gridPreferences,
+          paperState.config,
+        );
         return {
           ...currentState,
-          config: paperState.config,
+          config: normalizeLayoutConfig({
+            ...paperState.config,
+            ...gridPreferences,
+          }),
+          gridPreferences,
           textConfig: normalizeTextConfig(
             {
               ...currentState.textConfig,

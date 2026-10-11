@@ -10,6 +10,10 @@ import type {
 } from "../utils/layoutMath";
 import { getTextOutputMetrics } from "../utils/textValidation";
 
+// UI guidance only; this is not an output admission limit.
+export const RECOMMENDED_IMAGE_CELL_MIN_MM = 5;
+export type GenerationReadiness = ReturnType<typeof useGenerationReadiness>;
+
 /**
  * 生成就绪度单一来源：布局有效 + 图片模式下至少一张图且不超过累计标签上限 /
  * 文本模式下配置无错误。
@@ -45,7 +49,21 @@ export function useGenerationReadiness(
     [layout, appMode, imageItems.length, imageOutputError, textOutputError],
   );
 
+  const imageCellWarning =
+    appMode === "image" &&
+    imageItems.length > 0 &&
+    !layout.error &&
+    Math.min(layout.labelWidth, layout.labelHeight) <
+      RECOMMENDED_IMAGE_CELL_MIN_MM
+      ? t("image_cell_warning", {
+          width: Number(layout.labelWidth.toFixed(2)),
+          height: Number(layout.labelHeight.toFixed(2)),
+          min: RECOMMENDED_IMAGE_CELL_MIN_MM,
+        })
+      : null;
+
   return {
+    imageCellWarning,
     layout,
     textOutputMetrics,
     textOutputError,

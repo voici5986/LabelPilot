@@ -8,13 +8,20 @@ import { IconButton } from "./ui/IconButton";
 export type ToastType = "success" | "error" | "warning";
 
 interface ToastProps {
+  eventId?: number;
   message: string;
   type: ToastType;
   isVisible: boolean;
   onClose: () => void;
 }
 
-export function Toast({ message, type, isVisible, onClose }: ToastProps) {
+export function Toast({
+  eventId,
+  message,
+  type,
+  isVisible,
+  onClose,
+}: ToastProps) {
   const { t } = useI18n();
   const onCloseRef = useRef(onClose);
 
@@ -30,7 +37,7 @@ export function Toast({ message, type, isVisible, onClose }: ToastProps) {
       }, 3000);
       return () => clearTimeout(timer);
     }
-  }, [isVisible, message]);
+  }, [isVisible, message, eventId]);
 
   return (
     <AnimatePresence>

@@ -3,8 +3,7 @@ import type { PointerEvent as ReactPointerEvent } from "react";
 
 import type { HelperLayoutConfig } from "../utils/layoutMath";
 import { resolvePageDimensions } from "../utils/layoutMath";
-
-const MM_TO_PX = 96 / 25.4;
+import { computeFitScale } from "../utils/zoomMath";
 
 interface PanStart {
   x: number;
@@ -22,13 +21,13 @@ export function usePreviewViewport(config: HelperLayoutConfig) {
   useEffect(() => {
     const updateFitScale = () => {
       if (!containerRef.current) return;
-      const containerWidth = containerRef.current.clientWidth - 20;
-      const containerHeight = containerRef.current.clientHeight - 20;
       const { pageWidth, pageHeight } = resolvePageDimensions(config);
       setBaseFitScale(
-        Math.min(
-          containerWidth / (pageWidth * MM_TO_PX),
-          containerHeight / (pageHeight * MM_TO_PX),
+        computeFitScale(
+          containerRef.current.clientWidth,
+          containerRef.current.clientHeight,
+          pageWidth,
+          pageHeight,
         ),
       );
     };
