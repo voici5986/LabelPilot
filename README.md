@@ -77,6 +77,10 @@ The output will be in the `dist/` directory.
 
 ## 💡 Usage Guide
 
+After the arrow tour, use **Upload images** or **Create numbered labels** on an empty preview to get started; the ruler and zoom controls stay hidden while these entry points are displayed. The header's **User guide** is always available for step-by-step help. On smaller screens, tap **Edit** at the bottom to change content and layout, then **View Preview** to return to the page.
+
+New users see an optional arrow tour of content, layout, preview and PDF generation, including zoom and 1:1 screen calibration on desktop; on smaller screens it starts with the **Edit** button. Highlights and short tips point to real controls so you can work as you learn. Returning users keep their settings and can select **User guide → Replay tour** to start again. The tour changes no label settings on its own and remembers when you finish or skip it.
+
 1. **Select Mode**: Switch between **Image** and **Text** mode at the top of the left panel.
 2. **Configure Layout**: Use the left sidebar to adjust rows, columns, spacing, and orientation.
 3. **Add Content**:
@@ -85,6 +89,8 @@ The output will be in the `dist/` directory.
 4. **Check Preview**: Verify the layout on the right preview panel.
 5. **Generate**: Click "Generate PDF" to download the final file.
 6. **Check Actual Size (desktop)**: Click the "1:1" button next to the zoom slider. On first use, measure the on-screen ruler line (keep browser zoom at 100%, Ctrl+0), enter the value you read, and save. The preview then shows the paper at true physical size; re-calibrate after changing monitors or system display scaling.
+
+When printing the downloaded PDF, choose the matching paper size and **Actual size** or **100%** scaling. Screen 1:1 calibration only affects the preview display; it does not change PDF page dimensions.
 
 **PDF output quality:** Non-ASCII text is rasterized with a target of 300 DPI. Large text boxes can lower the output DPI to stay within the canvas limits; the text controls show the expected DPI when this happens. JPEG images that need orientation correction may be re-encoded, and normalized images above 16 megapixels are resized. Other JPEGs retain their original bytes. Check the exported PDF and a sample print when sharpness matters.
 

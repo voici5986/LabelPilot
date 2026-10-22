@@ -73,6 +73,8 @@ P0/P1 表示复用收益优先级，不代表生产故障等级。“已落地�
 - **字段容器与输入样式分工**：`FieldShell` 负责 label/hint/error 关联；基础输入外观继续复用 `input-base`。数值解析、提交时机和业务校验仍由调用方负责。
 - **提示语义由使用场景决定**：普通行内错误可以共享窄范围的 danger tone；Toast 和更新提示只共享状态色 token，不共享布局、生命周期、关闭动作或 live region。避免提示内部和外层同时建立 live region，造成重复播报。
 - **普通文字按钮可独立演进**：校准保存/取消、查看预览、更新按钮和错误页操作已统一到 `ActionButton` 的少量 primary/secondary/quiet 变体；字重和禁用透明度通过 `weight`、`disabledOpacity` 接口表达，不在调用方叠加冲突 utility；`SmartButton` 的生成/取消状态机保持独立。
+- **顶部文字操作与滚动正文**：`HeaderTextButton` 统一顶部指南与语言按钮的命中、按压和焦点反馈；`DialogBody` 统一指南与导览正文的可聚焦 region、滚动和焦点环。文案、排版间距、live 状态与模态生命周期仍由调用方负责。指南重放入口位于正文之后的固定底栏。
+- **导览测量与面板槽位**：定位监听目标祖先的显隐、目标/卡片/菜单尺寸、相关节点挂载及滚动/视口变化；无关动画样式不触发测量，相同几何结果复用既有 placement。手机卡片占用面板底部槽位，短横屏按需增加面板高度；SVG 单独按视口坐标绘制，实际卡片开孔不受目标缺失影响。
 - **模态焦点与轻量浮层分开**：`EditSheet` 和 `CalibrationDialog` 已共享 `useModalFocus`，由模块统一首焦点、Escape、Tab 环回、关闭恢复和不可聚焦项过滤；`SettingsMenu` 是非模态 dialog/popover，允许背景点击和 Tab 离开，并单独处理外部焦点关闭。
 - **状态色和表面优先用 token/utility**：danger、warning、success、tooltip 的前景/淡背景/边框已集中到主题 token；重复的 `border + bg-surface` 可评估 `surface-card` utility，不为此创建透传大量布局参数的 React `Surface`。
 - **分组标题先保留 utility**：`LayoutFields`、`TextModeFields`、图片分组共享 `group-title` 已有收益。仅标题加图标不必立即建组件；如需统一帮助入口或右侧摘要，再提取 SectionHeader，并允许调用方指定 h2/h3。
@@ -87,15 +89,17 @@ P0/P1 表示复用收益优先级，不代表生产故障等级。“已落地�
 
 ### 测试映射
 
-| UI 契约            | 主要回归位置                                                                        | 必须守护的内容                                                                                        |
-| ------------------ | ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| 桌面控制面板滚动链 | `ControlPanel.test.tsx`                                                             | 已有 class 结构断言；1440×420 浏览器验证 `clientHeight=301`、`scrollHeight=530`，生成按钮位于滚动区外 |
-| 图片队列与数量控件 | `ImageFilesSection.test.tsx`、`e2e/mobile-flow.spec.ts`                             | 文件名优先、排序可用、数量步进按钮为 `40px` 可见尺寸、上传入口不重复显示摘要                          |
-| 移动编辑面板       | `EditSheet.test.tsx`、`src/hooks/useModalFocus.test.tsx`、`e2e/mobile-flow.spec.ts` | 已有折叠错误、面板高度、上传流程和共享模态焦点环回检查；真实辅助技术仍待补                            |
-| 设置浮层           | `SettingsMenu.test.tsx`                                                             | 非模态语义、外部点击/焦点关闭、打开首帧 Escape、短视口滚动类和隐藏/禁用项过滤                         |
-| 主题对比度         | `themeContrast.test.ts`                                                             | 品牌色与状态/提示 token 的定义；完整界面对比度仍需视觉/辅助技术验收                                   |
-| 预览/校准          | `PreviewPanel.test.tsx`、`ZoomControl.test.tsx`、`e2e/calibration-flow.spec.ts`     | 缩放间距与实际模式滑块、分页、布局错误 alert、环境失效后的回退                                        |
-| 数值与字段模块     | `NumberInput.test.tsx`、相关组件测试                                                | 失焦/Enter 提交、Escape 恢复、FieldShell 的 label/hint 关联和边界 disabled                            |
+| UI 契约            | 主要回归位置                                                                                      | 必须守护的内容                                                                                              |
+| ------------------ | ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| 桌面控制面板滚动链 | `ControlPanel.test.tsx`                                                                           | 已有 class 结构断言；1440×420 浏览器验证 `clientHeight=301`、`scrollHeight=530`，生成按钮位于滚动区外       |
+| 图片队列与数量控件 | `ImageFilesSection.test.tsx`、`e2e/mobile-flow.spec.ts`                                           | 文件名优先、排序可用、数量步进按钮为 `40px` 可见尺寸、上传入口不重复显示摘要                                |
+| 移动编辑面板       | `EditSheet.test.tsx`、`src/hooks/useModalFocus.test.tsx`、`e2e/mobile-flow.spec.ts`               | 已有折叠错误、面板高度、上传流程和共享模态焦点环回检查；真实辅助技术仍待补                                  |
+| 设置浮层           | `SettingsMenu.test.tsx`                                                                           | 非模态语义、外部点击/焦点关闭、打开首帧 Escape、短视口滚动类和隐藏/禁用项过滤                               |
+| 首次使用与指南     | `QuickStart.test.tsx`、`UsageGuide.test.tsx`、`App.onboarding.test.tsx`、`PreviewPanel.test.tsx`  | 原生上传与同文件重试、编号模式与移动编辑入口、引导显隐、中英文、指南焦点环回与关闭返回                      |
+| 箭头操作导览       | `GuidedTour.test.tsx`、`App.guidedTour.test.tsx`、`guidedTour.test.ts`、`e2e/guided-tour.spec.ts` | 首访、显式退出与中断的已读边界、步骤播报、控件避让与箭头、响应式目标、手机槽位/焦点恢复、无关动画不触发测量 |
+| 主题对比度         | `themeContrast.test.ts`                                                                           | 品牌色与状态/提示 token 的定义；完整界面对比度仍需视觉/辅助技术验收                                         |
+| 预览/校准          | `PreviewPanel.test.tsx`、`ZoomControl.test.tsx`、`e2e/calibration-flow.spec.ts`                   | 缩放间距与实际模式滑块、分页、布局错误 alert、环境失效后的回退                                              |
+| 数值与字段模块     | `NumberInput.test.tsx`、相关组件测试                                                              | 失焦/Enter 提交、Escape 恢复、FieldShell 的 label/hint 关联和边界 disabled                                  |
 
 - 2026-09-19 Chromium 360px 流程确认数量复合框和内部按钮均为 40px，使用 inset shadow 表达边框，焦点轮廓位于内部。
 - 原规范记录 Toast 22px 按钮扩展 11px、gap 为 12px，命中检查未覆盖文字；Zoom reset 和 1:1 通过 gap-3 避让扩展命中区。不是本次重新测量。
