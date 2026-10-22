@@ -72,11 +72,13 @@ fix(deps): update image processing dependency
 
 该模式不运行 `semantic-release`。三个模式都要求干净且与远端精确同步的 `main` 和标签；远端认证、网络或 fetch 失败都会停止，脚本不会使用陈旧的远端引用继续。标签检查会阻止 `@semantic-release/git` 将本地独有标签顺带推送到远端。同一工作树同时只允许一个发版脚本运行。
 
-端到端测试要求本机已有 Chromium；首次使用可运行：
+端到端测试要求本机已有 Chromium 和 WebKit；首次使用可运行：
 
 ```powershell
-pnpm exec playwright install chromium
+pnpm exec playwright install chromium webkit
 ```
+
+WebKit 桌面冒烟测试覆盖图片上传与预览、真实 Worker 的图片 PDF 和 ASCII 编号及二维码 PDF 下载；Unicode 编号根据实际模块 Worker 的 OffscreenCanvas 能力验证 PDF 下载，或明确的不支持错误及控件恢复。Windows 上的 Playwright WebKit 引擎测试不替代真实 Safari 或 iPhone 设备验收。
 
 ## CI 与 Git hooks
 

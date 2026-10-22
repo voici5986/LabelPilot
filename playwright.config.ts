@@ -1,5 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const chromiumChannel = process.env.CI ? "chromium" : "chrome";
+
 export default defineConfig({
   testDir: "./e2e",
   timeout: 60_000,
@@ -11,32 +13,54 @@ export default defineConfig({
     baseURL: "http://127.0.0.1:4173",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
-    channel: process.env.CI ? "chromium" : "chrome",
   },
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      use: {
+        ...devices["Desktop Chrome"],
+        channel: chromiumChannel,
+      },
       testIgnore: /mobile-flow/,
     },
     {
+      name: "webkit",
+      use: { ...devices["Desktop Safari"], browserName: "webkit" },
+      testMatch: /browser-smoke\.spec\.ts/,
+    },
+    {
       name: "mobile-pixel-7",
-      use: { ...devices["Pixel 7"] },
+      use: {
+        ...devices["Pixel 7"],
+        channel: chromiumChannel,
+      },
       testMatch: /mobile-flow/,
     },
     {
       name: "mobile-iphone-14",
-      use: { ...devices["iPhone 14"], defaultBrowserType: "chromium" },
+      use: {
+        ...devices["iPhone 14"],
+        defaultBrowserType: "chromium",
+        channel: chromiumChannel,
+      },
       testMatch: /mobile-flow/,
     },
     {
       name: "mobile-375",
-      use: { ...devices["Pixel 5"], viewport: { width: 375, height: 812 } },
+      use: {
+        ...devices["Pixel 5"],
+        viewport: { width: 375, height: 812 },
+        channel: chromiumChannel,
+      },
       testMatch: /mobile-flow/,
     },
     {
       name: "mobile-360",
-      use: { ...devices["Pixel 5"], viewport: { width: 360, height: 740 } },
+      use: {
+        ...devices["Pixel 5"],
+        viewport: { width: 360, height: 740 },
+        channel: chromiumChannel,
+      },
       testMatch: /mobile-flow/,
     },
   ],

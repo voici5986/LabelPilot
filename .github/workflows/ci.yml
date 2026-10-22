@@ -52,8 +52,8 @@ jobs:
       - name: Build
         run: pnpm run build
 
-      - name: Install browser
-        run: pnpm exec playwright install --with-deps chromium
+      - name: Install browsers
+        run: pnpm exec playwright install --with-deps chromium webkit
 
       - name: Check optional PDF renderers offline
         run: pnpm run check:pdf-optional
