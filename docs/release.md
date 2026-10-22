@@ -13,7 +13,7 @@
 
 ## 什么时候发版
 
-发版脚本要求 PowerShell 7.6 或更高版本（当前验证版本为 7.6.5）、Node.js 24.21.0 或更高版本及锁定的 pnpm 12.11.2；CI 使用 Node.js 26。脚本通过 `pwsh` 运行，不要求 Windows PowerShell。发版不是每次 push 自动执行，而是维护者需要发布时，在本地 `main` 分支手动运行：
+发版脚本要求 PowerShell 7.6 或更高版本（当前验证版本为 7.6.5）、Node.js 24.21.0 或更高版本及锁定的 pnpm 12.15.0；CI 使用 Node.js 26。脚本通过 `pwsh` 运行，不要求 Windows PowerShell。发版不是每次 push 自动执行，而是维护者需要发布时，在本地 `main` 分支手动运行：
 
 ```powershell
 .\release.ps1

@@ -45,7 +45,7 @@
 
 ### 安装步骤
 
-使用 **Node.js 24.21.0 或更高版本**和锁定的 **pnpm 12.11.2**。CI 使用 Node.js 26，满足同一最低版本要求。
+使用 **Node.js 24.21.0 或更高版本**和锁定的 **pnpm 12.15.0**。CI 使用 Node.js 26，满足同一最低版本要求。
 
 1. `pnpm install`
 2. `pnpm dev`
@@ -60,7 +60,7 @@
    - **Framework Preset**: Vite
    - **Build Command**: `pnpm build`
    - **Output Directory**: `dist`
-4. 设置 Vercel 环境变量 **`ENABLE_EXPERIMENTAL_COREPACK=1`**，启用平台 Corepack 支持，并确认所选构建环境支持 `packageManager` 指定的 **pnpm 12.11.2**。
+4. 设置 Vercel 环境变量 **`ENABLE_EXPERIMENTAL_COREPACK=1`**，启用平台 Corepack 支持，并确认所选构建环境支持 `packageManager` 指定的 **pnpm 12.15.0**。
 5. 点击 **Deploy**，检查构建日志并确认使用了锁定的 pnpm 版本。
 
 ### 发布流程

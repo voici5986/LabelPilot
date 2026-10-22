@@ -45,7 +45,7 @@ A modern, offline-capable web application for batch generating label PDF documen
 
 ### Installation
 
-Use Node.js **24.21.0 or newer** and the pinned **pnpm 12.11.2**. CI uses Node.js 26, which satisfies the same minimum.
+Use Node.js **24.21.0 or newer** and the pinned **pnpm 12.15.0**. CI uses Node.js 26, which satisfies the same minimum.
 
 1. `pnpm install`
 2. `pnpm dev`
@@ -60,7 +60,7 @@ Configure and verify the build toolchain on Vercel before deploying.
    - **Framework Preset**: Vite
    - **Build Command**: `pnpm build`
    - **Output Directory**: `dist`
-4. Enable platform Corepack support with the Vercel environment variable **`ENABLE_EXPERIMENTAL_COREPACK=1`** and verify that the selected build environment supports **pnpm 12.11.2** from `packageManager`.
+4. Enable platform Corepack support with the Vercel environment variable **`ENABLE_EXPERIMENTAL_COREPACK=1`** and verify that the selected build environment supports **pnpm 12.15.0** from `packageManager`.
 5. Click **Deploy** and check the build logs to confirm the pinned pnpm version is used.
 
 ### Release process
