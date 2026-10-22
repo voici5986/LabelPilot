@@ -131,6 +131,41 @@ describe("App PDF generation state", () => {
 
     await act(async () => second.resolve());
   });
+  it("does not let a previous error timer unlock an unresolved retry", async () => {
+    const first = deferred();
+    const retry = deferred();
+    generatePDF
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(retry.promise);
+    render(
+      <I18nProvider>
+        <App />
+      </I18nProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "generate" }));
+    await act(async () => first.reject(new AppError("generation_timeout")));
+    expect(screen.getByLabelText("generation status").textContent).toBe(
+      "error",
+    );
+    expect(screen.getByLabelText("generation lock").textContent).toBe("false");
+    await act(async () => vi.advanceTimersByTimeAsync(1000));
+
+    // Request a new run at the App callback boundary before the old error reset.
+    fireEvent.click(screen.getByRole("button", { name: "generate" }));
+    await act(async () => vi.advanceTimersByTimeAsync(2500));
+    expect(screen.getByLabelText("generation status").textContent).toBe(
+      "generating",
+    );
+    expect(screen.getByLabelText("generation lock").textContent).toBe("true");
+    expect(generatePDF).toHaveBeenCalledTimes(2);
+
+    await act(async () => retry.resolve());
+    expect(screen.getByLabelText("generation status").textContent).toBe(
+      "success",
+    );
+    expect(screen.getByLabelText("generation lock").textContent).toBe("false");
+  });
   it.each(["error", "cancel"])(
     "cancels pending progress on %s and rejects late callbacks",
     async (ending) => {
