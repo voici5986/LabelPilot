@@ -24,6 +24,7 @@ test("calibrate from the 1:1 button, enter actual size, survive resize", async (
   page,
 }) => {
   await page.goto("/");
+  await page.getByRole("button", { name: "制作编号标签", exact: true }).click();
 
   const actualButton = page.getByRole("button", { name: "1:1 实际尺寸" });
   await actualButton.click();
@@ -50,6 +51,7 @@ test("slider leaves actual, reset returns to fit, calibration persists", async (
   page,
 }) => {
   await page.goto("/");
+  await page.getByRole("button", { name: "制作编号标签", exact: true }).click();
 
   // 经设置入口校准（不自动切 actual）
   await page.getByRole("button", { name: "全局设置" }).click();
@@ -89,6 +91,7 @@ test("keyboard zoom leaves actual size from 100% after manual 300%", async ({
   page,
 }) => {
   await page.goto("/");
+  await page.getByRole("button", { name: "制作编号标签", exact: true }).click();
   const slider = page.getByRole("slider", { name: "缩放级别" });
   await slider.press("End");
   await expect(slider).toHaveAttribute("aria-valuenow", "300");
@@ -116,6 +119,7 @@ test("keeps the preview center focused when the slider zooms in", async ({
   page,
 }) => {
   await page.goto("/");
+  await page.getByRole("button", { name: "制作编号标签", exact: true }).click();
   await page.waitForTimeout(700);
 
   const before = await page.evaluate(() => {
@@ -195,6 +199,7 @@ test("centers fit and preserves a panned focus through continuous zoom and actua
   page,
 }) => {
   await page.goto("/");
+  await page.getByRole("button", { name: "制作编号标签", exact: true }).click();
   const viewport = page.locator("div.touch-none.overflow-auto");
   const paper = viewport.locator("div.absolute.left-0.top-0.bg-white");
   const readFocus = () =>
@@ -257,6 +262,7 @@ test("stale environment exits actual to fit (manual scale reset) and prompts re-
   page,
 }) => {
   await page.goto("/");
+  await page.getByRole("button", { name: "制作编号标签", exact: true }).click();
   // 等待 baseFitScale 稳定（初始 state 为 0.8，需 ResizeObserver 收敛后再测量）
   await page.waitForTimeout(700);
   const fitWidth = await paperContainerWidth(page);
@@ -300,6 +306,7 @@ test("verification line retains 50/k mm at k=0.2 and its right endpoint is reach
   page,
 }) => {
   await page.goto("/");
+  await page.getByRole("button", { name: "制作编号标签", exact: true }).click();
   await page.getByRole("button", { name: "1:1 实际尺寸" }).click();
   const dialog = page.getByRole("dialog", { name: "屏幕 1:1 校准" });
   await dialog.getByLabel(/量出来是/).fill("20");

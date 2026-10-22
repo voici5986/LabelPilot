@@ -122,6 +122,7 @@ export function ZoomControl({
       {/* 1:1 实际尺寸（仅桌面断点显示，文字按钮更易识别） */}
       <button
         type="button"
+        data-tour="zoom"
         aria-label={t("zoom_actual")}
         aria-pressed={isActual}
         onClick={onRequestActual}

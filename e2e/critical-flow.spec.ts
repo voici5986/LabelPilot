@@ -247,7 +247,10 @@ test("portrait layout, theme, PWA, and accessible names remain usable", async ({
   // 关闭编辑面板回到预览
   await editDialog.getByRole("button", { name: "查看预览" }).click();
   await expect(editDialog).toHaveCount(0);
-  await expect(page.getByRole("slider", { name: "缩放级别" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "开始制作标签" }),
+  ).toBeVisible();
+  await expect(page.getByRole("slider", { name: "缩放级别" })).toHaveCount(0);
 
   const settingsButton = page.getByRole("button", { name: "全局设置" });
   await settingsButton.click();
@@ -556,6 +559,7 @@ test("tiny preview resizes keep fit scale valid and actual size independent", as
   page,
 }) => {
   await page.goto("/");
+  await switchToTextMode(page);
   const preview = page.getByRole("region", { name: "纸张预览" });
   const paper = preview.locator("div.absolute.left-0.top-0.bg-white");
   const readScale = () =>

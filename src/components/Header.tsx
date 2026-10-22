@@ -1,4 +1,4 @@
-import { Download, Globe, Monitor, Moon, Sun } from "lucide-react";
+import { BookOpen, Download, Globe, Monitor, Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useShallow } from "zustand/shallow";
 
@@ -6,15 +6,18 @@ import { useStore } from "../store/useStore";
 import { useI18n } from "../utils/i18nContext";
 import { LogoIcon } from "./LogoIcon";
 import { SettingsMenu } from "./SettingsMenu";
+import { HeaderTextButton } from "./ui/HeaderTextButton";
 import { IconButton } from "./ui/IconButton";
 
 interface HeaderProps {
   onOpenCalibration: () => void;
+  onOpenGuide?: () => void;
   isGenerating?: boolean;
 }
 
 export function Header({
   onOpenCalibration,
+  onOpenGuide,
   isGenerating = false,
 }: HeaderProps) {
   const { theme, onThemeChange } = useStore(
@@ -72,6 +75,10 @@ export function Header({
       </div>
 
       <div className="relative flex items-center gap-2">
+        <HeaderTextButton onClick={onOpenGuide} aria-label={t("guide_title")}>
+          <BookOpen className="h-5 w-5" aria-hidden="true" />
+          <span className="hidden sm:inline">{t("guide_title")}</span>
+        </HeaderTextButton>
         {canInstall && (
           <button
             type="button"
@@ -92,16 +99,14 @@ export function Header({
           disabled={isGenerating}
         />
 
-        <button
-          type="button"
+        <HeaderTextButton
           onClick={() => setLanguage(language === "zh" ? "en" : "zh")}
           aria-label={t("language_toggle")}
-          className="hit-target flex items-center justify-center gap-1 rounded-md p-2 text-text-muted transition-colors enabled:hover:bg-text-main/5 enabled:hover:text-brand-primary enabled:active:bg-text-main/10 [--hit-target-inset:-4px]"
           title={t("language_toggle")}
         >
           <Globe className="h-5 w-5" />
-          <span className="text-sm font-semibold uppercase">{language}</span>
-        </button>
+          <span className="uppercase">{language}</span>
+        </HeaderTextButton>
 
         <IconButton
           onClick={toggleTheme}

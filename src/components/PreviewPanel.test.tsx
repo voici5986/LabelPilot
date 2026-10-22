@@ -45,15 +45,22 @@ function resetStore() {
   });
 }
 
-function renderPanel() {
+function renderPanel(
+  zoomMode: "fit" | "manual" | "actual" = "fit",
+  onFilesSelect: (files: File[]) => void | Promise<void> = vi.fn(),
+  tourActive = false,
+) {
   return render(
     <I18nProvider>
       <PreviewPanel
-        zoomMode="fit"
+        tourActive={tourActive}
+        zoomMode={zoomMode}
         manualScale={1}
         onZoomModeChange={vi.fn()}
         onManualScaleChange={vi.fn()}
         onRequestActual={vi.fn()}
+        onFilesSelect={onFilesSelect}
+        onStartNumbering={vi.fn()}
       />
     </I18nProvider>,
   );
@@ -66,10 +73,118 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   resetStore();
 });
 
 describe("PreviewPanel", () => {
+  it.each([false, true])(
+    "hands upload focus to the surviving preview unless focus moved during admission (moved %s)",
+    async (moveFocus) => {
+      const frames: FrameRequestCallback[] = [];
+      vi.spyOn(window, "requestAnimationFrame").mockImplementation(
+        (callback) => {
+          frames.push(callback);
+          return frames.length;
+        },
+      );
+      useStore.setState({ appMode: "image" });
+      let finishAdmission!: () => void;
+      const admission = new Promise<void>((resolve) => {
+        finishAdmission = resolve;
+      });
+      const onFilesSelect = async (files: File[]) => {
+        await admission;
+        useStore.setState({
+          imageItems: [{ id: "uploaded", file: files[0], count: 1 }],
+        });
+      };
+      renderPanel("fit", onFilesSelect);
+      const upload = screen.getByRole("button", { name: "上传图片" });
+      upload.focus();
+      fireEvent.change(screen.getByLabelText("上传图片"), {
+        target: {
+          files: [new File(["image"], "label.png", { type: "image/png" })],
+        },
+      });
+      const stableControl = document.createElement("button");
+      document.body.append(stableControl);
+      if (moveFocus) stableControl.focus();
+      await act(async () => {
+        finishAdmission();
+        await admission;
+      });
+      expect(upload.isConnected).toBe(false);
+      expect(frames).toHaveLength(1);
+      act(() => frames.forEach((callback) => callback(0)));
+      expect(document.activeElement).toBe(
+        moveFocus
+          ? stableControl
+          : screen.getByRole("region", { name: "纸张预览" }),
+      );
+      stableControl.remove();
+    },
+  );
+
+  it("shows the paper and its controls during the tour instead of QuickStart", () => {
+    useStore.setState({ appMode: "image" });
+    renderPanel("fit", vi.fn(), true);
+    expect(screen.queryByRole("button", { name: "上传图片" })).toBeNull();
+    expect(screen.getByRole("slider")).toBeTruthy();
+    expect(screen.getByTestId("preview-ruler")).toBeTruthy();
+  });
+
+  it.each(["manual", "actual"] as const)(
+    "reveals the empty paper for intentional %s zoom",
+    (mode) => {
+      useStore.setState({ appMode: "image" });
+      renderPanel(mode);
+      expect(screen.queryByRole("button", { name: "上传图片" })).toBeNull();
+      expect(screen.getByRole("slider")).toBeTruthy();
+      expect(
+        screen
+          .getByRole("region", { name: "纸张预览" })
+          .querySelector("[style*=scale]"),
+      ).toBeTruthy();
+    },
+  );
+
+  it("offers quick start only for an empty, valid image preview and hides preview controls", () => {
+    useStore.setState({ appMode: "image" });
+    renderPanel();
+    expect(screen.getByRole("button", { name: "上传图片" })).toBeTruthy();
+    expect(screen.queryByRole("slider")).toBeNull();
+    expect(screen.queryByTestId("preview-ruler")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "制作编号标签" }));
+    expect(document.activeElement).toBe(
+      screen.getByRole("region", { name: "纸张预览" }),
+    );
+
+    act(() => useStore.setState({ appMode: "text" }));
+    expect(screen.queryByRole("button", { name: "上传图片" })).toBeNull();
+    act(() =>
+      useStore.setState({
+        appMode: "image",
+        imageItems: [
+          {
+            id: "label",
+            file: new File(["image"], "label.png", { type: "image/png" }),
+            count: 1,
+          },
+        ],
+      }),
+    );
+    expect(screen.queryByRole("button", { name: "上传图片" })).toBeNull();
+    act(() =>
+      useStore.setState({
+        imageItems: [],
+        config: { ...defaultConfig, marginMm: 200 },
+      }),
+    );
+    expect(screen.queryByRole("button", { name: "上传图片" })).toBeNull();
+    expect(screen.getByRole("alert")).toBeTruthy();
+  });
+
   it("exposes the preview as an explicitly keyboard-focusable named region", () => {
     renderPanel();
     const preview = screen.getByRole("region", { name: "纸张预览" });

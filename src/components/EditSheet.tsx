@@ -21,6 +21,8 @@ interface EditSheetProps {
   full: boolean;
   onClose: () => void;
   onToggleFull: () => void;
+  onEscape?: () => void;
+  onTourHostChange?: (host: HTMLDivElement | null) => void;
   onFilesSelect: (files: File[]) => void;
   /** 生成期间冻结会影响当前 PDF 的输入。 */
   isGenerating?: boolean;
@@ -37,6 +39,8 @@ export function EditSheet({
   full,
   onClose,
   onToggleFull,
+  onEscape,
+  onTourHostChange,
   onFilesSelect,
   isGenerating = false,
 }: EditSheetProps) {
@@ -46,7 +50,7 @@ export function EditSheet({
   const { handleKeyDown: handlePanelKeyDown } = useModalFocus({
     open,
     containerRef: panelRef,
-    onDismiss: onClose,
+    onDismiss: onEscape ?? onClose,
   });
   const {
     config,
@@ -84,7 +88,14 @@ export function EditSheet({
   return (
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-50 lg:hidden">
+        <div
+          ref={panelRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="edit-sheet-title"
+          onKeyDown={handlePanelKeyDown}
+          className="fixed inset-0 z-50 lg:hidden"
+        >
           <motion.div
             className="absolute inset-0 bg-black/35"
             initial={{ opacity: 0 }}
@@ -94,12 +105,8 @@ export function EditSheet({
             onClick={onClose}
           />
           <motion.div
-            ref={panelRef}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="edit-sheet-title"
-            onKeyDown={handlePanelKeyDown}
-            className={`absolute inset-x-0 bottom-0 flex flex-col rounded-t-2xl border-t border-border-subtle bg-elevated shadow-2xl ${full ? "h-full" : "h-[62dvh]"}`}
+            data-testid="edit-sheet-panel"
+            className={`absolute inset-x-0 bottom-0 flex flex-col rounded-t-2xl border-t border-border-subtle bg-elevated shadow-2xl has-[[data-tour-overlay]]:min-h-[min(100dvh,28rem)] ${full ? "h-full" : "h-[62dvh]"}`}
             initial={{ y: "100%" }}
             animate={{ y: "0%" }}
             exit={{ y: "100%" }}
@@ -166,7 +173,11 @@ export function EditSheet({
                   </div>
 
                   {appMode === "image" ? (
-                    <div className="rounded-xl border border-border-subtle bg-surface p-3">
+                    <div
+                      data-tour="content"
+                      tabIndex={-1}
+                      className="rounded-xl border border-border-subtle bg-surface p-3"
+                    >
                       <button
                         type="button"
                         onClick={() =>
@@ -207,7 +218,11 @@ export function EditSheet({
                       )}
                     </div>
                   ) : (
-                    <div className="rounded-xl border border-border-subtle bg-surface p-3">
+                    <div
+                      data-tour="content"
+                      tabIndex={-1}
+                      className="rounded-xl border border-border-subtle bg-surface p-3"
+                    >
                       <TextModeFields
                         textConfig={textConfig}
                         metrics={textOutputMetrics}
@@ -218,7 +233,11 @@ export function EditSheet({
                   )}
 
                   {/* 排版设置 */}
-                  <div className="rounded-xl border border-border-subtle bg-surface p-3">
+                  <div
+                    data-tour="layout"
+                    tabIndex={-1}
+                    className="rounded-xl border border-border-subtle bg-surface p-3"
+                  >
                     <LayoutFields
                       config={config}
                       gridPreferences={gridPreferences}
@@ -229,6 +248,11 @@ export function EditSheet({
                 </div>
               </fieldset>
             </div>
+            <div
+              ref={onTourHostChange}
+              data-tour-slot=""
+              className="relative z-[70] min-h-0 shrink-0 [&:not(:empty)]:px-3 [&:not(:empty)]:pt-4 [&:not(:empty)]:pb-[max(12px,env(safe-area-inset-bottom))]"
+            />
           </motion.div>
         </div>
       )}

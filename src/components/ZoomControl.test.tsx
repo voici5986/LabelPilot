@@ -47,6 +47,10 @@ describe("ZoomControl accessibility", () => {
     expect(actual.className).toContain("min-w-9");
     expect(actual.className).toContain("hit-target");
     expect(actual.className).toContain("[--hit-target-inset:-5px]");
+    expect(actual.getAttribute("data-tour")).toBe("zoom");
+    expect(actual.className).toContain("hidden");
+    expect(actual.className).toContain("lg:flex");
+    expect(document.querySelectorAll('[data-tour="zoom"]')).toHaveLength(1);
     expect(actionGroup?.className).toContain("gap-3");
   });
 

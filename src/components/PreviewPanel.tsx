@@ -25,14 +25,18 @@ import {
 import type { ZoomMode } from "../utils/zoomMath";
 import { PageNavigator } from "./PageNavigator";
 import { QrCodeSvg } from "./QrCodeSvg";
+import { QuickStart } from "./QuickStart";
 import { ZoomControl } from "./ZoomControl";
 
 interface PreviewPanelProps {
+  tourActive?: boolean;
   zoomMode: ZoomMode;
   manualScale: number;
   onZoomModeChange: (mode: ZoomMode) => void;
   onManualScaleChange: Dispatch<SetStateAction<number>>;
   onRequestActual: () => void;
+  onFilesSelect?: (files: File[]) => void | Promise<void>;
+  onStartNumbering?: () => void;
 }
 
 interface ZoomFocus {
@@ -41,11 +45,14 @@ interface ZoomFocus {
 }
 
 export const PreviewPanel = memo(function PreviewPanel({
+  tourActive = false,
   zoomMode,
   manualScale,
   onZoomModeChange,
   onManualScaleChange,
   onRequestActual,
+  onFilesSelect,
+  onStartNumbering,
 }: PreviewPanelProps) {
   const {
     config,
@@ -169,6 +176,15 @@ export const PreviewPanel = memo(function PreviewPanel({
   const { pageWidth: paperWidthMm, pageHeight: paperHeightMm } =
     resolvePageDimensions(config);
 
+  const showQuickStart =
+    !tourActive &&
+    zoomMode === "fit" &&
+    appMode === "image" &&
+    imageItems.length === 0 &&
+    !layout.error &&
+    !!onFilesSelect &&
+    !!onStartNumbering;
+
   // Keep the scale bar compact using readable 1/2/5 mm steps at any zoom.
   const rulerMaxMm = 80 / (renderScale * (96 / 25.4));
   const rulerMagnitude = 10 ** Math.floor(Math.log10(rulerMaxMm));
@@ -177,7 +193,11 @@ export const PreviewPanel = memo(function PreviewPanel({
   const rulerLengthMm = Number((rulerStep * rulerMagnitude).toPrecision(8));
 
   return (
-    <section className="flex h-full flex-1 flex-col overflow-hidden">
+    <section
+      data-tour="preview"
+      tabIndex={-1}
+      className="flex h-full flex-1 flex-col overflow-hidden"
+    >
       <div className="relative flex flex-1 flex-col overflow-hidden rounded-lg border border-border-subtle bg-surface font-sans">
         {/* Background Pattern */}
         <div
@@ -357,6 +377,30 @@ export const PreviewPanel = memo(function PreviewPanel({
           )}
         </div>
 
+        {showQuickStart && (
+          <QuickStart
+            onFilesSelect={async (files) => {
+              const previousFocus = document.activeElement;
+              await onFilesSelect?.(files);
+              // Admission may remove the focused upload button. Wait for the
+              // React commit, and leave any focus chosen during validation alone.
+              requestAnimationFrame(() => {
+                if (
+                  previousFocus instanceof HTMLElement &&
+                  !previousFocus.isConnected &&
+                  document.activeElement === document.body
+                ) {
+                  containerRef.current?.focus();
+                }
+              });
+            }}
+            onStartNumbering={() => {
+              containerRef.current?.focus();
+              onStartNumbering?.();
+            }}
+          />
+        )}
+
         {!layout.error && totalPages > 1 && (
           <PageNavigator
             currentPage={currentPage}
@@ -365,32 +409,36 @@ export const PreviewPanel = memo(function PreviewPanel({
           />
         )}
 
-        {/* Relative Ruler */}
-        <div
-          data-testid="preview-ruler"
-          className="absolute top-3 right-3 flex flex-col items-end gap-1 pointer-events-none z-20 opacity-60"
-        >
-          <div className="flex items-end h-3">
-            <div className="w-[1.5px] h-full bg-text-muted"></div>
+        {!showQuickStart && (
+          <>
+            {/* Relative Ruler */}
             <div
-              className="h-[1.5px] bg-text-muted"
-              style={{ width: `${rulerLengthMm * renderScale}mm` }}
-            />
-            <div className="w-[1.5px] h-full bg-text-muted"></div>
-          </div>
-          <span className="text-[12px] text-text-muted font-semibold font-mono leading-none select-none">
-            {t("ruler_length", { length: rulerLengthMm })}
-          </span>
-        </div>
+              data-testid="preview-ruler"
+              className="absolute top-3 right-3 flex flex-col items-end gap-1 pointer-events-none z-20 opacity-60"
+            >
+              <div className="flex items-end h-3">
+                <div className="w-[1.5px] h-full bg-text-muted"></div>
+                <div
+                  className="h-[1.5px] bg-text-muted"
+                  style={{ width: `${rulerLengthMm * renderScale}mm` }}
+                />
+                <div className="w-[1.5px] h-full bg-text-muted"></div>
+              </div>
+              <span className="text-[12px] text-text-muted font-semibold font-mono leading-none select-none">
+                {t("ruler_length", { length: rulerLengthMm })}
+              </span>
+            </div>
 
-        <ZoomControl
-          zoomMode={zoomMode}
-          manualScale={manualScale}
-          onZoomModeChange={onZoomModeChange}
-          onManualScaleChange={handleManualScaleChange}
-          onRequestActual={onRequestActual}
-          onInteractionChange={handleZoomInteractionChange}
-        />
+            <ZoomControl
+              zoomMode={zoomMode}
+              manualScale={manualScale}
+              onZoomModeChange={onZoomModeChange}
+              onManualScaleChange={handleManualScaleChange}
+              onRequestActual={onRequestActual}
+              onInteractionChange={handleZoomInteractionChange}
+            />
+          </>
+        )}
       </div>
     </section>
   );

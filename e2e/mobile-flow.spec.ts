@@ -27,7 +27,11 @@ test("mobile shell: full preview + action bar, desktop panel hidden", async ({
     page.getByRole("button", { name: "生成 PDF 文档" }),
   ).toBeVisible();
 
-  // 全屏预览可用
+  // 空白页入口期间量尺/缩放一起退场；创建编号后恢复纸张控件。
+  await expect(page.getByRole("slider", { name: "缩放级别" })).toHaveCount(0);
+  await expect(page.getByTestId("preview-ruler")).toHaveCount(0);
+  await page.getByRole("button", { name: "制作编号标签", exact: true }).click();
+  await page.getByRole("button", { name: "查看预览", exact: true }).click();
   const zoomSlider = page.getByRole("slider", { name: "缩放级别" });
   await expect(zoomSlider).toBeVisible();
   const zoomSliderBox = await zoomSlider.boundingBox();
@@ -76,9 +80,9 @@ test("edit sheet: open, size toggle, files collapse, upload enables generate", a
 
   // 默认档位：面板高度约为视口 62%（62dvh），全屏为 100%
   const sheetHeightRatio = async () => {
-    const height = await dialog.evaluate(
-      (element) => element.getBoundingClientRect().height,
-    );
+    const height = await page
+      .getByTestId("edit-sheet-panel")
+      .evaluate((element) => element.getBoundingClientRect().height);
     const viewport = await page.evaluate(() => window.innerHeight);
     return height / viewport;
   };
@@ -246,6 +250,8 @@ test("calibration entry points stay hidden on mobile, slider still usable", asyn
   );
   await page.keyboard.press("Escape");
 
-  // 缩放滑杆仍可用
+  // 进入有内容的纸张后缩放滑杆可用。
+  await page.getByRole("button", { name: "制作编号标签", exact: true }).click();
+  await page.getByRole("button", { name: "查看预览", exact: true }).click();
   await expect(page.getByRole("slider", { name: "缩放级别" })).toBeVisible();
 });

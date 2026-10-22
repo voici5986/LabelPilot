@@ -247,3 +247,46 @@ describe("EditSheet image output errors", () => {
     expect(screen.queryByRole("dialog", { name: "编辑" })).not.toBeNull();
   });
 });
+
+it("exposes an empty reserved tour slot inside the animated panel, separate from modal root", () => {
+  const onTourHostChange = vi.fn();
+  const { unmount } = render(
+    <I18nProvider>
+      <ReadyEditSheet
+        open
+        full={false}
+        onClose={vi.fn()}
+        onToggleFull={vi.fn()}
+        onFilesSelect={vi.fn()}
+        onTourHostChange={onTourHostChange}
+      />
+    </I18nProvider>,
+  );
+  const slot = document.querySelector("[data-tour-slot]");
+  expect(slot?.parentElement).toBe(screen.getByTestId("edit-sheet-panel"));
+  expect(slot?.childElementCount).toBe(0);
+  expect(onTourHostChange).toHaveBeenCalledWith(slot);
+  expect(slot).not.toBe(screen.getByRole("dialog"));
+  unmount();
+  expect(onTourHostChange.mock.calls.at(-1)?.[0]).toBe(null);
+});
+
+it("routes one unconsumed Escape through the sheet tour owner", () => {
+  const onEscape = vi.fn();
+  const onClose = vi.fn();
+  render(
+    <I18nProvider>
+      <ReadyEditSheet
+        open
+        full={false}
+        onClose={onClose}
+        onEscape={onEscape}
+        onToggleFull={vi.fn()}
+        onFilesSelect={vi.fn()}
+      />
+    </I18nProvider>,
+  );
+  fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+  expect(onEscape).toHaveBeenCalledOnce();
+  expect(onClose).not.toHaveBeenCalled();
+});

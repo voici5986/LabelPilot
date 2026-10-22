@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import App from "./App";
 import { AppError } from "./utils/appError";
+import { TOUR_SEEN_KEY } from "./utils/guidedTour";
 import { I18nProvider } from "./utils/i18n";
 import type { PdfProgressUpdate } from "./utils/pdfProgress";
 
@@ -72,6 +73,8 @@ function deferred() {
 
 describe("App PDF generation state", () => {
   beforeEach(() => {
+    // These cases isolate PDF progress after the optional first-use setup.
+    localStorage.setItem(TOUR_SEEN_KEY, "1");
     vi.useFakeTimers();
     generatePDF.mockReset();
     vi.stubGlobal("matchMedia", (query: string) => ({

@@ -105,7 +105,11 @@ export function ControlPanel({
             />
           </div>
 
-          <div className="space-y-4 border-b border-border-subtle/60 pb-4">
+          <div
+            data-tour="layout"
+            tabIndex={-1}
+            className="space-y-4 border-b border-border-subtle/60 pb-4"
+          >
             <LayoutFields
               config={config}
               gridPreferences={gridPreferences}
@@ -115,7 +119,7 @@ export function ControlPanel({
           </div>
 
           {appMode === "image" ? (
-            <div className="space-y-3">
+            <div data-tour="content" tabIndex={-1} className="space-y-3">
               <h2 className="group-title flex items-center gap-2">
                 <UploadCloud className="h-4 w-4" /> {t("file_group")}
               </h2>
@@ -138,17 +142,23 @@ export function ControlPanel({
               )}
             </div>
           ) : (
-            <TextModeFields
-              textConfig={textConfig}
-              metrics={textOutputMetrics}
-              error={textOutputError}
-              onChange={onTextConfigChange}
-            />
+            <div data-tour="content" tabIndex={-1}>
+              <TextModeFields
+                textConfig={textConfig}
+                metrics={textOutputMetrics}
+                error={textOutputError}
+                onChange={onTextConfigChange}
+              />
+            </div>
           )}
         </div>
       </fieldset>
 
-      <div className="relative overflow-hidden border-t border-border-subtle p-1">
+      <div
+        data-tour="generate"
+        tabIndex={-1}
+        className="relative overflow-hidden border-t border-border-subtle p-1"
+      >
         <SmartButton
           onClick={onGeneratePdf}
           onCancel={onCancelPdf}

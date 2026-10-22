@@ -5,16 +5,25 @@ import { CalibrationDialog } from "./components/CalibrationDialog";
 import type { CalibrationDialogSource } from "./components/CalibrationDialog";
 import { ControlPanel } from "./components/ControlPanel";
 import { EditSheet } from "./components/EditSheet";
+import { GuidedTour } from "./components/GuidedTour";
 import { Header } from "./components/Header";
 import { MobileActionBar } from "./components/MobileActionBar";
 import { PreviewPanel } from "./components/PreviewPanel";
 import { ReloadPrompt } from "./components/ReloadPrompt";
 import { Toast, type ToastType } from "./components/Toast";
+import { UsageGuide } from "./components/UsageGuide";
 import { useFrameProgress } from "./hooks/useFrameProgress";
 import { useGenerationReadiness } from "./hooks/useGenerationReadiness";
-import { useStore } from "./store/useStore";
+import { PERSIST_STORAGE_KEY, useStore } from "./store/useStore";
 import { AppError } from "./utils/appError";
 import type { GenerationStatus } from "./utils/generation";
+import {
+  findVisibleTourTarget,
+  getTourSteps,
+  markGuidedTourSeen,
+  shouldShowGuidedTour,
+  type TourStep,
+} from "./utils/guidedTour";
 import { useI18n } from "./utils/i18nContext";
 import type { Translations } from "./utils/i18nContext";
 import { generatePDF } from "./utils/pdfGenerator";
@@ -75,7 +84,119 @@ function App() {
   // 移动端编辑面板状态（<lg 生效）
   const [editOpen, setEditOpen] = useState(false);
   const [editFull, setEditFull] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(
+    () => !window.matchMedia("(min-width: 1024px)").matches,
+  );
+  const [tourActive, setTourActive] = useState(() =>
+    shouldShowGuidedTour(PERSIST_STORAGE_KEY),
+  );
+  const [tourStep, setTourStep] = useState<TourStep>(() =>
+    window.matchMedia("(min-width: 1024px)").matches ? "content" : "edit",
+  );
+  const [tourHost, setTourHost] = useState<HTMLDivElement | null>(null);
+  const guideLauncherRef = useRef<HTMLElement | null>(null);
+  const tourSnapshotRef = useRef<{
+    open: boolean;
+    full: boolean;
+    focus: HTMLElement | null;
+  } | null>(null);
+  if (tourSnapshotRef.current === null) {
+    tourSnapshotRef.current = {
+      open: editOpen,
+      full: editFull,
+      focus:
+        document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null,
+    };
+  }
+  const tourSteps = getTourSteps(isMobile);
+  const displayedTourStep =
+    !isMobile && tourStep === "edit"
+      ? "content"
+      : isMobile && tourStep === "zoom"
+        ? "preview"
+        : tourStep;
+  const displayedTourIndex = tourSteps.indexOf(displayedTourStep);
+  const tourInSheet =
+    tourActive &&
+    isMobile &&
+    (displayedTourStep === "content" || displayedTourStep === "layout");
 
+  const endTour = useCallback(
+    (reason: "complete" | "dismiss" | "guide" | "calibration" | "generate") => {
+      if (reason === "complete" || reason === "dismiss") markGuidedTourSeen();
+      const restoreFocus = reason !== "guide" && reason !== "calibration";
+      const snapshot = tourSnapshotRef.current;
+      if (!snapshot) return;
+      // AnimatePresence keeps a closing sheet connected until its exit finishes.
+      // Its controls need restoration just like the tour, even while still mounted.
+      const closingSheet =
+        isMobile && snapshot.open ? null : tourHost?.closest('[role="dialog"]');
+      setTourActive(false);
+      setEditOpen(isMobile && snapshot.open);
+      setEditFull(snapshot.full);
+      requestAnimationFrame(() => {
+        if (!restoreFocus) return;
+        const current = document.activeElement;
+        if (
+          current instanceof HTMLElement &&
+          current.isConnected &&
+          current !== document.body &&
+          !current.closest("[data-tour-overlay]") &&
+          !closingSheet?.contains(current)
+        )
+          return;
+        const target = snapshot.focus;
+        if (
+          target?.isConnected &&
+          target !== document.body &&
+          target.getClientRects().length
+        )
+          target.focus();
+        else {
+          const fallback = findVisibleTourTarget(
+            isMobile && snapshot.open ? "content" : "preview",
+          );
+          (
+            fallback ?? document.querySelector<HTMLElement>("header button")
+          )?.focus();
+        }
+      });
+    },
+    [isMobile, tourHost],
+  );
+  const openTour = () => {
+    if (generationControllerRef.current) return;
+    const focus = guideLauncherRef.current;
+    setGuideOpen(false);
+    // Let the guide restore its launcher before capturing a new tour session.
+    requestAnimationFrame(() => {
+      if (generationControllerRef.current) return;
+      tourSnapshotRef.current = { open: editOpen, full: editFull, focus };
+      setTourStep(isMobile ? "edit" : "content");
+      setEditOpen(false);
+      setTourActive(true);
+    });
+  };
+  const goToTourStep = (step: TourStep) => {
+    setTourStep(step);
+    setEditOpen(isMobile && (step === "content" || step === "layout"));
+    if (isMobile && (step === "content" || step === "layout"))
+      setEditFull(false);
+  };
+  useEffect(() => {
+    if (!tourActive || tourInSheet) return;
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !event.defaultPrevented) {
+        event.preventDefault();
+        endTour("dismiss");
+      }
+    };
+    window.addEventListener("keydown", escape);
+    return () => window.removeEventListener("keydown", escape);
+  }, [tourActive, tourInSheet, endTour]);
   // 预览缩放三态与 1:1 校准（非持久化）
   const [zoomMode, setZoomMode] = useState<ZoomMode>("fit");
   const [manualScale, setManualScale] = useState(1);
@@ -93,10 +214,14 @@ function App() {
     }));
   }, []);
 
-  const openCalibration = useCallback((source: CalibrationDialogSource) => {
-    setCalibrationNonce((nonce) => nonce + 1);
-    setCalibrationSource(source);
-  }, []);
+  const openCalibration = useCallback(
+    (source: CalibrationDialogSource) => {
+      if (tourActive) endTour("calibration");
+      setCalibrationNonce((nonce) => nonce + 1);
+      setCalibrationSource(source);
+    },
+    [tourActive, endTour],
+  );
 
   // 1:1 请求：未校准或环境失效时打开校准对话框，否则直接进入 actual
   const handleRequestActual = useCallback(() => {
@@ -168,20 +293,24 @@ function App() {
     };
   }, [screenCalibration, t, showToast]);
 
-  // 桌面布局不保留移动端 Sheet 状态，避免缩回移动端时重新出现旧面板。
   useEffect(() => {
     const desktopMedia = window.matchMedia("(min-width: 1024px)");
-    const resetMobileSheetForDesktop = () => {
-      if (!desktopMedia.matches) return;
-      setEditOpen(false);
-      setEditFull(false);
+    const update = () => {
+      const mobile = !desktopMedia.matches;
+      setIsMobile(mobile);
+      if (!mobile) {
+        setEditOpen(false);
+        setEditFull(false);
+        if (tourActive && tourStep === "edit") setTourStep("content");
+      } else if (tourActive) {
+        setEditOpen(tourStep === "content" || tourStep === "layout");
+        setEditFull(false);
+      }
     };
-
-    resetMobileSheetForDesktop();
-    desktopMedia.addEventListener("change", resetMobileSheetForDesktop);
-    return () =>
-      desktopMedia.removeEventListener("change", resetMobileSheetForDesktop);
-  }, []);
+    update();
+    desktopMedia.addEventListener("change", update);
+    return () => desktopMedia.removeEventListener("change", update);
+  }, [tourActive, tourStep]);
 
   // 生成就绪度：与桌面 ControlPanel 共用同一判定来源
   const readiness = useGenerationReadiness(
@@ -207,16 +336,40 @@ function App() {
     return () => media.removeEventListener("change", applyTheme);
   }, [theme]);
 
-  const handleFilesSelect = async (files: File[]) => {
-    try {
-      await useStore.getState().addImageFiles(files);
-    } catch (error) {
-      showToast(getLocalizedError(error), "error");
+  const getLocalizedError = useCallback(
+    (error: unknown) => {
+      if (error instanceof AppError) {
+        return t(error.code as keyof Translations, error.params);
+      }
+      return error instanceof Error ? error.message : String(error);
+    },
+    [t],
+  );
+
+  const handleFilesSelect = useCallback(
+    async (files: File[]) => {
+      if (generationControllerRef.current) return;
+      try {
+        await useStore.getState().addImageFiles(files);
+      } catch (error) {
+        showToast(getLocalizedError(error), "error");
+      }
+    },
+    [showToast, getLocalizedError],
+  );
+
+  const handleStartNumbering = useCallback(() => {
+    if (generationControllerRef.current) return;
+    useStore.getState().setAppMode("text");
+    if (isMobile) {
+      setEditOpen(true);
+      if (tourActive) setTourStep("content");
     }
-  };
+  }, [isMobile, tourActive]);
 
   const handleGeneratePdf = async () => {
     if (genStatus === "generating") return;
+    if (tourActive) endTour("generate");
     if (resetTimerRef.current !== null) {
       window.clearTimeout(resetTimerRef.current);
       resetTimerRef.current = null;
@@ -277,13 +430,6 @@ function App() {
     }
   };
 
-  const getLocalizedError = (error: unknown) => {
-    if (error instanceof AppError) {
-      return t(error.code as keyof Translations, error.params);
-    }
-    return error instanceof Error ? error.message : String(error);
-  };
-
   const handleCancelPdf = () => {
     cancelProgress();
     generationControllerRef.current?.abort();
@@ -302,6 +448,14 @@ function App() {
   return (
     <div className="safe-area-app flex h-dvh flex-col overflow-hidden bg-background text-text-main selection:bg-brand-primary/20">
       <Header
+        onOpenGuide={() => {
+          if (tourActive) endTour("guide");
+          guideLauncherRef.current =
+            document.activeElement instanceof HTMLElement
+              ? document.activeElement
+              : null;
+          setGuideOpen(true);
+        }}
         onOpenCalibration={() => openCalibration("settings")}
         isGenerating={genStatus === "generating"}
       />
@@ -324,15 +478,21 @@ function App() {
         <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
           <div className="min-h-0 flex-1">
             <PreviewPanel
+              tourActive={tourActive}
               zoomMode={zoomMode}
               manualScale={manualScale}
               onZoomModeChange={setZoomMode}
               onManualScaleChange={setManualScale}
               onRequestActual={handleRequestActual}
+              onFilesSelect={handleFilesSelect}
+              onStartNumbering={handleStartNumbering}
             />
           </div>
           <MobileActionBar
-            onOpenEdit={() => setEditOpen(true)}
+            onOpenEdit={() => {
+              setEditOpen(true);
+              if (tourActive) goToTourStep("content");
+            }}
             onGenerate={handleGeneratePdf}
             onCancel={handleCancelPdf}
             editDisabled={genStatus === "generating"}
@@ -348,7 +508,12 @@ function App() {
         readiness={readiness}
         open={editOpen}
         full={editFull}
-        onClose={() => setEditOpen(false)}
+        onClose={() => {
+          setEditOpen(false);
+          if (tourActive) goToTourStep("preview");
+        }}
+        onEscape={tourInSheet ? () => endTour("dismiss") : undefined}
+        onTourHostChange={setTourHost}
         onToggleFull={() => setEditFull((full) => !full)}
         onFilesSelect={handleFilesSelect}
         isGenerating={genStatus === "generating"}
@@ -361,6 +526,30 @@ function App() {
         environmentMismatch={calibrationMismatch}
         onClose={handleCalibrationClose}
         onSaved={handleCalibrationSaved}
+      />
+
+      <UsageGuide
+        open={guideOpen}
+        onClose={() => setGuideOpen(false)}
+        onRestartTour={openTour}
+        isGenerating={genStatus === "generating"}
+      />
+      <GuidedTour
+        open={tourActive && (!tourInSheet || tourHost !== null)}
+        steps={tourSteps}
+        stepIndex={displayedTourIndex}
+        appMode={appMode}
+        portalHost={tourInSheet ? tourHost : null}
+        onNext={() => {
+          const next = tourSteps[displayedTourIndex + 1];
+          if (next) goToTourStep(next);
+          else endTour("complete");
+        }}
+        onBack={() => {
+          const previous = tourSteps[displayedTourIndex - 1];
+          if (previous) goToTourStep(previous);
+        }}
+        onClose={() => endTour("dismiss")}
       />
 
       <Toast

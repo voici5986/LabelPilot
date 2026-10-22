@@ -33,6 +33,7 @@ export function MobileActionBar({
   return (
     <div className="flex shrink-0 items-center gap-2 border-t border-border-subtle bg-elevated px-3 pb-[max(12px,env(safe-area-inset-bottom))] pt-2 lg:hidden">
       <ActionButton
+        data-tour="edit"
         type="button"
         variant="secondary"
         onClick={onOpenEdit}
@@ -45,7 +46,7 @@ export function MobileActionBar({
         <ChevronUp className="h-3.5 w-3.5 text-text-muted" aria-hidden="true" />
       </ActionButton>
 
-      <div className="min-w-0 flex-1">
+      <div data-tour="generate" tabIndex={-1} className="min-w-0 flex-1">
         <SmartButton
           onClick={onGenerate}
           onCancel={onCancel}

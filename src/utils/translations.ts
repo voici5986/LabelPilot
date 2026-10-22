@@ -2,6 +2,67 @@ export type Language = "en" | "zh";
 
 export const translations = {
   en: {
+    tour_title: "Interface tour",
+    tour_restart: "Replay tour",
+    tour_back: "Back",
+    tour_next: "Next",
+    tour_skip: "Skip",
+    tour_done: "Done",
+    tour_close: "Close tour",
+    tour_progress: "{step} / {total}",
+    tour_edit_title: "Open the editor",
+    tour_edit_body:
+      "Tap Edit to open your label controls. You can use the real controls throughout this tour.",
+    tour_content_image_title: "Add your images",
+    tour_content_image_body:
+      "Upload PNG or JPEG images here, then set copies for each image. Labels follow the queue order.",
+    tour_content_text_title: "Create your numbers",
+    tour_content_text_body:
+      "Set the prefix, starting number, digits and label count. Enable QR codes if you need them.",
+    tour_layout_title: "Arrange the sheet",
+    tour_layout_image_body:
+      "Choose paper size in Settings at the top. Adjust rows, columns, margins and gaps here; set copies beside each image.",
+    tour_layout_text_body:
+      "Choose paper size in Settings at the top. Adjust rows, columns, margins and gaps here; set label count with your numbers.",
+    tour_preview_title: "Check your preview",
+    tour_preview_body:
+      "Check label size, spacing and page count on the sheet. Browse pages when your labels span several sheets.",
+    tour_zoom_title: "Zoom and 1:1",
+    tour_zoom_body:
+      "The slider's 100% means Fit to window, not physical size. Click 1:1 for a preview based on screen calibration; the first click opens calibration. Press Ctrl+0, measure the reference line with a real ruler, enter its measured length and save. Calibration only changes the preview; PDF paper size and print scale are separate. Print at Actual Size / 100%.",
+    tour_generate_title: "Generate and print",
+    tour_generate_body:
+      "Once your content and layout are ready, click Generate PDF. Print at Actual Size / 100%.",
+    tour_missing_target:
+      "This control is currently outside the visible workspace. You can continue or skip the tour.",
+
+    guide_title: "User guide",
+    guide_close: "Close user guide",
+    guide_desktop:
+      "Use the left panel to set up your labels and check the page preview.",
+    guide_mobile:
+      "Tap Edit at the bottom to change settings, then View Preview to return to the page.",
+    guide_images_title: "Upload label images",
+    guide_images:
+      "Choose PNG or JPEG files in Image mode. Set the number of copies for each image; labels follow the image queue order.",
+    guide_numbers_title: "Or create numbered labels",
+    guide_numbers:
+      "Choose Auto Number and set a prefix, starting number, digits and label count. For example, SN-001, SN-002… Optional QR codes encode the QR content prefix followed by the label number.",
+    guide_layout_title: "Set up the paper",
+    guide_layout:
+      "Choose the paper size and orientation, margins and spacing. Rows × columns sets the slots per page; each image’s copies set how many labels to make. Check the layout and page count in the preview.",
+    guide_print_title: "Generate and print",
+    guide_print:
+      "Select Generate PDF, then print the downloaded PDF at Actual size / 100%. Match the printer paper size to your layout.",
+    guide_screen:
+      "Fit to Window scales the preview to your screen. Desktop 1:1 calibration only changes screen display; neither changes PDF dimensions or printer scaling.",
+    quick_title: "Start your first label sheet",
+    quick_steps:
+      "Add images or create numbered labels → adjust the layout → generate a PDF.",
+    quick_upload: "Upload images",
+    quick_numbering: "Create numbered labels",
+    quick_mobile:
+      "Use Edit at the bottom for copies and layout settings; View Preview returns to the page.",
     window_title: "LabelPilot",
     file_group: "LABEL IMAGE",
     layout_group: "LAYOUT SETTINGS",
@@ -171,6 +232,62 @@ export const translations = {
     ruler_length: "{length} mm",
   },
   zh: {
+    tour_title: "操作导览",
+    tour_restart: "重新导览",
+    tour_back: "上一步",
+    tour_next: "下一步",
+    tour_skip: "跳过",
+    tour_done: "完成",
+    tour_close: "关闭导览",
+    tour_progress: "{step} / {total}",
+    tour_edit_title: "打开编辑面板",
+    tour_edit_body:
+      "点击底部的编辑，展开标签设置。导览过程中可直接操作真实控件。",
+    tour_content_image_title: "添加标签图片",
+    tour_content_image_body:
+      "在此上传 PNG 或 JPEG 图片，再设置每张图片的份数。标签按队列顺序排列。",
+    tour_content_text_title: "设置连续编号",
+    tour_content_text_body:
+      "设置前缀、起始编号、位数和标签数量。需要时可启用二维码。",
+    tour_layout_title: "调整纸张排版",
+    tour_layout_image_body:
+      "在顶部的全局设置中选择纸张尺寸，在此调整行列数、边距和间距。每张图片的份数在图片旁设置。",
+    tour_layout_text_body:
+      "在顶部的全局设置中选择纸张尺寸，在此调整行列数、边距和间距。标签数量在编号设置中调整。",
+    tour_preview_title: "检查纸张预览",
+    tour_preview_body:
+      "检查标签尺寸、间距和总页数。标签超过一页时，可切换页面检查。",
+    tour_zoom_title: "缩放与 1:1",
+    tour_zoom_body:
+      "滑杆的 100% 表示适应窗口，不是物理实际尺寸。点击 1:1 使用屏幕校准后的实际尺寸预览，首次点击会打开校准。先按 Ctrl+0，再用真实尺子测量参考线，输入实测长度并保存。校准只改变预览，PDF 纸张尺寸与打印缩放需分别设置；打印时选择实际大小 / 100%。",
+    tour_generate_title: "生成并打印",
+    tour_generate_body:
+      "内容和布局准备好后，点击生成 PDF 文档。打印时选择实际大小 / 100%。",
+    tour_missing_target: "此控件暂未显示在工作区中。可以继续下一步或跳过导览。",
+
+    guide_title: "使用指南",
+    guide_close: "关闭使用指南",
+    guide_desktop: "在左侧面板设置标签，并在预览中检查纸张排版。",
+    guide_mobile: "点击底部「编辑」调整设置，再点「查看预览」返回纸张。",
+    guide_images_title: "上传标签图片",
+    guide_images:
+      "在图片模式选择 PNG 或 JPEG 文件，为每张图片设置份数；标签按图片队列顺序排列。",
+    guide_numbers_title: "或制作编号标签",
+    guide_numbers:
+      "选择自动编号，设置前缀、起始数字、位数和标签数量，例如 SN-001、SN-002… 可选二维码包含其内容前缀与标签编号。",
+    guide_layout_title: "设置纸张与排版",
+    guide_layout:
+      "选择纸张尺寸与方向、边距和间距。行数 × 列数决定每页格数，每张图片的份数决定标签数量；在预览中检查排版与页数。",
+    guide_print_title: "生成并打印",
+    guide_print:
+      "点击「生成 PDF 文档」，将下载的 PDF 按「实际大小 / 100%」打印，打印机纸张尺寸须与排版一致。",
+    guide_screen:
+      "「适应窗口」将预览缩放至屏幕内；桌面端 1:1 校准仅影响屏幕显示，两者均不改变 PDF 尺寸或打印缩放。",
+    quick_title: "开始制作标签",
+    quick_steps: "添加图片或制作编号标签 → 调整排版 → 生成 PDF。",
+    quick_upload: "上传图片",
+    quick_numbering: "制作编号标签",
+    quick_mobile: "点击底部「编辑」设置份数和排版，点击「查看预览」返回纸张。",
     window_title: "LabelPilot",
     file_group: "标签图片",
     layout_group: "排版设置",
